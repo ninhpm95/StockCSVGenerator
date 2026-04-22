@@ -64,37 +64,22 @@ def get_data(ticker_symbol,info):
     DIVIDEND_YIELD: info.get('dividendYield') / 100 if info.get('dividendYield') else None,
 
     PEG: info.get('trailingPegRatio'),
-    ROA: info.get('returnOnAssets'),
-    ROE: info.get('returnOnEquity'),
-    ROIC: info.get('returnOnCapital'), 
-    NET_MARGIN: info.get('profitMargins'),
-    OPERATING_MARGIN: info.get('operatingMargins'),
+    ROA: info.get('returnOnAssets'), ROE: info.get('returnOnEquity'), ROIC: info.get('returnOnCapital'), 
+    NET_MARGIN: info.get('profitMargins'), OPERATING_MARGIN: info.get('operatingMargins'),
     DEBT_TO_EQUITY: info.get('debtToEquity') / 100 if info.get('debtToEquity') else None,
     CURRENT_RATIO: info.get('currentRatio'),
     TOTAL_CASH_PER_SHARE: info.get('totalCashPerShare'),
     EARNINGS_GROWTH: info.get('earningsGrowth'),
     PAYOUT_RATIO: info.get('payoutRatio'),
 
-    PRICE_1D: hp_1d,
-    PRICE_3D: hp_3d,
-    PRICE_5D: hp_5d,
+    VOL_1D: vol_1d, VOL_3D: vol_3d, VOL_5D: vol_5d,
+    PRICE_1D: hp_1d, PRICE_3D: hp_3d, PRICE_5D: hp_5d,
 
-    VOL_1D: vol_1d,
-    VOL_3D: vol_3d,
-    VOL_5D: vol_5d,
-
-    TARGET_HIGH: target_high,
-    TARGET_LOW: target_low,
-    TARGET_MEAN: target_mean,
-    TARGET_HIGH_PERCENT: target_high_percent,
-    TARGET_LOW_PERCENT: target_low_percent,
-    TARGET_MEAN_PERCENT: target_mean_percent,
+    TARGET_HIGH: target_high, TARGET_LOW: target_low, TARGET_MEAN: target_mean,
+    TARGET_HIGH_PERCENT: target_high_percent, TARGET_LOW_PERCENT: target_low_percent, TARGET_MEAN_PERCENT: target_mean_percent,
     CURRENT_PRICE: current_price,
-
-    SECTOR: info.get('sector'),
-    AVG_RATING: info.get('averageAnalystRating'),
-    AVG_RATING_1D: short_term_score_1d,
-    AVG_RATING_7D: short_term_score_7d
+    AVG_RATING_1D: short_term_score_1d, AVG_RATING_7D: short_term_score_7d, AVG_RATING: info.get('averageAnalystRating'),
+    SECTOR: info.get('sector')
   }
   return data
 
