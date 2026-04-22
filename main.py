@@ -2,7 +2,7 @@ import os
 import time
 import pandas as pd
 from helper import get_region
-from financials import fetch_financials
+from financials import fetch_financials_batch
 from constants import OUTPUT_DIR, FILE_NAME, COLUMNS_TO_PRESERVE, FINAL_COLUMNS
 
 def main():
@@ -28,13 +28,19 @@ def main():
   # Fetch Data
   print(f"Updating financials for {len(df)} tickers...")
   results = []
-  for symbol in df['api_ticker']:
-    # print(f"Processing: {symbol}")
-    data = fetch_financials(symbol)
-    results.append(data if data else {})
-    time.sleep(0.1) 
 
-  # Merge and Sort
+  all_tickers = df['api_ticker'].tolist()
+  batch_size = 39
+  for i in range(0, len(all_tickers), batch_size):
+    batch = all_tickers[i:i + batch_size]
+    print(f"Processing batch {i//batch_size + 1}/{(len(all_tickers)//batch_size)+1}...")
+    
+    batch_data = fetch_financials_batch(batch)
+    results.extend(batch_data)
+    
+    time.sleep(43)
+
+  # Merge and Save
   financials_df = pd.DataFrame(results)
   final_df = pd.concat([df.reset_index(drop=True), financials_df], axis=1)
 

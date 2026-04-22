@@ -1,75 +1,40 @@
+import time
 import yfinance as yf
-from tradingview_ta import TA_Handler, Interval
+from tradingview_ta import get_multiple_analysis, Interval
 from helper import get_region
 from fields import *
 
 def calculate_price_trends(current_price, historical_price):
-    if not historical_price or len(historical_price) <= 5:
-        return None, None, None
-
-    # --- PRICE JUMPS (The "Direction") ---
-    # We compare current price vs the price at the start of the window
-    hp1 = (current_price - historical_price[-2]) / historical_price[-2] # 1 day  ago
-    hp3 = (current_price - historical_price[-4]) / historical_price[-4] # 3 days ago
-    hp5 = (current_price - historical_price[-6]) / historical_price[-6] # 5 days ago
-
+  if not historical_price or len(historical_price) <= 5 or not current_price:
+    return None, None, None
+  
+  # Basic safety: ensure we have enough data points
+  try:
+    hp1 = (current_price - historical_price[-2]) / historical_price[-2]
+    hp3 = (current_price - historical_price[-4]) / historical_price[-4]
+    hp5 = (current_price - historical_price[-6]) / historical_price[-6]
     return hp1, hp3, hp5
+  except (IndexError, ZeroDivisionError):
+    return None, None, None
 
 def calculate_volume_surges(volume_data):
-    """
-    Calculates the relative volume surge for the last 1, 3, and 5 days
-    compared to their respective historical baselines.
-    """
-    # Ensure volume_data exists and has enough entries
-    if not volume_data or len(volume_data) <= 5:
-        return None, None, None
+  if not volume_data or len(volume_data) <= 5:
+    return None, None, None
 
-    n = len(volume_data)
+  n = len(volume_data)
+  base1 = sum(volume_data[:-1]) / (n - 1)
+  base3 = sum(volume_data[:-3]) / (n - 3)
+  base5 = sum(volume_data[:-5]) / (n - 5)
 
-    # --- BASELINES (Historical volume excluding the recent window) ---
-    base1 = sum(volume_data[:-1]) / (n - 1)
-    base3 = sum(volume_data[:-3]) / (n - 3)
-    base5 = sum(volume_data[:-5]) / (n - 5)
+  recent1 = volume_data[-1]
+  recent3 = sum(volume_data[-3:-1]) / 2
+  recent5 = sum(volume_data[-5:-1]) / 4
 
-    # --- RECENT AVERAGES (The windows we are testing) ---
-    recent1 = volume_data[-1]
-    recent3 = sum(volume_data[-3:-1]) / 2
-    recent5 = sum(volume_data[-5:-1]) / 4
+  avg_last_1 = (recent1 - base1) / base1 if base1 else 0
+  avg_last_3 = (recent3 - base3) / base3 if base3 else 0
+  avg_last_5 = (recent5 - base5) / base5 if base5 else 0
 
-    # --- RELATIVE CALCULATIONS ---
-    # Result is a decimal (e.g., 0.5 means 50% above baseline)
-    avg_last_1 = (recent1 - base1) / base1 if base1 else 0
-    avg_last_3 = (recent3 - base3) / base3 if base3 else 0
-    avg_last_5 = (recent5 - base5) / base5 if base5 else 0
-
-    return avg_last_1, avg_last_3, avg_last_5
-
-def get_short_term_analysis(symbol, period):
-    return 0
-    # if get_region()== 'JP':
-    #     screener = "japan"
-    #     exchange = "TSE"
-    # else:
-    #     screener = "US"
-    #     exchange = "NYSE"
-
-    # # Initialize handler
-    # handler = TA_Handler(
-    #     symbol=symbol.replace('.T', ''),
-    #     screener=screener,
-    #     exchange=exchange,
-    #     interval=period
-    # )
-
-    # analysis = handler.get_analysis()
-
-    # # Get the raw TradingView score (-1 to 1)
-    # raw_score = analysis.indicators["Recommend.All"]
-
-    # # Convert to a 1-5 scale (1 = Strong Buy, 5 = Strong Sell)
-    # # Formula: 3 - (raw_score * 2)
-    # normalized_score = round(3 - (raw_score * 2), 2)
-    # return normalized_score
+  return avg_last_1, avg_last_3, avg_last_5
 
 def get_data(ticker_symbol,info):
   current_price = info.get('currentPrice') or info.get('regularMarketPrice')
@@ -87,8 +52,8 @@ def get_data(ticker_symbol,info):
   historical_price = info.get('historical_price')
   hp_1d, hp_3d, hp_5d = calculate_price_trends(current_price, historical_price)
 
-  short_term_score_1d = get_short_term_analysis(ticker_symbol, Interval.INTERVAL_1_DAY)
-  short_term_score_7d = get_short_term_analysis(ticker_symbol, Interval.INTERVAL_1_WEEK)
+  short_term_score_1d = info.get('tv_score_1d', 0)
+  short_term_score_7d = info.get('tv_score_1w', 0)
 
   data = {
     NAME: info.get('shortName') or info.get('longName'),
@@ -133,7 +98,22 @@ def get_data(ticker_symbol,info):
   }
   return data
 
-def fetch_financials(ticker_symbol):
+def get_batch_analysis(tickers, period):
+  if get_region() == 'JP':
+    screener, exchange = "japan", "TSE"
+  else:
+    screener, exchange = "US", "NYSE"
+
+  tv_tickers = [t.replace('.T', '') for t in tickers]
+  tv_formatted = [f"{exchange}:{t}" for t in tv_tickers]
+
+  try:
+    return get_multiple_analysis(screener=screener, interval=period, symbols=tv_formatted)
+  except Exception as e:
+    print(f" [!] TV Batch Error: {e}")
+    return {}
+
+def fetch_financials(ticker_symbol, tv_scores=None):
   try:
     ticker = yf.Ticker(ticker_symbol)
     info = ticker.info
@@ -142,8 +122,35 @@ def fetch_financials(ticker_symbol):
     historical_price = history['Close'].tolist()
     info['volume'] = volume
     info['historical_price'] = historical_price
+
+    if tv_scores:
+      info['tv_score_1d'] = tv_scores.get('1d', 0)
+      info['tv_score_1w'] = tv_scores.get('1w', 0)
+    
     return get_data(ticker_symbol, info)
 
   except Exception as e:
     print(f" [!] Error fetching {ticker_symbol}: {e}")
     return get_data(ticker_symbol,{})
+
+def fetch_financials_batch(ticker_list):
+  results = []
+  tv_1d = get_batch_analysis(ticker_list, Interval.INTERVAL_1_DAY)
+  tv_1w = get_batch_analysis(ticker_list, Interval.INTERVAL_1_WEEK)
+
+  for symbol in ticker_list:
+    # Match the key format used in get_batch_analysis
+    exchange = "TSE" if get_region() == 'JP' else "NYSE"
+    tv_key = f"{exchange}:{symbol.replace('.T', '')}"
+    
+    def extract_score(batch_res):
+      analysis = batch_res.get(tv_key)
+      if analysis and "Recommend.All" in analysis.indicators:
+        return round(3 - (analysis.indicators["Recommend.All"] * 2), 2)
+      return 0
+
+    scores = {'1d': extract_score(tv_1d), '1w': extract_score(tv_1w)}
+    results.append(fetch_financials(symbol, tv_scores=scores))
+    time.sleep(0.2)
+            
+  return results
