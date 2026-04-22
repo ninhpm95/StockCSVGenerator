@@ -32,8 +32,8 @@ def calculate_volume_surges(volume_data):
 
     # --- RECENT AVERAGES (The windows we are testing) ---
     recent1 = volume_data[-1]
-    recent3 = sum(volume_data[-3:]) / 3
-    recent5 = sum(volume_data[-5:]) / 5
+    recent3 = sum(volume_data[-3:-1]) / 2
+    recent5 = sum(volume_data[-5:-1]) / 4
 
     # --- RELATIVE CALCULATIONS ---
     # Result is a decimal (e.g., 0.5 means 50% above baseline)
@@ -109,7 +109,6 @@ def fetch_financials(ticker_symbol):
     historical_price = history['Close'].tolist()
     info['volume'] = volume
     info['historical_price'] = historical_price
-    print(f"historical_price for {ticker_symbol}: {historical_price}")  # Debug print
     return get_data(info)
 
   except Exception as e:
