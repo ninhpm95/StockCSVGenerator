@@ -1,5 +1,6 @@
 import yfinance as yf
-from helper import calc_score
+from tradingview_ta import TA_Handler, Interval
+from helper import get_region
 from fields import *
 
 def calculate_price_trends(current_price, historical_price):
@@ -43,7 +44,34 @@ def calculate_volume_surges(volume_data):
 
     return avg_last_1, avg_last_3, avg_last_5
 
-def get_data(info):
+def get_short_term_analysis(symbol, period):
+    return 0
+    # if get_region()== 'JP':
+    #     screener = "japan"
+    #     exchange = "TSE"
+    # else:
+    #     screener = "US"
+    #     exchange = "NYSE"
+
+    # # Initialize handler
+    # handler = TA_Handler(
+    #     symbol=symbol.replace('.T', ''),
+    #     screener=screener,
+    #     exchange=exchange,
+    #     interval=period
+    # )
+
+    # analysis = handler.get_analysis()
+
+    # # Get the raw TradingView score (-1 to 1)
+    # raw_score = analysis.indicators["Recommend.All"]
+
+    # # Convert to a 1-5 scale (1 = Strong Buy, 5 = Strong Sell)
+    # # Formula: 3 - (raw_score * 2)
+    # normalized_score = round(3 - (raw_score * 2), 2)
+    # return normalized_score
+
+def get_data(ticker_symbol,info):
   current_price = info.get('currentPrice') or info.get('regularMarketPrice')
 
   target_high = info.get('targetHighPrice')
@@ -58,6 +86,9 @@ def get_data(info):
 
   historical_price = info.get('historical_price')
   hp_1d, hp_3d, hp_5d = calculate_price_trends(current_price, historical_price)
+
+  short_term_score_1d = get_short_term_analysis(ticker_symbol, Interval.INTERVAL_1_DAY)
+  short_term_score_7d = get_short_term_analysis(ticker_symbol, Interval.INTERVAL_1_WEEK)
 
   data = {
     NAME: info.get('shortName') or info.get('longName'),
@@ -96,7 +127,9 @@ def get_data(info):
     CURRENT_PRICE: current_price,
 
     SECTOR: info.get('sector'),
-    AVG_RATING: info.get('averageAnalystRating')
+    AVG_RATING: info.get('averageAnalystRating'),
+    AVG_RATING_1D: short_term_score_1d,
+    AVG_RATING_7D: short_term_score_7d
   }
   return data
 
@@ -109,8 +142,8 @@ def fetch_financials(ticker_symbol):
     historical_price = history['Close'].tolist()
     info['volume'] = volume
     info['historical_price'] = historical_price
-    return get_data(info)
+    return get_data(ticker_symbol, info)
 
   except Exception as e:
     print(f" [!] Error fetching {ticker_symbol}: {e}")
-    return get_data({})
+    return get_data(ticker_symbol,{})
