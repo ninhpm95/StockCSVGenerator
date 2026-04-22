@@ -28,12 +28,11 @@ def main():
   df = df.drop_duplicates(subset=[ticker_col], keep='first')
 
   # Prep API tickers
-  is_jp = get_region() == 'JP'
   df['api_ticker'] = df[ticker_col].astype(str).apply(
-    lambda x: x.strip() if x.endswith('.T') or not is_jp else f"{x.strip()}.T"
+    lambda x: x.strip() if x.endswith('.T') or get_region() != 'JP' else f"{x.strip()}.T"
   )
 
-  # Fetch Data in Batches
+  # Fetch data in batches
   all_tickers = df['api_ticker'].tolist()
   batch_size = 39
   total_batches = math.ceil(len(all_tickers) / batch_size)
@@ -55,7 +54,7 @@ def main():
       # Fill with empty dicts to keep DataFrame alignment if a whole batch fails
       results.extend([{}] * len(batch))
 
-    # Randomized Cooldown (Skip sleep on the last batch)
+    # Randomized cooldown (Skip sleep on the last batch)
     if current_batch_num < total_batches:
       # Randomize sleep to mimic human behavior
       sleep_time = random.uniform(40, 50)
@@ -79,7 +78,7 @@ def main():
     final_df.to_csv(file_path, index=False)
     print(f"\n[+] Update successful! Saved to {file_path}")
   except PermissionError:
-    print(f" [!] Error: Could not save file. Please close {FILE_NAME} if it is open in Excel.")
+    print(f" [!] Error: Could not save file. Please close {FILE_NAME} if it is open.")
 
 if __name__ == "__main__":
   main()

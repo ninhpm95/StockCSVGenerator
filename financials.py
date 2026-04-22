@@ -36,41 +36,41 @@ def calculate_volume_surges(volume_data):
 
   return avg_last_1, avg_last_3, avg_last_5
 
-def get_data(ticker_symbol,info):
-  current_price = info.get('currentPrice') or info.get('regularMarketPrice')
+def format_financials(ticker_data):
+  current_price = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')
 
-  target_high = info.get('targetHighPrice')
+  target_high = ticker_data.get('targetHighPrice')
   target_high_percent = (target_high - current_price) / current_price if target_high and current_price else None
-  target_low = info.get('targetLowPrice')
+  target_low = ticker_data.get('targetLowPrice')
   target_low_percent = (target_low - current_price) / current_price if target_low and current_price else None
-  target_mean = info.get('targetMeanPrice')
+  target_mean = ticker_data.get('targetMeanPrice')
   target_mean_percent = (target_mean - current_price) / current_price if target_mean and current_price else None
 
-  volume = info.get('volume')
+  volume = ticker_data.get('volume')
   vol_1d, vol_3d, vol_5d = calculate_volume_surges(volume)
 
-  historical_price = info.get('historical_price')
+  historical_price = ticker_data.get('historical_price')
   hp_1d, hp_3d, hp_5d = calculate_price_trends(current_price, historical_price)
 
-  short_term_score_1d = info.get('tv_score_1d', 0)
-  short_term_score_7d = info.get('tv_score_1w', 0)
+  short_term_score_1d = ticker_data.get('tv_score_1d', 0)
+  short_term_score_7d = ticker_data.get('tv_score_1w', 0)
 
   data = {
-    NAME: info.get('shortName') or info.get('longName'),
-    MARKET_CAP: info.get('marketCap'),
-    PE_RATIO: info.get('trailingPE'),
-    FORWARD_PE_RATIO: info.get('forwardPE'),
-    PB: info.get('priceToBook'),
-    DIVIDEND_YIELD: info.get('dividendYield') / 100 if info.get('dividendYield') else None,
+    NAME: ticker_data.get('shortName') or ticker_data.get('longName'),
+    MARKET_CAP: ticker_data.get('marketCap'),
+    PE_RATIO: ticker_data.get('trailingPE'),
+    FORWARD_PE_RATIO: ticker_data.get('forwardPE'),
+    PB: ticker_data.get('priceToBook'),
+    DIVIDEND_YIELD: ticker_data.get('dividendYield') / 100 if ticker_data.get('dividendYield') else None,
 
-    PEG: info.get('trailingPegRatio'),
-    ROA: info.get('returnOnAssets'), ROE: info.get('returnOnEquity'), ROIC: info.get('returnOnCapital'), 
-    NET_MARGIN: info.get('profitMargins'), OPERATING_MARGIN: info.get('operatingMargins'),
-    DEBT_TO_EQUITY: info.get('debtToEquity') / 100 if info.get('debtToEquity') else None,
-    CURRENT_RATIO: info.get('currentRatio'),
-    TOTAL_CASH_PER_SHARE: info.get('totalCashPerShare'),
-    EARNINGS_GROWTH: info.get('earningsGrowth'),
-    PAYOUT_RATIO: info.get('payoutRatio'),
+    PEG: ticker_data.get('trailingPegRatio'),
+    ROA: ticker_data.get('returnOnAssets'), ROE: ticker_data.get('returnOnEquity'), ROIC: ticker_data.get('returnOnCapital'), 
+    NET_MARGIN: ticker_data.get('profitMargins'), OPERATING_MARGIN: ticker_data.get('operatingMargins'),
+    DEBT_TO_EQUITY: ticker_data.get('debtToEquity') / 100 if ticker_data.get('debtToEquity') else None,
+    CURRENT_RATIO: ticker_data.get('currentRatio'),
+    TOTAL_CASH_PER_SHARE: ticker_data.get('totalCashPerShare'),
+    EARNINGS_GROWTH: ticker_data.get('earningsGrowth'),
+    PAYOUT_RATIO: ticker_data.get('payoutRatio'),
 
     VOL_1D: vol_1d, VOL_3D: vol_3d, VOL_5D: vol_5d,
     PRICE_1D: hp_1d, PRICE_3D: hp_3d, PRICE_5D: hp_5d,
@@ -78,8 +78,8 @@ def get_data(ticker_symbol,info):
     TARGET_HIGH: target_high, TARGET_LOW: target_low, TARGET_MEAN: target_mean,
     TARGET_HIGH_PERCENT: target_high_percent, TARGET_LOW_PERCENT: target_low_percent, TARGET_MEAN_PERCENT: target_mean_percent,
     CURRENT_PRICE: current_price,
-    AVG_RATING_1D: short_term_score_1d, AVG_RATING_7D: short_term_score_7d, AVG_RATING: info.get('averageAnalystRating'),
-    SECTOR: info.get('sector')
+    AVG_RATING_1D: short_term_score_1d, AVG_RATING_7D: short_term_score_7d, AVG_RATING: ticker_data.get('averageAnalystRating'),
+    SECTOR: ticker_data.get('sector')
   }
   return data
 
@@ -101,22 +101,22 @@ def get_batch_analysis(tickers, period):
 def fetch_financials(ticker_symbol, tv_scores=None):
   try:
     ticker = yf.Ticker(ticker_symbol)
-    info = ticker.info
+    ticker_data = ticker.info
     history = ticker.history(period="20d")
     volume = history['Volume'].tolist()
     historical_price = history['Close'].tolist()
-    info['volume'] = volume
-    info['historical_price'] = historical_price
+    ticker_data['volume'] = volume
+    ticker_data['historical_price'] = historical_price
 
     if tv_scores:
-      info['tv_score_1d'] = tv_scores.get('1d', 0)
-      info['tv_score_1w'] = tv_scores.get('1w', 0)
+      ticker_data['tv_score_1d'] = tv_scores.get('1d', 0)
+      ticker_data['tv_score_1w'] = tv_scores.get('1w', 0)
     
-    return get_data(ticker_symbol, info)
+    return format_financials(ticker_data)
 
   except Exception as e:
     print(f" [!] Error fetching {ticker_symbol}: {e}")
-    return get_data(ticker_symbol,{})
+    return format_financials({})
 
 def fetch_financials_batch(ticker_list):
   results = []
