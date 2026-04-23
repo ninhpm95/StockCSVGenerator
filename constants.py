@@ -1,10 +1,12 @@
-import os
 from fields import *
 
 # Paths
 OUTPUT_DIR = "output"
 FILE_NAME = "JP.csv"
-FILE_PATH = os.path.join(OUTPUT_DIR, FILE_NAME)
+
+# Batch Configurations
+BATCH_SIZE = 39
+TV_SLEEP_RANGE = (40, 50)
 
 # Column Configurations
 COLUMNS_TO_PRESERVE = [TICKER, BOUGHT]

@@ -1,70 +1,22 @@
 import time
 import random
 import yfinance as yf
-from typing import List, Dict, Optional, Any
+from typing import List, Dict
 from tradingview_ta import get_multiple_analysis, Interval
 
 from helper import get_region
 from fields import *
-
-def safe_div(numerator: Optional[float], denominator: Optional[float], default: Any = None) -> Any:
-  """Safely handles division and null checks."""
-  try:
-    if numerator is None or denominator is None or denominator == 0:
-      return default
-    return numerator / denominator
-  except (TypeError, ValueError):
-    return default
+from calculators import safe_div, calculate_price_trends, calculate_volume_surges
 
 def get_tv_config():
-  """Returns TradingView screener and exchange based on region."""
   return ("japan", "TSE") if get_region() == 'JP' else ("US", "NYSE")
 
-def calculate_price_trends(current: float, history: List[float]):
-  """Calculates price change % for 1d, 3d, and 5d intervals."""
-  # We need at least 6 points to look back 5 periods (index -6)
-  if not current or not history or len(history) < 6:
-    return None, None, None
-
-  hp1 = safe_div(current - history[-2], history[-2])
-  hp3 = safe_div(current - history[-4], history[-4])
-  hp5 = safe_div(current - history[-6], history[-6])
-  return hp1, hp3, hp5
-
-def calculate_volume_surges(volume_data: List[int]):
-  """Calculates relative volume surges vs historical averages exactly per original logic."""
-  if not volume_data or len(volume_data) <= 5:
-    return None, None, None
-
-  n = len(volume_data)
-
-  # 1-Day: Today vs everything before today
-  base1 = sum(volume_data[:-1]) / (n - 1)
-  recent1 = volume_data[-1]
-  avg_last_1 = safe_div(recent1 - base1, base1, default=0)
-
-  # 3-Day: Avg of [2 days ago, 1 day ago] vs everything before those 3 days
-  base3 = sum(volume_data[:-3]) / (n - 3)
-  recent3 = sum(volume_data[-3:-1]) / 2
-  avg_last_3 = safe_div(recent3 - base3, base3, default=0)
-
-  # 5-Day: Avg of [4, 3, 2, 1 days ago] vs everything before those 5 days
-  base5 = sum(volume_data[:-5]) / (n - 5)
-  recent5 = sum(volume_data[-5:-1]) / 4
-  avg_last_5 = safe_div(recent5 - base5, base5, default=0)
-
-  return avg_last_1, avg_last_3, avg_last_5
-
 def format_financials(ticker_data: Dict) -> Dict:
-  """Maps raw API data to the standardized fields defined in fields.py."""
   curr = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')
-  
-  # Calculate Targets
   t_high = ticker_data.get('targetHighPrice')
   t_low = ticker_data.get('targetLowPrice')
   t_mean = ticker_data.get('targetMeanPrice')
 
-  # Price & Volume Trends
   vol_1d, vol_3d, vol_5d = calculate_volume_surges(ticker_data.get('volume'))
   hp_1d, hp_3d, hp_5d = calculate_price_trends(curr, ticker_data.get('historical_price'))
 
