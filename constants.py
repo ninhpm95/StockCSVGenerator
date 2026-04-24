@@ -6,7 +6,7 @@ FILE_NAME = "JP.csv"
 
 # Batch Configurations
 BATCH_SIZE = 39
-TV_SLEEP_RANGE = (40, 50)
+TV_SLEEP_RANGE = (40, 50) if FILE_NAME == "JP.csv" else (60, 70)
 
 # Column Configurations
 COLUMNS_TO_PRESERVE = [TICKER, BOUGHT]

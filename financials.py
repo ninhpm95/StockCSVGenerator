@@ -3,13 +3,11 @@ import random
 import yfinance as yf
 from typing import List, Dict
 from tradingview_ta import get_multiple_analysis, Interval
-
 from helper import get_region
+
+from helper import get_tv_screener, map_exchange
 from fields import *
 from calculators import safe_div, calculate_price_trends, calculate_volume_surges
-
-def get_tv_config():
-  return ("japan", "TSE") if get_region() == 'JP' else ("america", "NYSE")
 
 def format_financials(ticker_data: Dict) -> Dict:
   curr = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')
@@ -28,11 +26,11 @@ def format_financials(ticker_data: Dict) -> Dict:
   avg_rating_1w = ticker_data.get('tv_score_1w', 0)
   # avg_rating_1m = ticker_data.get('tv_score_1m', 0)
 
-  score = t_mean_percent * 100
+  score = (t_mean_percent or 0) * 100
   multiplier = 10 if score < 0 else 1/10
   if avg_rating_1d >= 3 or avg_rating_1w >= 3:
     score *= multiplier
-  if t_low_percent <= -0.1:
+  if t_low_percent and t_low_percent <= -0.1:
     score *= multiplier
   
   return {
@@ -70,61 +68,89 @@ def format_financials(ticker_data: Dict) -> Dict:
     SECTOR: ticker_data.get('sector')
   }
 
-def get_tv_scores_batch(tickers: List[str]) -> Dict[str, Dict]:
-  """Fetches TV analysis for multiple timeframes and returns a mapped dict."""
-  screener, exchange = get_tv_config()
-  tv_formatted = [f"{exchange}:{t.replace('.T', '')}" for t in tickers]
-  
-  intervals = {
-    '1d': Interval.INTERVAL_1_DAY,
-    '1w': Interval.INTERVAL_1_WEEK,
-    # '1m': Interval.INTERVAL_1_MONTH
-  }
-  
-  score_map = {t: {} for t in tv_formatted}
+def get_tv_scores_batch(tv_symbols: List[str]) -> Dict[str, Dict]:
+  if not tv_symbols:
+    return {}
+    
+  screener = get_tv_screener()
+  intervals = {'1d': Interval.INTERVAL_1_DAY, '1w': Interval.INTERVAL_1_WEEK}
+  score_map = {sym: {} for sym in tv_symbols}
 
   for key, interval in intervals.items():
     try:
-      analysis = get_multiple_analysis(screener=screener, interval=interval, symbols=tv_formatted)
-      for sym, data in analysis.items():
-        val = data.indicators.get("Recommend.All")
-        score_map[sym][key] = round(3 - (val * 2), 2) if val is not None else 0
-      time.sleep(random.uniform(1, 2))
+      analysis = get_multiple_analysis(screener=screener, interval=interval, symbols=tv_symbols)
+      
+      # SAFE CHECK: ensure analysis itself isn't None
+      if analysis:
+        for sym, data in analysis.items():
+          # SAFE CHECK: ensure the specific symbol's data isn't None
+          if data and hasattr(data, 'indicators'):
+            val = data.indicators.get("Recommend.All")
+            score_map[sym][key] = round(3 - (val * 2), 2) if val is not None else 0
+          else:
+            score_map[sym][key] = 0
+      
+      time.sleep(random.uniform(1, 1.5))
     except Exception as e:
       print(f" [!] TV Error ({key}): {e}")
       
   return score_map
 
 def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
-  """Orchestrates the fetching of YF and TV data for a batch of tickers."""
-  results = []
-  tv_scores = get_tv_scores_batch(ticker_list)
-  _, exchange = get_tv_config()
+  intermediate_data = []
+  tv_symbols_to_fetch = []
 
   for symbol in ticker_list:
     try:
-      ticker = yf.Ticker(symbol)
-      # Fetch history and info
-      info = ticker.info
-      hist = ticker.history(period="20d")
+      if get_region() == 'JP' or symbol.endswith('.T'):
+        yf_sym = symbol
+      else:
+        yf_sym = symbol.replace('.', '-')
       
-      info['volume'] = hist['Volume'].tolist()
-      info['historical_price'] = hist['Close'].tolist()
+      ticker = yf.Ticker(yf_sym)
+      
+      info = ticker.info
+      if not info or ('symbol' not in info and 'shortName' not in info):
+        raise ValueError(f"No info returned for {yf_sym}")
 
-      # Map TV Scores
-      tv_key = f"{exchange}:{symbol.replace('.T', '')}"
-      scores = tv_scores.get(tv_key, {})
-      info.update({
-        'tv_score_1d': scores.get('1d', 0),
-        'tv_score_1w': scores.get('1w', 0),
-        # 'tv_score_1m': scores.get('1m', 0)
-      })
-
-      results.append(format_financials(info))
-      time.sleep(0.1) # Small throttle for YF
-
+      hist = ticker.history(period="20d")
+      info['volume'] = hist['Volume'].tolist() if not hist.empty else []
+      info['historical_price'] = hist['Close'].tolist() if not hist.empty else []
+      
+      # Identify Exchange and format for TradingView
+      yf_exchange = info.get('exchange')
+      mapped_exch = map_exchange(yf_exchange)
+      
+      # TradingView needs the clean symbol (no .T)
+      clean_tv_name = symbol.replace('.T', '')
+      tv_sym = f"{mapped_exch}:{clean_tv_name}"
+      
+      info['tv_key'] = tv_sym
+      tv_symbols_to_fetch.append(tv_sym)
+      intermediate_data.append(info)
+      
+      time.sleep(0.05) 
     except Exception as e:
       print(f" [!] Error fetching {symbol}: {e}")
-      results.append(format_financials({}))
+      intermediate_data.append({'shortName': symbol, 'error': True})
 
-  return results
+  # Step 2: Fetch TV scores (unchanged from previous fix)
+  tv_scores = get_tv_scores_batch(tv_symbols_to_fetch)
+
+  # Step 3: Combine and Format
+  final_results = []
+  for info in intermediate_data:
+    if info.get('error'):
+      final_results.append(format_financials(info))
+      continue
+      
+    tv_key = info.get('tv_key')
+    scores = tv_scores.get(tv_key, {})
+    
+    info.update({
+      'tv_score_1d': scores.get('1d', 0),
+      'tv_score_1w': scores.get('1w', 0),
+    })
+    final_results.append(format_financials(info))
+
+  return final_results

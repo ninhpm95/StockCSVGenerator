@@ -31,3 +31,24 @@ def prepare_ticker(ticker: str) -> str:
   if ticker.endswith('.T') or get_region() != 'JP':
     return ticker
   return f"{ticker}.T"
+
+def get_tv_screener():
+  """Returns the TradingView screener name based on region."""
+  return "japan" if get_region() == 'JP' else "america"
+
+def map_exchange(yf_exchange: str) -> str:
+  """Maps yfinance exchange codes to TradingView exchange codes."""
+  if not yf_exchange:
+    return "TSE"
+  
+  # Common yfinance exchange mappings
+  mapping = {
+    "NMS": "NASDAQ",
+    "NGM": "NASDAQ",
+    "NCM": "NASDAQ",
+    "NYQ": "NYSE",
+    "ASE": "AMEX",
+    "TSE": "TSE",
+    "TYO": "TSE"
+  }
+  return mapping.get(yf_exchange, "TSE")
