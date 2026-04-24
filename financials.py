@@ -9,7 +9,7 @@ from fields import *
 from calculators import safe_div, calculate_price_trends, calculate_volume_surges
 
 def get_tv_config():
-  return ("japan", "TSE") if get_region() == 'JP' else ("US", "NYSE")
+  return ("japan", "TSE") if get_region() == 'JP' else ("america", "NYSE")
 
 def format_financials(ticker_data: Dict) -> Dict:
   curr = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')
