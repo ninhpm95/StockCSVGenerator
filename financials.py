@@ -20,6 +20,21 @@ def format_financials(ticker_data: Dict) -> Dict:
   vol_1d, vol_3d, vol_5d = calculate_volume_surges(ticker_data.get('volume'))
   hp_1d, hp_3d, hp_5d = calculate_price_trends(curr, ticker_data.get('historical_price'))
 
+  t_high_percent = safe_div(t_high - curr, curr) if t_high else None
+  t_low_percent = safe_div(t_low - curr, curr) if t_low else None
+  t_mean_percent = safe_div(t_mean - curr, curr) if t_mean else None
+
+  avg_rating_1d = ticker_data.get('tv_score_1d', 0)
+  avg_rating_1w = ticker_data.get('tv_score_1w', 0)
+  # avg_rating_1m = ticker_data.get('tv_score_1m', 0)
+
+  score = t_mean_percent * 100
+  multiplier = 10 if score < 0 else 1/10
+  if avg_rating_1d >= 3 or avg_rating_1w >= 3:
+    score *= multiplier
+  if t_low_percent <= -0.1:
+    score *= multiplier
+  
   return {
     NAME: ticker_data.get('shortName') or ticker_data.get('longName'),
     MARKET_CAP: ticker_data.get('marketCap'),
@@ -43,14 +58,15 @@ def format_financials(ticker_data: Dict) -> Dict:
     TARGET_HIGH: t_high,
     TARGET_LOW: t_low,
     TARGET_MEAN: t_mean,
-    TARGET_HIGH_PERCENT: safe_div(t_high - curr, curr) if t_high else None,
-    TARGET_LOW_PERCENT: safe_div(t_low - curr, curr) if t_low else None,
-    TARGET_MEAN_PERCENT: safe_div(t_mean - curr, curr) if t_mean else None,
+    TARGET_HIGH_PERCENT: t_high_percent,
+    TARGET_LOW_PERCENT: t_low_percent,
+    TARGET_MEAN_PERCENT: t_mean_percent,
     CURRENT_PRICE: curr,
-    AVG_RATING_1D: ticker_data.get('tv_score_1d', 0),
-    AVG_RATING_7D: ticker_data.get('tv_score_1w', 0),
-    # AVG_RATING_1M: ticker_data.get('tv_score_1m', 0),
+    AVG_RATING_1D: avg_rating_1d,
+    AVG_RATING_7D: avg_rating_1w,
+    # AVG_RATING_1M: avg_rating_1m,
     AVG_RATING: ticker_data.get('averageAnalystRating'),
+    SCORE: score,
     SECTOR: ticker_data.get('sector')
   }
 
