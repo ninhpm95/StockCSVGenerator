@@ -1,4 +1,5 @@
 yfinance
+tradingview_ta
 pandas
 requests
 html5lib
