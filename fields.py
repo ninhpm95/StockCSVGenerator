@@ -7,8 +7,6 @@ Using a class with static attributes provides better namespacing.
 TICKER = 'Ticker'
 NAME = 'Name'
 SECTOR = 'Sector'
-NOTE = 'Note'
-BOUGHT = 'Bought'
 
 # Valuation Metrics
 MARKET_CAP = 'Market cap'
@@ -31,12 +29,15 @@ PAYOUT_RATIO = 'Payout Ratio'
 DIVIDEND_YIELD = 'Dividend yield'
 
 # Momentum & Volume
+AVG_VOLUME = 'Avg Volume'
 VOL_1D = 'Vol 1D'
 VOL_3D = 'Vol 3D'
 VOL_5D = 'Vol 5D'
+VOL_30D = 'Vol 30D'
 PRICE_1D = 'Price 1D'
 PRICE_3D = 'Price 3D'
 PRICE_5D = 'Price 5D'
+PRICE_30D = 'Price 30D'
 
 # Analyst Targets
 CURRENT_PRICE = 'Current price'
@@ -53,3 +54,8 @@ AVG_RATING_7D = 'Avg Rating 7D'
 AVG_RATING_1M = 'Avg Rating 1M'
 AVG_RATING = 'Avg Rating'
 SCORE = 'Score'
+
+# Others
+FEE = 'Fee'
+BOUGHT = 'Bought'
+NOTE = 'Note'

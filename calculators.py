@@ -9,16 +9,17 @@ def safe_div(numerator: Optional[float], denominator: Optional[float], default: 
     return default
 
 def calculate_price_trends(current: float, history: List[float]):
-  if not current or not history or len(history) < 6:
-    return None, None, None
+  if not current or not history or len(history) <= 30:
+    return None, None, None, None
   hp1 = safe_div(current - history[-2], history[-2])
   hp3 = safe_div(current - history[-4], history[-4])
   hp5 = safe_div(current - history[-6], history[-6])
-  return hp1, hp3, hp5
+  hp30 = safe_div(current - history[-31], history[-31])
+  return hp1, hp3, hp5, hp30
 
 def calculate_volume_surges(volume_data: List[int]):
-  if not volume_data or len(volume_data) <= 5:
-    return None, None, None
+  if not volume_data or len(volume_data) <= 30:
+    return None, None, None, None
   n = len(volume_data)
   # Logic preserved exactly as requested
   base1 = sum(volume_data[:-1]) / (n - 1)
@@ -32,4 +33,9 @@ def calculate_volume_surges(volume_data: List[int]):
   base5 = sum(volume_data[:-5]) / (n - 5)
   recent5 = sum(volume_data[-5:-1]) / 4
   avg_last_5 = safe_div(recent5 - base5, base5, default=0)
-  return avg_last_1, avg_last_3, avg_last_5
+
+  base30 = sum(volume_data[:-30]) / (n - 30)
+  recent30 = sum(volume_data[-30:-1]) / 29
+  avg_last_30 = safe_div(recent30 - base30, base30, default=0)
+
+  return avg_last_1, avg_last_3, avg_last_5, avg_last_30

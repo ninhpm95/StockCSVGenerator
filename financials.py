@@ -15,8 +15,8 @@ def format_financials(ticker_data: Dict) -> Dict:
   t_low = ticker_data.get('targetLowPrice')
   t_mean = ticker_data.get('targetMeanPrice')
 
-  vol_1d, vol_3d, vol_5d = calculate_volume_surges(ticker_data.get('volume'))
-  hp_1d, hp_3d, hp_5d = calculate_price_trends(curr, ticker_data.get('historical_price'))
+  vol_1d, vol_3d, vol_5d, vol_30d = calculate_volume_surges(ticker_data.get('volume'))
+  hp_1d, hp_3d, hp_5d, hp_30d = calculate_price_trends(curr, ticker_data.get('historical_price'))
 
   t_high_percent = safe_div(t_high - curr, curr) if t_high else None
   t_low_percent = safe_div(t_low - curr, curr) if t_low else None
@@ -34,7 +34,7 @@ def format_financials(ticker_data: Dict) -> Dict:
     score *= multiplier
   
   return {
-    NAME: ticker_data.get('shortName') or ticker_data.get('longName'),
+    NAME: ticker_data.get('longName') or ticker_data.get('shortName'),
     MARKET_CAP: ticker_data.get('marketCap'),
     PE_RATIO: ticker_data.get('trailingPE'),
     FORWARD_PE_RATIO: ticker_data.get('forwardPE'),
@@ -51,8 +51,9 @@ def format_financials(ticker_data: Dict) -> Dict:
     TOTAL_CASH_PER_SHARE: ticker_data.get('totalCashPerShare'),
     EARNINGS_GROWTH: ticker_data.get('earningsGrowth'),
     PAYOUT_RATIO: ticker_data.get('payoutRatio'),
-    VOL_1D: vol_1d, VOL_3D: vol_3d, VOL_5D: vol_5d,
-    PRICE_1D: hp_1d, PRICE_3D: hp_3d, PRICE_5D: hp_5d,
+    AVG_VOLUME: ticker_data.get('averageVolume10days'),
+    VOL_1D: vol_1d, VOL_3D: vol_3d, VOL_5D: vol_5d, VOL_30D: vol_30d,
+    PRICE_1D: hp_1d, PRICE_3D: hp_3d, PRICE_5D: hp_5d, PRICE_30D: hp_30d,
     TARGET_HIGH: t_high,
     TARGET_LOW: t_low,
     TARGET_MEAN: t_mean,
@@ -113,7 +114,7 @@ def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
       if not info or ('symbol' not in info and 'shortName' not in info):
         raise ValueError(f"No info returned for {yf_sym}")
 
-      hist = ticker.history(period="20d")
+      hist = ticker.history(period="60d")
       info['volume'] = hist['Volume'].tolist() if not hist.empty else []
       info['historical_price'] = hist['Close'].tolist() if not hist.empty else []
       
