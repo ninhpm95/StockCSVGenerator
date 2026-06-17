@@ -51,7 +51,7 @@ def format_financials(ticker_data: Dict) -> Dict:
     TOTAL_CASH_PER_SHARE: ticker_data.get('totalCashPerShare'),
     EARNINGS_GROWTH: ticker_data.get('earningsGrowth'),
     PAYOUT_RATIO: ticker_data.get('payoutRatio'),
-    AVG_VOLUME: ticker_data.get('averageVolume10days'),
+    AVG_VOLUME: ticker_data.get('averageVolume10days') * curr if ticker_data.get('averageVolume10days') and curr else None,
     VOL_1D: vol_1d, VOL_3D: vol_3d, VOL_5D: vol_5d, VOL_30D: vol_30d,
     PRICE_1D: hp_1d, PRICE_3D: hp_3d, PRICE_5D: hp_5d, PRICE_30D: hp_30d,
     TARGET_HIGH: t_high,
