@@ -33,6 +33,12 @@ def format_financials(ticker_data: Dict) -> Dict:
   if t_low_percent and t_low_percent <= -0.1:
     score *= multiplier
   
+  avg_rating = ticker_data.get('averageAnalystRating')
+  if avg_rating and ' - ' in avg_rating:
+    avg_rating_score, avg_rating_label = avg_rating.split(' - ', 1)
+  else:
+    avg_rating_score, avg_rating_label = None, None
+  
   return {
     NAME: ticker_data.get('longName') or ticker_data.get('shortName'),
     MARKET_CAP: ticker_data.get('marketCap'),
@@ -61,11 +67,13 @@ def format_financials(ticker_data: Dict) -> Dict:
     TARGET_LOW_PERCENT: t_low_percent,
     TARGET_MEAN_PERCENT: t_mean_percent,
     CURRENT_PRICE: curr,
-    AVG_RATING_1D: avg_rating_1d,
-    AVG_RATING_7D: avg_rating_1w,
+    AVG_RATING_1D: avg_rating_1d if avg_rating_1d != 0 else None,
+    AVG_RATING_7D: avg_rating_1w if avg_rating_1w != 0 else None,
     # AVG_RATING_1M: avg_rating_1m,
-    AVG_RATING: ticker_data.get('averageAnalystRating'),
-    SCORE: score,
+    # AVG_RATING: ticker_data.get('averageAnalystRating'),
+    AVG_RATING_SCORE: avg_rating_score if avg_rating_score != 0 else None,
+    AVG_RATING_LABEL: avg_rating_label,
+    GROWTH: ticker_data.get('trailingPE')/ticker_data.get('forwardPE') if ticker_data.get('trailingPE') and ticker_data.get('forwardPE') else None,
     SECTOR: ticker_data.get('sector')
   }
 
@@ -137,6 +145,7 @@ def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
 
   # Step 2: Fetch TV scores (unchanged from previous fix)
   tv_scores = get_tv_scores_batch(tv_symbols_to_fetch)
+  # tv_scores = {}
 
   # Step 3: Combine and Format
   final_results = []

@@ -53,6 +53,9 @@ AVG_RATING_1D = 'Avg Rating 1D'
 AVG_RATING_7D = 'Avg Rating 7D'
 AVG_RATING_1M = 'Avg Rating 1M'
 AVG_RATING = 'Avg Rating'
+AVG_RATING_SCORE = 'Avg Rating Score'
+AVG_RATING_LABEL = 'Avg Rating Label'
+GROWTH = 'Growth'
 SCORE = 'Score'
 
 # Others
