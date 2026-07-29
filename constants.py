@@ -3,20 +3,25 @@ from fields import *
 # Paths
 OUTPUT_DIR = "output"
 
-# FILE_NAME = "JP_ETFs_full.csv"
 FILE_NAME = "JP_ETFs.csv"
-# FILE_NAME = "US.csv"
+# FILE_NAME = "JP_ETFs_full.csv"
 # FILE_NAME = "JP.csv"
+# FILE_NAME = "US.csv"
 
-# MODE = FAST
-MODE = NORMAL
+SPEED = NORMAL
+# SPEED = FAST
 
-TASK = UPDATE_FINANCIALS
-# TASK = FILTER_ETFS
+MODE = UPDATE_FINANCIALS
+# MODE = FILTER_ETFS
 
 # Batch Configurations
 BATCH_SIZE = 39
-TV_SLEEP_RANGE = (1, 2) if MODE == FAST else (35, 50)
+TV_SLEEP_LOOKUP = [
+  (100, (25, 40)),
+  (300, (30, 45)),
+  (600, (35, 50)),
+  (float("inf"), (45, 60))
+]
 
 # Column Configurations
 COLUMNS_TO_PRESERVE = [TICKER, FEE, BOUGHT, NOTE]

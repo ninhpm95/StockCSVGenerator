@@ -1,6 +1,7 @@
 import os
 from typing import Literal
-from constants import FILE_NAME
+from constants import FILE_NAME, TV_SLEEP_LOOKUP, SPEED
+from fields import FAST
 
 RegionType = Literal['JP', 'US', 'Unknown']
 
@@ -24,6 +25,13 @@ def get_region(filename: str = FILE_NAME) -> RegionType:
     return 'US'
     
   return 'Unknown'
+
+def get_tv_sleep_range(ticker_num: int) -> tuple[int, int]:
+  if SPEED == FAST:
+    return (1, 2)
+  for limit, sleep_range in TV_SLEEP_LOOKUP:
+    if ticker_num < limit:
+      return sleep_range
 
 def prepare_ticker(ticker: str) -> str:
   """Standardizes ticker format based on region."""

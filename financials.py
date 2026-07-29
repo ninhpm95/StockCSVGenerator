@@ -8,7 +8,7 @@ from helper import get_region
 from helper import get_tv_screener, map_exchange
 from fields import *
 from calculators import safe_div, calculate_price_trends, calculate_volume_surges
-from constants import MODE
+from constants import SPEED
 
 def format_financials(ticker_data: Dict) -> Dict:
   curr = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')
@@ -148,7 +148,7 @@ def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
       intermediate_data.append({'shortName': symbol, 'error': True})
 
   # Step 2: Fetch TV scores (unchanged from previous fix)
-  tv_scores = {} if MODE == FAST else get_tv_scores_batch(tv_symbols_to_fetch)
+  tv_scores = {} if SPEED == FAST else get_tv_scores_batch(tv_symbols_to_fetch)
 
   # Step 3: Combine and Format
   final_results = []

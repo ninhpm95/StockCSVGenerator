@@ -1,11 +1,11 @@
 import os
 import pandas as pd
 from processor import load_and_clean_data, process_batches
-from constants import OUTPUT_DIR, FILE_NAME, FINAL_COLUMNS, TASK, FILTER_ETFS
-from filter_etfs.filter_etfs import filter_etfs
+from constants import OUTPUT_DIR, FILE_NAME, FINAL_COLUMNS, MODE, FILTER_ETFS
+from screening.etf_filter import filter_etfs
 
 def main():
-  if TASK == FILTER_ETFS:
+  if MODE == FILTER_ETFS:
     filter_etfs()
     return
 

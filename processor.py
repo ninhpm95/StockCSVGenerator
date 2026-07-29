@@ -5,8 +5,8 @@ import os
 import pandas as pd
 from typing import List, Dict
 from financials import fetch_financials_batch
-from helper import prepare_ticker
-from constants import BATCH_SIZE, TV_SLEEP_RANGE, COLUMNS_TO_PRESERVE
+from helper import prepare_ticker, get_tv_sleep_range
+from constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
 
 def load_and_clean_data(file_path: str) -> pd.DataFrame:
   if not os.path.exists(file_path):
@@ -28,6 +28,7 @@ def load_and_clean_data(file_path: str) -> pd.DataFrame:
 def process_batches(tickers: List[str]) -> List[Dict]:
   results = []
   total_batches = math.ceil(len(tickers) / BATCH_SIZE)
+  sleep_range = get_tv_sleep_range(len(tickers))
 
   for i in range(0, len(tickers), BATCH_SIZE):
     batch_num = (i // BATCH_SIZE) + 1
@@ -42,7 +43,7 @@ def process_batches(tickers: List[str]) -> List[Dict]:
       results.extend([{}] * len(batch))
 
     if batch_num < total_batches:
-      wait = random.uniform(*TV_SLEEP_RANGE)
+      wait = random.uniform(*sleep_range)
       print(f"   Cooling down for {wait:.1f}s...")
       time.sleep(wait)
   return results
