@@ -14,18 +14,18 @@ from .sp500 import SP500
 from .topix import TOPIX
 
 ALL_TICKER_GROUPS = {
-    "TOPIX": TOPIX,
-    "Nikkei 225": NIKKEI225,
-    "Nikkei 300": NIKKEI300,
-    "Nikkei 400": NIKKEI400,
-    "S&P 500": SP500,
-    "S&P 500 equal weight": SP500_EQUAL_WEIGHT,
-    "Nasdaq 100": NASDAQ100,
-    "JP Semiconductor": SEMICONDUCTOR_JP,
-    "US Semiconductor": SEMICONDUCTOR_US,
-    "JP banks": BANKS_JP,
-    "JP ex-financials": EX_FINANCIALS_JP,
-    "JP REIT": REIT_JP,
-    "Gold": GOLD,
-    "Silver": SILVER
+  "TOPIX": TOPIX,
+  "Nikkei 225": NIKKEI225,
+  "Nikkei 300": NIKKEI300,
+  "Nikkei 400": NIKKEI400,
+  "S&P 500": SP500,
+  "S&P 500 equal weight": SP500_EQUAL_WEIGHT,
+  "Nasdaq 100": NASDAQ100,
+  "JP Semiconductor": SEMICONDUCTOR_JP,
+  "US Semiconductor": SEMICONDUCTOR_US,
+  "JP banks": BANKS_JP,
+  "JP ex-financials": EX_FINANCIALS_JP,
+  "JP REIT": REIT_JP,
+  "Gold": GOLD,
+  "Silver": SILVER
 }
