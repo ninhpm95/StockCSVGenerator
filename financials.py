@@ -8,6 +8,7 @@ from helper import get_region
 from helper import get_tv_screener, map_exchange
 from fields import *
 from calculators import safe_div, calculate_price_trends, calculate_volume_surges
+from constants import MODE
 
 def format_financials(ticker_data: Dict) -> Dict:
   curr = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')
@@ -16,7 +17,7 @@ def format_financials(ticker_data: Dict) -> Dict:
   t_mean = ticker_data.get('targetMeanPrice')
 
   vol_1d, vol_3d, vol_5d, vol_30d = calculate_volume_surges(ticker_data.get('volume'))
-  hp_1d, hp_3d, hp_5d, hp_30d = calculate_price_trends(curr, ticker_data.get('historical_price'))
+  hp_1d, hp_3d, hp_5d, hp_7d, hp_10d, hp_15d, hp_20d, hp_30d = calculate_price_trends(curr, ticker_data.get('historical_price'))
 
   t_high_percent = safe_div(t_high - curr, curr) if t_high else None
   t_low_percent = safe_div(t_low - curr, curr) if t_low else None
@@ -39,11 +40,14 @@ def format_financials(ticker_data: Dict) -> Dict:
   else:
     avg_rating_score, avg_rating_label = None, None
   
+  trailing_pe = ticker_data.get('trailingPE')
+  forward_pe = ticker_data.get('forwardPE')
+
   return {
     NAME: ticker_data.get('longName') or ticker_data.get('shortName'),
     MARKET_CAP: ticker_data.get('marketCap'),
-    PE_RATIO: ticker_data.get('trailingPE'),
-    FORWARD_PE_RATIO: ticker_data.get('forwardPE'),
+    PE_RATIO: trailing_pe,
+    FORWARD_PE_RATIO: forward_pe,
     PB: ticker_data.get('priceToBook'),
     DIVIDEND_YIELD: safe_div(ticker_data.get('dividendYield'), 100),
     PEG: ticker_data.get('trailingPegRatio'),
@@ -59,7 +63,7 @@ def format_financials(ticker_data: Dict) -> Dict:
     PAYOUT_RATIO: ticker_data.get('payoutRatio'),
     AVG_VOLUME: ticker_data.get('averageVolume10days') * curr if ticker_data.get('averageVolume10days') and curr else None,
     VOL_1D: vol_1d, VOL_3D: vol_3d, VOL_5D: vol_5d, VOL_30D: vol_30d,
-    PRICE_1D: hp_1d, PRICE_3D: hp_3d, PRICE_5D: hp_5d, PRICE_30D: hp_30d,
+    PRICE_1D: hp_1d, PRICE_3D: hp_3d, PRICE_5D: hp_5d, PRICE_7D: hp_7d, PRICE_10D: hp_10d, PRICE_15D: hp_15d, PRICE_20D: hp_20d, PRICE_30D: hp_30d,
     TARGET_HIGH: t_high,
     TARGET_LOW: t_low,
     TARGET_MEAN: t_mean,
@@ -73,7 +77,7 @@ def format_financials(ticker_data: Dict) -> Dict:
     # AVG_RATING: ticker_data.get('averageAnalystRating'),
     AVG_RATING_SCORE: avg_rating_score if avg_rating_score != 0 else None,
     AVG_RATING_LABEL: avg_rating_label,
-    GROWTH: ticker_data.get('trailingPE')/ticker_data.get('forwardPE') if ticker_data.get('trailingPE') and ticker_data.get('forwardPE') else None,
+    GROWTH: trailing_pe / forward_pe if isinstance(trailing_pe, (int, float)) and isinstance(forward_pe, (int, float)) else None,
     SECTOR: ticker_data.get('sector')
   }
 
@@ -144,8 +148,7 @@ def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
       intermediate_data.append({'shortName': symbol, 'error': True})
 
   # Step 2: Fetch TV scores (unchanged from previous fix)
-  tv_scores = get_tv_scores_batch(tv_symbols_to_fetch)
-  # tv_scores = {}
+  tv_scores = {} if MODE == FAST else get_tv_scores_batch(tv_symbols_to_fetch)
 
   # Step 3: Combine and Format
   final_results = []
