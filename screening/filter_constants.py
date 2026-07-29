@@ -4,6 +4,7 @@ from .excluded_tickers.all_excluded_tickers import ALL_EXCLUDED_TICKERS
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+CURRENT_CSV = os.path.join(BASE_DIR, "..", "output", "JP_ETFs.csv")
 DATA_CSV = os.path.join(BASE_DIR, "..", "output", "JP_ETFs_full.csv")
 LOOKUP_CSV = os.path.join(BASE_DIR, "..", "output", "Old", "JP_ETFs_full_old.csv")
 OUTPUT_CSV = os.path.join(BASE_DIR, "..", "output", "filtered_etfs.csv")
@@ -16,4 +17,8 @@ EXCLUDED_TICKERS = ALL_EXCLUDED_TICKERS
 
 TICKER = "Ticker"
 NAME = "Name"
+FEE = "Fee"
+TER = "TER"
+BOUGHT = "Bought"
 AVG_VOLUME = "Avg Volume"
+NOTE = "Note"

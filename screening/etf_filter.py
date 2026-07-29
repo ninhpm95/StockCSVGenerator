@@ -1,10 +1,25 @@
+from unittest import result
+
 import pandas as pd
+import numpy as np
 from .filter_helper import normalize_ticker, load_lookup_fees
-from .filter_constants import DATA_CSV, LOOKUP_CSV, MIN_AVG_VOLUME, VOLUME_CASCADE, TICKER_GROUPS, EXCLUDED_TICKERS, OUTPUT_CSV, TICKER, NAME, AVG_VOLUME
+from .filter_constants import *
 
 def filter_etfs():
   df = pd.read_csv(DATA_CSV, dtype=str)
   df[TICKER] = df[TICKER].map(normalize_ticker)
+
+  # Preserve user notes
+  current_df = pd.read_csv(CURRENT_CSV, dtype=str)
+  current_df[TICKER] = current_df[TICKER].map(normalize_ticker)
+
+  # Keep only columns we want to restore later
+  current_df = current_df[[TICKER, BOUGHT, NOTE]].copy()
+
+  # Remove them from main dataframe if they exist
+  for col in [BOUGHT, NOTE]:
+    if col in df.columns:
+      df = df.drop(columns=[col])
 
   # Numeric coercion for the columns we filter/sort on
   df[AVG_VOLUME] = pd.to_numeric(df[AVG_VOLUME], errors="coerce")
@@ -27,9 +42,13 @@ def filter_etfs():
   # ---- Step 4: fix Fee using LOOKUP_CSV (ignore/keep original if ticker not found) ----
   fee_lookup = load_lookup_fees(LOOKUP_CSV)
   looked_up = df[TICKER].map(fee_lookup)
+  looked_up = pd.to_numeric(looked_up, errors="coerce")
   found_mask = looked_up.notna()
-  looked_up_pct = "'" + (looked_up * 100).round(4).astype(str) + '%'
-  df["Fee"] = df["Fee"].where(~found_mask, looked_up_pct)
+  looked_up_pct = "'" + looked_up.round(4).astype(str)
+  ter = np.where(found_mask, looked_up_pct, np.nan)
+  if TER in df.columns:
+    df = df.drop(columns=[TER])
+  df.insert(df.columns.get_loc(FEE) + 1, TER, ter)
   fee_fixed_n = int(found_mask.sum())
 
   # ---- Step 5: group dedup by cascading volume + lowest fee ----
@@ -94,6 +113,24 @@ def filter_etfs():
 
   result = pd.concat(keep_rows, ignore_index=True)
   result = result.sort_values(TICKER).reset_index(drop=True)
+
+  result = result.merge(
+    current_df,
+    on=TICKER,
+    how="left"
+  )
+
+  # Move Bought after TER
+  if BOUGHT in result.columns:
+    result.insert(
+      result.columns.get_loc(TER) + 1,
+      BOUGHT,
+      result.pop(BOUGHT)
+    )
+
+  # Move Note to end
+  if NOTE in result.columns:
+    result[NOTE] = result.pop(NOTE)
 
   result.to_csv(OUTPUT_CSV, index=False)
 

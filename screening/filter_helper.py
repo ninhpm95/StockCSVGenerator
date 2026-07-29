@@ -1,4 +1,5 @@
 import pandas as pd
+from .filter_constants import *
 
 def normalize_ticker(t):
   return str(t).strip()
@@ -18,6 +19,6 @@ def parse_number(raw):
 
 def load_lookup_fees(lookup_path):
   lookup = pd.read_csv(lookup_path, dtype=str)
-  lookup["Ticker"] = lookup["Ticker"].map(normalize_ticker)
-  lookup["Fee"] = lookup["Fee"].map(parse_number)
-  return dict(zip(lookup["Ticker"], lookup["Fee"]))
+  lookup[TICKER] = lookup[TICKER].map(normalize_ticker)
+  lookup[TER] = lookup[TER].map(parse_number)
+  return dict(zip(lookup[TICKER], lookup[TER]))

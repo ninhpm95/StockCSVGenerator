@@ -64,6 +64,7 @@ SCORE = 'Score'
 
 # Others
 FEE = 'Fee'
+TER = 'TER'
 BOUGHT = 'Bought'
 NOTE = 'Note'
 FAST = 'Fast'
