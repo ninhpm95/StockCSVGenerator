@@ -8,7 +8,7 @@ REIT_JP = [
   "1343", # NEXT FUNDS REIT INDEX ETF
   "1595", # NZAM ETF J-REIT Index
   "1488", # Daiwa ETF Tokyo Stock Exchange REIT Index
-  "443A", #iFreeETF Tokyo Stock Exchange REIT Index (Feb/May/Aug/Nov Dividend Type)
+  "443A", # iFreeETF Tokyo Stock Exchange REIT Index (Feb/May/Aug/Nov Dividend Type)
   "530A", # NZAM ETF J-REIT Index(2 5 8 11)
   "1476", # iShares Core Japan REIT ETF
   "2517", # MAXIS J-REIT Core ETF

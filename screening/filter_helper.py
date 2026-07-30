@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 from .filter_constants import *
 
@@ -9,6 +10,7 @@ def parse_number(raw):
   if pd.isna(raw):
     return None
   s = str(raw).strip().lstrip("'")
+  s = re.sub(r"\(\*\d+\)", "", s).strip()
   has_percent = s.endswith("%")
   s = s.rstrip("%")
   try:
@@ -20,5 +22,5 @@ def parse_number(raw):
 def load_lookup_fees(lookup_path):
   lookup = pd.read_csv(lookup_path, dtype=str)
   lookup[TICKER] = lookup[TICKER].map(normalize_ticker)
-  lookup[TER] = lookup[TER].map(parse_number)
-  return dict(zip(lookup[TICKER], lookup[TER]))
+  lookup[FEE] = lookup[FEE].map(parse_number)
+  return dict(zip(lookup[TICKER], lookup[FEE]))

@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 CURRENT_CSV = os.path.join(BASE_DIR, "..", "output", "JP_ETFs.csv")
 DATA_CSV = os.path.join(BASE_DIR, "..", "output", "JP_ETFs_full.csv")
-LOOKUP_CSV = os.path.join(BASE_DIR, "..", "output", "Old", "JP_ETFs_full_old.csv")
+LOOKUP_CSV = os.path.join(BASE_DIR, "..", "output", "JP_ETFs_full.csv")
 OUTPUT_CSV = os.path.join(BASE_DIR, "..", "output", "filtered_etfs.csv")
 
 MIN_AVG_VOLUME = 50_000_000
