@@ -115,10 +115,7 @@ def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
 
   for symbol in ticker_list:
     try:
-      if get_region() == 'JP' or symbol.endswith('.T'):
-        yf_sym = symbol
-      else:
-        yf_sym = symbol.replace('.', '-')
+      yf_sym = symbol
       
       ticker = yf.Ticker(yf_sym)
       

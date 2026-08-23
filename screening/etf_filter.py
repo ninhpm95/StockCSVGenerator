@@ -44,11 +44,11 @@ def filter_etfs():
   looked_up = df[TICKER].map(fee_lookup)
   looked_up = pd.to_numeric(looked_up, errors="coerce")
   found_mask = looked_up.notna()
-  looked_up_pct = "'" + looked_up.round(4).astype(str)
-  ter = np.where(found_mask, looked_up_pct, np.nan)
-  if FEE in df.columns:
-    df = df.drop(columns=[FEE])
-  df.insert(df.columns.get_loc(NAME) + 1, FEE, ter)
+  # looked_up_pct = "'" + looked_up.round(4).astype(str)
+  # fee = np.where(found_mask, looked_up_pct, np.nan)
+  # if FEE in df.columns:
+  #   df = df.drop(columns=[FEE])
+  # df.insert(df.columns.get_loc(NAME) + 1, FEE, fee)
   fee_fixed_n = int(found_mask.sum())
 
   # ---- Step 5: group dedup by cascading volume + lowest fee ----

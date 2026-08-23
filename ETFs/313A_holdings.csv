@@ -1,0 +1,37 @@
+﻿Fund Holdings as of,"2026/08/21"
+ 
+Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
+"TOPT","ISHARES TOP 20 U.S. STOCKS E CL1","Other","Equity","2,242,628,796.19","99.88","2,242,628,796.19","423,273.00","5,298.89","United States","New York Stock Exchange Inc.","JPY","0.01","USD"
+"JPY","JPY CASH","Cash and/or Derivatives","Cash","2,379,164.00","0.11","2,379,164.00","2,379,164.00","100.00","Japan","-","JPY","1.00","JPY"
+"USD","USD CASH","Cash and/or Derivatives","Cash","357,617.20","0.02","357,617.20","2,250.00","15,898.25","United States","-","JPY","0.01","USD"
+ 
+Fund Holdings as of,"2026/08/20"
+ 
+Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
+"NVDA","NVIDIA","Information Technology","Equity","371,884,576.42","16.62","371,884,576.42","510,399.00","-","United States","NASDAQ","JPY","-","USD"
+"AAPL","APPLE","Information Technology","Equity","323,745,608.53","14.47","323,745,608.53","309,518.00","-","United States","NASDAQ","JPY","-","USD"
+"GOOGL","ALPHABET CLASS A","Communication","Equity","141,447,740.37","6.32","141,447,740.37","123,573.00","-","United States","NASDAQ","JPY","-","USD"
+"MSFT","MICROSOFT","Information Technology","Equity","141,238,147.11","6.31","141,238,147.11","87,364.00","-","United States","NASDAQ","JPY","-","USD"
+"GOOG","ALPHABET CLASS C","Communication","Equity","113,188,402.32","5.06","113,188,402.32","99,607.00","-","United States","NASDAQ","JPY","-","USD"
+"AMZN","AMAZON.COM INC","Consumer Discretionary","Equity","105,515,903.78","4.72","105,515,903.78","120,732.00","-","United States","NASDAQ","JPY","-","USD"
+"MU","MICRON TECHNOLOGY","Information Technology","Equity","99,767,283.64","4.46","99,767,283.64","30,475.00","-","United States","NASDAQ","JPY","-","USD"
+"AVGO","BROADCOM INC","Information Technology","Equity","94,445,894.09","4.22","94,445,894.09","77,216.00","-","United States","NASDAQ","JPY","-","USD"
+"META","META PLATFORMS CLASS A","Communication","Equity","92,282,480.55","4.12","92,282,480.55","50,318.00","-","United States","NASDAQ","JPY","-","USD"
+"LLY","ELI LILLY","Health Care","Equity","89,376,999.63","4.00","89,376,999.63","21,376.00","-","United States","New York Stock Exchange Inc.","JPY","-","USD"
+"TSLA","TESLA INC","Consumer Discretionary","Equity","87,313,690.32","3.90","87,313,690.32","75,294.00","-","United States","NASDAQ","JPY","-","USD"
+"JPM","JPMORGAN CHASE & CO","Financials","Equity","85,541,755.87","3.82","85,541,755.87","72,419.00","-","United States","New York Stock Exchange Inc.","JPY","-","USD"
+"BRKB","BERKSHIRE HATHAWAY INC CLASS B","Financials","Equity","82,737,943.31","3.70","82,737,943.31","49,560.00","-","United States","New York Stock Exchange Inc.","JPY","-","USD"
+"AMD","ADVANCED MICRO DEVICES","Information Technology","Equity","69,519,267.58","3.11","69,519,267.58","44,073.00","-","United States","NASDAQ","JPY","-","USD"
+"XOM","EXXONMOBIL HOLDINGS CORP","Energy","Equity","62,545,040.81","2.80","62,545,040.81","112,035.00","-","United States","New York Stock Exchange Inc.","JPY","-","USD"
+"JNJ","JOHNSON & JOHNSON","Health Care","Equity","58,451,045.47","2.61","58,451,045.47","65,064.00","-","United States","New York Stock Exchange Inc.","JPY","-","USD"
+"V","VISA CLASS A","Financials","Equity","55,129,953.18","2.46","55,129,953.18","44,863.00","-","United States","New York Stock Exchange Inc.","JPY","-","USD"
+"WMT","WALMART INC","Consumer Staples","Equity","41,341,487.68","1.85","41,341,487.68","118,490.00","-","United States","NASDAQ","JPY","-","USD"
+"INTC","INTEL CORPORATION","Information Technology","Equity","41,284,285.26","1.85","41,284,285.26","133,366.00","-","United States","NASDAQ","JPY","-","USD"
+"CSCO","CISCO SYSTEMS INC","Information Technology","Equity","39,313,483.00","1.76","39,313,483.00","106,766.00","-","United States","NASDAQ","JPY","-","USD"
+"COST","COSTCO WHOLESALE CORP","Consumer Staples","Equity","37,613,945.36","1.68","37,613,945.36","11,992.00","-","United States","NASDAQ","JPY","-","USD"
+"JPY","JPY CASH","Cash and/or Derivatives","Cash","2,379,164.00","0.11","2,379,164.00","23,792.00","100.00","Japan","-","JPY","1.00","JPY"
+"USD","USD CASH","Cash and/or Derivatives","Cash","988,303.72","0.04","988,303.72","2,250.00","-","United States","-","JPY","-","USD"
+"XTSLA","BLK CSH FND TREASURY SL AGENCY","Cash and/or Derivatives","Money Market","122,895.83","0.01","122,895.83","36,588.00","-","United States","-","JPY","-","USD"
+"BPSFT","CASH COLLATERAL BPSFT USD","Cash and/or Derivatives","Cash Collateral and Margins","30,165.34","0.00","30,165.34","9,000.00","-","United States","-","JPY","-","USD"
+"HWBU6","MICRO E-MINI NASDAQ 100 SEP 26","Cash and/or Derivatives","Futures","0.00","0.00","0.00","2.00","-","-","Chicago Mercantile Exchange","JPY","-","USD"
+ 

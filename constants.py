@@ -5,8 +5,9 @@ OUTPUT_DIR = "output"
 
 FILE_NAME = "JP_ETFs.csv"
 # FILE_NAME = "JP_ETFs_full.csv"
-# FILE_NAME = "JP.csv"
-# FILE_NAME = "US.csv"
+# FILE_NAME = "JP_stocks.csv"
+# FILE_NAME = "US_stocks.csv"
+# FILE_NAME = "HK_stocks.csv"
 
 SPEED = NORMAL
 # SPEED = FAST
