@@ -34,7 +34,7 @@ def weighted_harmonic_mean(values: pd.Series, weights: pd.Series) -> float:
     numeric_values = pd.to_numeric(values, errors="coerce")
     numeric_weights = pd.to_numeric(weights, errors="coerce")
 
-    valid = numeric_values.notna() & numeric_weights.notna() & numeric_values.ne(0)
+    valid = numeric_values.notna() & numeric_weights.notna() & (numeric_values > 0)
     if not valid.any():
         return float("nan")
 

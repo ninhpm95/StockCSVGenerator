@@ -1,0 +1,13 @@
+﻿Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Par Value,Price,Location,Exchange,Currency,Duration,FX Rate,Maturity,Coupon (%),Market Currency,Effective Date
+GNMA,ISHARES GNMA BOND ETF,Securitized,Fixed Income,"3,147,099,954.09",102.09,"3,147,099,954.09","454,152.00","454,152.00","6,930.38",United States,NASDAQ,JPY,5.70,0.01,-,0.00,USD,2012/02/07
+JPY,JPY CASH,Cash and/or Derivatives,Cash,"4,786,314.00",0.16,"4,786,314.00","4,786,314.00","4,786,314.00",100.00,Japan,-,JPY,0.00,1.00,-,0.00,JPY,1990/01/01
+USD,USD/JPY,Cash and/or Derivatives,Forwards,"97,214.03",0.00,"97,214.03","70,480.00","70,480.00",1.00,Japan,-,JPY,0.00,0.01,2026/09/02,0.00,JPY,2026/08/05
+USD,USD/JPY,Cash and/or Derivatives,Forwards,"3,469.79",0.00,"3,469.79","5,340.00","5,340.00",1.00,Japan,-,JPY,0.00,0.01,2026/09/02,0.00,JPY,2026/08/07
+USD,USD/JPY,Cash and/or Derivatives,Forwards,"-10,934.13",0.00,"-10,934.13","-8,580.00","-8,580.00",1.00,Japan,-,JPY,0.00,0.01,2026/09/02,0.00,JPY,2026/08/06
+USD,USD/JPY,Cash and/or Derivatives,Forwards,"-141,453.89",0.00,"-141,453.89","-41,210.00","-41,210.00",1.00,Japan,-,JPY,0.00,0.01,2026/09/02,0.00,JPY,2026/08/03
+USD,USD/JPY,Cash and/or Derivatives,Forwards,"-1,531,373.76",-0.05,"-1,531,373.76","-560,150.00","-560,150.00",1.00,Japan,-,JPY,0.00,0.01,2026/09/02,0.00,JPY,2026/08/03
+USD,USD CASH,Cash and/or Derivatives,Cash,"-1,874,427.85",-0.06,"-1,874,427.85","-11,791.00","-11,791.00","15,898.25",United States,-,JPY,0.00,0.01,-,0.00,USD,1989/01/01
+USD,USD/JPY,Cash and/or Derivatives,Forwards,"-65,620,261.65",-2.13,"-65,620,261.65","-19,169,758.00","-19,169,758.00",1.00,Japan,-,JPY,0.00,0.01,2026/09/02,0.00,JPY,2026/08/03
+ ,,,,,,,,,,,,,,,,,,
+Fund Holdings as of,2026/08/21,,,,,,,,,,,,,,,,,
+ ,,,,,,,,,,,,,,,,,,

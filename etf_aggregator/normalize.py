@@ -5,14 +5,36 @@ import re
 import pandas as pd
 
 
-_TICKER_PATTERN = re.compile(r"^[A-Z0-9]{1,5}([.\-][A-Z0-9]{1,4})?$")
+# Codes that show up in the "Code" column of holdings files but aren't
+# equities -- cash positions, currency balances, collateral, corporate
+# actions, etc. These are legitimate holdings, just not ones that will
+# ever be found in a stock database, so they're filtered out rather than
+# reported as misses. Add more here as new non-stock codes turn up.
+_RESERVED_NON_STOCKS = {
+    "CASH", "COLLATERAL", "RIGHTS", "MARGIN", "PENDING", "SUSPENSE",
+    "OTHER", "FUTURES", "OPTIONS", "SWAP", "FORWARD", "ACCRUED",
+    "N/A", "NA", "TBD", "UNKNOWN",
+    # currencies
+    "USD", "JPY", "EUR", "GBP", "HKD", "AUD", "CNY", "KRW", "TWD",
+    "INR", "CAD", "CHF", "SGD", "NZD",
+}
 
-def is_valid_ticker(ticker: str) -> bool:
-    """Check if string matches a standard stock ticker format
-    (1-5 alphanumeric chars, optional dot/dash extension like BRK.B or 0700.HK)."""
-    if not isinstance(ticker, str):
+
+def is_reserved_non_stock(code: str) -> bool:
+    """Check whether a holding's Code is a known non-stock placeholder
+    (cash, currency, collateral, ...) rather than an actual ticker."""
+    return normalize_ticker(code) in _RESERVED_NON_STOCKS
+
+
+_ISIN_PATTERN = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}\d$")
+
+
+def is_valid_isin(isin: str) -> bool:
+    """Check if a string matches the standard ISIN format: 2-letter country
+    code, 9 alphanumeric characters, 1 numeric check digit (12 chars total)."""
+    if not isinstance(isin, str):
         return False
-    return bool(_TICKER_PATTERN.match(ticker.strip().upper()))
+    return bool(_ISIN_PATTERN.match(isin.strip().upper()))
 
 
 def normalize_text(value) -> str:

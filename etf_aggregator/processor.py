@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple, TypedDict
 import logging
 import pandas as pd
 
-from aggregating_constants import AGGREGATE_COLUMNS, AGGREGATION_METHODS, OVERWRITE_EXISTING
+from aggregating_constants import AGGREGATE_COLUMNS, AGGREGATION_METHODS, OVERWRITE_EXISTING, MIN_WEIGHT_THRESHOLD
 from normalize import normalize_isin, normalize_ticker
 from aggregator import rating_label, weighted_average, weighted_harmonic_mean
 from loaders import find_holdings_file, extract_region_from_filename
@@ -61,7 +61,14 @@ def process_etf(
     total_weight = sum(item["weight"] for item in matched_rows)
     stats.matched_weight = total_weight
 
-    if total_weight <= 0:
+    # --- COVERAGE GUARD: Skip aggregation if matched weight is below 80% ---
+    if total_weight < MIN_WEIGHT_THRESHOLD:
+        logger.warning(
+            "ETF %s: matched weight (%.1f%%) is below the required %.0f%% threshold; leaving row unchanged.",
+            ticker,
+            total_weight * 100,
+            MIN_WEIGHT_THRESHOLD * 100,
+        )
         return result, stats
 
     for item in matched_rows:

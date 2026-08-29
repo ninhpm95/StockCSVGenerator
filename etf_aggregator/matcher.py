@@ -39,12 +39,39 @@ def find_region(
     return None, None
 
 
+def find_stock_by_isin(
+    isin: str,
+    stock_data: Dict[str, pd.DataFrame],
+) -> Tuple[Optional[pd.Series], Optional[str]]:
+    """Search every loaded stock file for a row whose ISIN matches, ignoring
+    region entirely. Used as a fallback when a holding's region can't be
+    determined some other way.
+
+    Returns (None, None) if `isin` is blank, or if no stock file has an
+    ISIN column to search -- both are "can't do this lookup" cases, not
+    "searched and found nothing".
+    """
+    if not isin:
+        return None, None
+
+    for region, df in stock_data.items():
+        if "ISIN" not in df.columns:
+            continue
+
+        matches = df.index[df["ISIN"].map(normalize_isin) == isin]
+        if len(matches):
+            return df.loc[matches[0]], region
+
+    return None, None
+
+
 def find_stock(
     holding: pd.Series,
     stock_data: Dict[str, pd.DataFrame],
     region_hint: Optional[str] = None,
 ) -> Tuple[Optional[pd.Series], Optional[str], Optional[str]]:
-    """Attempt to locate a stock in the database by ticker symbol.
+    """Attempt to locate a stock in the database, primarily by ticker symbol
+    within the holding's region.
 
     A holding that isn't a real equity (cash, FX, derivatives, ...) simply
     won't be found here and is reported as a miss like any other unmatched
@@ -55,7 +82,17 @@ def find_stock(
         return None, None, None
 
     region, reason = find_region(holding, stock_data, region_hint)
+
     if region is None:
+        # No way to narrow down which region's stock file to look in --
+        # fall back to matching by ISIN across all of them instead of
+        # giving up outright. This only works if the holding actually
+        # carries an ISIN and at least one stock file has an ISIN column;
+        # find_stock_by_isin returns (None, None) otherwise.
+        isin = normalize_isin(holding.get("ISIN", ""))
+        stock, isin_region = find_stock_by_isin(isin, stock_data)
+        if stock is not None:
+            return stock, isin_region, "isin_search"
         return None, None, None
 
     df = stock_data[region]

@@ -1,0 +1,401 @@
+﻿Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
+6857,ADVANTEST,Electric Appliances,Equity,"15,837,744,000.00",2.68,"15,837,744,000.00","447,900.00","35,360.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8411,MIZUHO FINANCIAL GROUP,Banks,Equity,"13,269,910,500.00",2.24,"13,269,910,500.00","1,641,300.00","8,085.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9984,SOFTBANK GROUP,Information & Communication,Equity,"12,530,162,000.00",2.12,"12,530,162,000.00","2,326,000.00","5,387.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8035,TOKYO ELECTRON,Electric Appliances,Equity,"12,192,314,000.00",2.06,"12,192,314,000.00","225,700.00","54,020.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8316,SUMITOMO MITSUI FINANCIAL GROUP,Banks,Equity,"11,970,015,600.00",2.02,"11,970,015,600.00","1,828,600.00","6,546.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6098,RECRUIT HOLDINGS LTD,Services,Equity,"11,209,473,500.00",1.89,"11,209,473,500.00","694,300.00","16,145.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8306,MITSUBISHI UFJ FINANCIAL GROUP,Banks,Equity,"10,813,222,400.00",1.83,"10,813,222,400.00","3,121,600.00","3,464.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6981,MURATA MANUFACTURING,Electric Appliances,Equity,"10,228,938,500.00",1.73,"10,228,938,500.00","1,419,700.00","7,205.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8058,MITSUBISHI,Wholesale Trade,Equity,"10,167,309,600.00",1.72,"10,167,309,600.00","2,165,100.00","4,696.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8031,MITSUI,Wholesale Trade,Equity,"10,054,521,400.00",1.70,"10,054,521,400.00","2,106,100.00","4,774.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6503,MITSUBISHI ELECTRIC,Electric Appliances,Equity,"9,306,999,000.00",1.57,"9,306,999,000.00","1,645,800.00","5,655.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6861,KEYENCE,Electric Appliances,Equity,"8,787,141,000.00",1.49,"8,787,141,000.00","108,900.00","80,690.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8001,ITOCHU,Wholesale Trade,Equity,"8,346,459,600.00",1.41,"8,346,459,600.00","4,164,900.00","2,004.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4063,SHIN ETSU CHEMICAL,Chemicals,Equity,"8,126,359,000.00",1.37,"8,126,359,000.00","1,319,000.00","6,161.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9983,FAST RETAILING,Retail Trade,Equity,"8,108,564,000.00",1.37,"8,108,564,000.00","106,300.00","76,280.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8766,TOKIO MARINE HOLDINGS,Insurance,Equity,"8,023,566,900.00",1.36,"8,023,566,900.00","1,109,300.00","7,233.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6501,HITACHI,Electric Appliances,Equity,"7,801,344,900.00",1.32,"7,801,344,900.00","1,482,300.00","5,263.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6752,PANASONIC HOLDINGS,Electric Appliances,Equity,"7,638,685,600.00",1.29,"7,638,685,600.00","1,775,200.00","4,303.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7011,MITSUBISHI HEAVY INDUSTRIES,Machinery,Equity,"7,573,682,800.00",1.28,"7,573,682,800.00","1,868,200.00","4,054.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7203,TOYOTA MOTOR,Transportation Equipment,Equity,"7,152,671,400.00",1.21,"7,152,671,400.00","2,332,900.00","3,066.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7741,HOYA,Precision Instruments,Equity,"7,049,532,000.00",1.19,"7,049,532,000.00","279,300.00","25,240.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8053,SUMITOMO,Wholesale Trade,Equity,"6,332,642,700.00",1.07,"6,332,642,700.00","3,721,800.00","1,701.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5803,FUJIKURA,Nonferrous Metal,Equity,"6,329,619,100.00",1.07,"6,329,619,100.00","1,185,100.00","5,341.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6758,SONY GROUP,Electric Appliances,Equity,"6,182,571,300.00",1.04,"6,182,571,300.00","1,636,900.00","3,777.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2914,JAPAN TOBACCO,Foods,Equity,"6,114,300,000.00",1.03,"6,114,300,000.00","890,000.00","6,870.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9432,NTT,Information & Communication,Equity,"6,088,944,120.00",1.03,"6,088,944,120.00","37,725,800.00",161.40,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8002,MARUBENI,Wholesale Trade,Equity,"5,832,056,000.00",0.99,"5,832,056,000.00","1,201,000.00","4,856.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9433,KDDI,Information & Communication,Equity,"5,740,310,400.00",0.97,"5,740,310,400.00","2,006,400.00","2,861.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9434,SOFTBANK,Information & Communication,Equity,"5,603,537,520.00",0.95,"5,603,537,520.00","24,039,200.00",233.10,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8591,ORIX,Other Financing Business,Equity,"5,271,385,500.00",0.89,"5,271,385,500.00","875,500.00","6,021.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6702,FUJITSU,Electric Appliances,Equity,"5,175,071,800.00",0.87,"5,175,071,800.00","1,382,600.00","3,743.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6301,KOMATSU,Machinery,Equity,"5,108,410,300.00",0.86,"5,108,410,300.00","724,700.00","7,049.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6723,RENESAS ELECTRONICS CORP,Electric Appliances,Equity,"5,053,639,200.00",0.85,"5,053,639,200.00","1,456,800.00","3,469.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8750,DAIICHI LIFE GROUP,Insurance,Equity,"4,985,410,500.00",0.84,"4,985,410,500.00","2,820,600.00","1,767.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7267,HONDA MOTOR,Transportation Equipment,Equity,"4,830,224,400.00",0.82,"4,830,224,400.00","2,773,600.00","1,741.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8630,SOMPO HOLDINGS,Insurance,Equity,"4,828,289,500.00",0.82,"4,828,289,500.00","727,700.00","6,635.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6701,NEC,Electric Appliances,Equity,"4,755,894,000.00",0.80,"4,755,894,000.00","986,700.00","4,820.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5802,SUMITOMO ELECTRIC INDUSTRIES,Nonferrous Metal,Equity,"4,703,220,000.00",0.79,"4,703,220,000.00","2,120,000.00","2,218.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4578,OTSUKA HOLDINGS,Pharmaceutical,Equity,"4,567,500,000.00",0.77,"4,567,500,000.00","362,500.00","12,600.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6146,DISCO CORP,Machinery,Equity,"4,367,168,000.00",0.74,"4,367,168,000.00","72,400.00","60,320.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8725,MS&AD INSURANCE GROUP HOLDINGS,Insurance,Equity,"4,359,658,200.00",0.74,"4,359,658,200.00","913,400.00","4,773.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6954,FANUC CORP,Electric Appliances,Equity,"4,344,194,800.00",0.73,"4,344,194,800.00","710,300.00","6,116.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8308,RESONA HOLDINGS,Banks,Equity,"4,218,222,750.00",0.71,"4,218,222,750.00","1,796,900.00","2,347.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6367,DAIKIN INDUSTRIES LTD,Machinery,Equity,"4,080,216,000.00",0.69,"4,080,216,000.00","195,600.00","20,860.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7974,NINTENDO,Other Products,Equity,"3,947,059,500.00",0.67,"3,947,059,500.00","449,500.00","8,781.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6762,TDK,Electric Appliances,Equity,"3,907,374,700.00",0.66,"3,907,374,700.00","1,297,700.00","3,011.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4568,DAIICHI SANKYO LTD,Pharmaceutical,Equity,"3,862,235,750.00",0.65,"3,862,235,750.00","1,346,900.00","2,867.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2802,AJINOMOTO,Foods,Equity,"3,781,743,000.00",0.64,"3,781,743,000.00","707,000.00","5,349.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8604,NOMURA HOLDINGS,Securities,Equity,"3,658,309,200.00",0.62,"3,658,309,200.00","2,405,200.00","1,521.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4062,IBIDEN LTD,Electric Appliances,Equity,"3,604,030,000.00",0.61,"3,604,030,000.00","188,200.00","19,150.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3382,SEVEN & I HOLDINGS,Retail Trade,Equity,"3,534,111,000.00",0.60,"3,534,111,000.00","1,738,800.00","2,032.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8309,SUMITOMO MITSUI TRUST GROUP,Banks,Equity,"3,450,986,700.00",0.58,"3,450,986,700.00","2,041,400.00","1,690.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5108,BRIDGESTONE,Rubber Products,Equity,"3,337,850,700.00",0.56,"3,337,850,700.00","816,300.00","4,089.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4519,CHUGAI PHARMACEUTICAL LTD,Pharmaceutical,Equity,"3,315,456,900.00",0.56,"3,315,456,900.00","466,900.00","7,101.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8802,MITSUBISHI ESTATE CO LTD,Real Estate ex REIT,Equity,"3,223,312,000.00",0.54,"3,223,312,000.00","875,900.00","3,680.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4503,ASTELLAS PHARMA,Pharmaceutical,Equity,"3,164,678,400.00",0.53,"3,164,678,400.00","1,308,800.00","2,418.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8801,MITSUI FUDOSAN,Real Estate ex REIT,Equity,"3,154,926,000.00",0.53,"3,154,926,000.00","2,117,400.00","1,490.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8015,TOYOTA TSUSHO,Wholesale Trade,Equity,"3,023,339,000.00",0.51,"3,023,339,000.00","420,200.00","7,195.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6273,SMC (JAPAN) CORP,Machinery,Equity,"3,018,463,000.00",0.51,"3,018,463,000.00","42,700.00","70,690.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7751,CANON,Electric Appliances,Equity,"3,015,117,000.00",0.51,"3,015,117,000.00","667,800.00","4,515.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7936,ASICS,Other Products,Equity,"3,013,629,300.00",0.51,"3,013,629,300.00","612,900.00","4,917.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4901,FUJIFILM HOLDINGS,Chemicals,Equity,"2,873,850,000.00",0.49,"2,873,850,000.00","892,500.00","3,220.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6902,DENSO,Transportation Equipment,Equity,"2,835,711,200.00",0.48,"2,835,711,200.00","1,457,200.00","1,946.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5401,NIPPON STEEL,Iron & Steel,Equity,"2,774,456,100.00",0.47,"2,774,456,100.00","4,184,700.00",663.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5020,ENEOS HOLDINGS,Oil & Coal Products,Equity,"2,746,984,600.00",0.46,"2,746,984,600.00","2,108,200.00","1,303.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1605,INPEX,Mining,Equity,"2,709,847,600.00",0.46,"2,709,847,600.00","700,400.00","3,869.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4661,ORIENTAL LAND,Services,Equity,"2,681,665,000.00",0.45,"2,681,665,000.00","901,400.00","2,975.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4543,TERUMO,Precision Instruments,Equity,"2,546,612,600.00",0.43,"2,546,612,600.00","988,400.00","2,576.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4452,KAO,Chemicals,Equity,"2,510,194,500.00",0.42,"2,510,194,500.00","706,500.00","3,553.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9022,CENTRAL JAPAN RAILWAY,Land Transportation,Equity,"2,368,085,500.00",0.40,"2,368,085,500.00","612,700.00","3,865.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7269,SUZUKI MOTOR,Transportation Equipment,Equity,"2,280,256,200.00",0.39,"2,280,256,200.00","1,092,600.00","2,087.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5713,SUMITOMO METAL MINING,Nonferrous Metal,Equity,"2,234,426,000.00",0.38,"2,234,426,000.00","210,200.00","10,630.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4004,RESONAC HOLDINGS,Chemicals,Equity,"2,202,004,500.00",0.37,"2,202,004,500.00","138,100.00","15,945.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6920,LASERTEC,Electric Appliances,Equity,"2,197,097,000.00",0.37,"2,197,097,000.00","62,900.00","34,930.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7832,BANDAI NAMCO HOLDINGS INC,Other Products,Equity,"2,191,608,400.00",0.37,"2,191,608,400.00","394,600.00","5,554.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7013,IHI,Machinery,Equity,"2,166,904,950.00",0.37,"2,166,904,950.00","782,700.00","2,768.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9503,KANSAI ELECTRIC POWER,Electric Power & Gas,Equity,"2,062,112,250.00",0.35,"2,062,112,250.00","806,300.00","2,557.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6326,KUBOTA,Machinery,Equity,"2,013,504,900.00",0.34,"2,013,504,900.00","760,100.00","2,649.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9101,NIPPON YUSEN,Marine Transportation,Equity,"1,992,294,000.00",0.34,"1,992,294,000.00","293,200.00","6,795.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9104,MITSUI OSK LINES,Marine Transportation,Equity,"1,966,048,200.00",0.33,"1,966,048,200.00","282,600.00","6,957.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2503,KIRIN HOLDINGS,Foods,Equity,"1,926,836,000.00",0.33,"1,926,836,000.00","635,500.00","3,032.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1925,DAIWA HOUSE INDUSTRY,Construction,Equity,"1,877,143,600.00",0.32,"1,877,143,600.00","403,600.00","4,651.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8601,DAIWA SECURITIES GROUP INC,Securities,Equity,"1,840,808,900.00",0.31,"1,840,808,900.00","1,047,700.00","1,757.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2502,ASAHI GROUP HOLDINGS,Foods,Equity,"1,838,817,150.00",0.31,"1,838,817,150.00","1,100,100.00","1,671.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9735,SECOM,Services,Equity,"1,816,987,200.00",0.31,"1,816,987,200.00","285,600.00","6,362.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6361,EBARA,Machinery,Equity,"1,790,763,800.00",0.30,"1,790,763,800.00","356,300.00","5,026.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8697,JAPAN EXCHANGE GROUP,Other Financing Business,Equity,"1,787,608,200.00",0.30,"1,787,608,200.00","803,600.00","2,224.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7733,OLYMPUS,Precision Instruments,Equity,"1,762,722,000.00",0.30,"1,762,722,000.00","806,000.00","2,187.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8473,SBI HOLDINGS INC,Securities,Equity,"1,613,181,700.00",0.27,"1,613,181,700.00","514,900.00","3,133.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4507,SHIONOGI,Pharmaceutical,Equity,"1,596,746,250.00",0.27,"1,596,746,250.00","544,500.00","2,932.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9502,CHUBU ELECTRIC POWER INC,Electric Power & Gas,Equity,"1,576,075,000.00",0.27,"1,576,075,000.00","548,200.00","2,875.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1812,KAJIMA,Construction,Equity,"1,566,063,500.00",0.26,"1,566,063,500.00","323,500.00","4,841.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7012,KAWASAKI HEAVY INDUSTRIES,Transportation Equipment,Equity,"1,564,481,500.00",0.26,"1,564,481,500.00","585,400.00","2,672.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6988,NITTO DENKO,Chemicals,Equity,"1,557,867,000.00",0.26,"1,557,867,000.00","453,000.00","3,439.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7453,RYOHIN KEIKAKU,Retail Trade,Equity,"1,504,186,500.00",0.25,"1,504,186,500.00","343,500.00","4,379.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1928,SEKISUI HOUSE,Construction,Equity,"1,494,407,600.00",0.25,"1,494,407,600.00","434,800.00","3,437.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6383,DAIFUKU,Machinery,Equity,"1,480,516,800.00",0.25,"1,480,516,800.00","253,600.00","5,838.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6504,FUJI ELECTRIC,Electric Appliances,Equity,"1,472,580,000.00",0.25,"1,472,580,000.00","108,000.00","13,635.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9531,TOKYO GAS LTD,Electric Power & Gas,Equity,"1,455,980,700.00",0.25,"1,455,980,700.00","242,300.00","6,009.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4307,NOMURA RESEARCH INSTITUTE,Information & Communication,Equity,"1,425,567,500.00",0.24,"1,425,567,500.00","280,900.00","5,075.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7272,YAMAHA MOTOR,Transportation Equipment,Equity,"1,422,899,750.00",0.24,"1,422,899,750.00","736,300.00","1,932.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9766,KONAMI GROUP,Information & Communication,Equity,"1,416,024,000.00",0.24,"1,416,024,000.00","63,900.00","22,160.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7186,YOKOHAMA FINANCIAL GROUP,Banks,Equity,"1,415,506,700.00",0.24,"1,415,506,700.00","763,900.00","1,853.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9532,OSAKA GAS,Electric Power & Gas,Equity,"1,411,248,600.00",0.24,"1,411,248,600.00","255,800.00","5,517.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8830,SUMITOMO REALTY & DEVELOPMENT,Real Estate ex REIT,Equity,"1,409,774,400.00",0.24,"1,409,774,400.00","416,600.00","3,384.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7735,SCREEN HOLDINGS LTD,Electric Appliances,Equity,"1,389,096,000.00",0.23,"1,389,096,000.00","106,200.00","13,080.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1802,OBAYASHI,Construction,Equity,"1,374,778,600.00",0.23,"1,374,778,600.00","461,800.00","2,977.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1801,TAISEI,Construction,Equity,"1,368,495,000.00",0.23,"1,368,495,000.00","109,000.00","12,555.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+JPY,JPY CASH,Other,Cash,"1,347,080,154.01",0.23,"1,347,080,154.01","1,347,080,154.00",100.00,Japan,-,JPY,1.00,JPY
+3402,TORAY INDUSTRIES,Textiles & Apparel,Equity,"1,306,334,100.00",0.22,"1,306,334,100.00","1,004,100.00","1,301.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4684,OBIC LTD,Information & Communication,Equity,"1,292,760,000.00",0.22,"1,292,760,000.00","273,600.00","4,725.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7532,PAN PACIFIC INTERNATIONAL HOLDINGS,Retail Trade,Equity,"1,288,461,060.00",0.22,"1,288,461,060.00","1,590,300.00",810.20,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7309,SHIMANO INC,Transportation Equipment,Equity,"1,282,361,000.00",0.22,"1,282,361,000.00","62,600.00","20,485.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9697,CAPCOM LTD,Information & Communication,Equity,"1,242,754,000.00",0.21,"1,242,754,000.00","296,600.00","4,190.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9202,ANA HOLDINGS,Air Transportation,Equity,"1,228,763,400.00",0.21,"1,228,763,400.00","403,800.00","3,043.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4188,MITSUBISHI CHEMICAL GROUP,Chemicals,Equity,"1,192,391,200.00",0.20,"1,192,391,200.00","1,042,300.00","1,144.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4689,LY CORP,Information & Communication,Equity,"1,188,956,250.00",0.20,"1,188,956,250.00","2,297,500.00",517.50,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8331,CHIBA BANK,Banks,Equity,"1,168,878,300.00",0.20,"1,168,878,300.00","431,400.00","2,709.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7270,SUBARU,Transportation Equipment,Equity,"1,156,106,500.00",0.20,"1,156,106,500.00","439,000.00","2,633.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7167,MEBUKI FINANCIAL GROUP INC,Banks,Equity,"1,101,661,650.00",0.19,"1,101,661,650.00","684,900.00","1,608.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5706,MITSUI KINZOKU LIMITED LTD,Nonferrous Metal,Equity,"1,097,088,000.00",0.19,"1,097,088,000.00","38,400.00","28,570.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5334,NITERRA,Glass & Ceramics Products,Equity,"1,088,932,700.00",0.18,"1,088,932,700.00","121,900.00","8,933.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7912,DAI NIPPON PRINTING,Other Products,Equity,"1,033,939,800.00",0.17,"1,033,939,800.00","320,900.00","3,222.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9021,WEST JAPAN RAILWAY,Land Transportation,Equity,"1,024,951,200.00",0.17,"1,024,951,200.00","354,900.00","2,888.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8593,MITSUBISHI HC CAPITAL INC,Other Financing Business,Equity,"1,019,853,250.00",0.17,"1,019,853,250.00","734,500.00","1,388.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9201,JAPAN AIRLINES,Air Transportation,Equity,"1,017,796,000.00",0.17,"1,017,796,000.00","340,400.00","2,990.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9107,KAWASAKI KISEN LTD,Marine Transportation,Equity,"1,015,680,000.00",0.17,"1,015,680,000.00","320,000.00","3,174.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3563,FOOD & LIFE COMPANIES,Retail Trade,Equity,"1,011,033,600.00",0.17,"1,011,033,600.00","180,800.00","5,592.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3436,SUMCO,Metal Products,Equity,"1,010,188,800.00",0.17,"1,010,188,800.00","292,300.00","3,456.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6586,MAKITA,Machinery,Equity,"983,280,900.00",0.17,"983,280,900.00","186,900.00","5,261.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4523,EISAI,Pharmaceutical,Equity,"966,101,400.00",0.16,"966,101,400.00","194,700.00","4,962.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4091,NIPPON SANSO HOLDINGS,Chemicals,Equity,"955,010,700.00",0.16,"955,010,700.00","168,700.00","5,661.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4612,NIPPON PAINT HOLDINGS,Chemicals,Equity,"948,133,350.00",0.16,"948,133,350.00","791,100.00","1,198.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3659,NEXON,Information & Communication,Equity,"941,832,000.00",0.16,"941,832,000.00","309,000.00","3,048.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8136,SANRIO,Wholesale Trade,Equity,"938,611,800.00",0.16,"938,611,800.00","781,200.00","1,201.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8113,UNICHARM,Chemicals,Equity,"931,927,080.00",0.16,"931,927,080.00","932,300.00",999.60,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5411,JFE HOLDINGS,Iron & Steel,Equity,"920,055,000.00",0.16,"920,055,000.00","498,000.00","1,847.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7550,ZENSHO HOLDINGS,Retail Trade,Equity,"917,364,000.00",0.16,"917,364,000.00","80,400.00","11,410.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6479,MINEBEA MITSUMI INC,Electric Appliances,Equity,"892,862,100.00",0.15,"892,862,100.00","261,300.00","3,417.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2801,KIKKOMAN CORP,Foods,Equity,"892,165,200.00",0.15,"892,165,200.00","485,400.00","1,838.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5333,NGK,Glass & Ceramics Products,Equity,"886,266,400.00",0.15,"886,266,400.00","159,200.00","5,567.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2269,MEIJI HOLDINGS LTD,Foods,Equity,"885,768,000.00",0.15,"885,768,000.00","204,000.00","4,342.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9147,NIPPON EXPRESS HOLDINGS,Land Transportation,Equity,"883,074,300.00",0.15,"883,074,300.00","162,300.00","5,441.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8354,FUKUOKA FINANCIAL GROUP,Banks,Equity,"878,319,000.00",0.15,"878,319,000.00","117,000.00","7,507.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6532,BAYCURRENT INC,Services,Equity,"867,166,000.00",0.15,"867,166,000.00","112,400.00","7,715.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7202,ISUZU MOTORS,Transportation Equipment,Equity,"854,313,000.00",0.14,"854,313,000.00","383,100.00","2,230.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2768,SOJITZ CORP,Wholesale Trade,Equity,"838,543,200.00",0.14,"838,543,200.00","151,800.00","5,524.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9962,MISUMI GROUP,Wholesale Trade,Equity,"826,733,700.00",0.14,"826,733,700.00","222,300.00","3,719.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5019,IDEMITSU KOSAN LTD,Oil & Coal Products,Equity,"826,298,850.00",0.14,"826,298,850.00","612,300.00","1,349.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6448,BROTHER INDUSTRIES,Electric Appliances,Equity,"825,816,000.00",0.14,"825,816,000.00","181,100.00","4,560.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4528,ONO PHARMACEUTICAL,Pharmaceutical,Equity,"825,346,900.00",0.14,"825,346,900.00","332,600.00","2,481.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7259,AISIN,Transportation Equipment,Equity,"824,054,500.00",0.14,"824,054,500.00","363,500.00","2,267.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6506,YASKAWA ELECTRIC,Electric Appliances,Equity,"820,255,900.00",0.14,"820,255,900.00","163,300.00","5,023.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1878,DAITO TRUST CONSTRUCTION LTD,Real Estate ex REIT,Equity,"816,877,600.00",0.14,"816,877,600.00","249,200.00","3,278.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7701,SHIMADZU,Precision Instruments,Equity,"810,160,000.00",0.14,"810,160,000.00","197,600.00","4,100.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6645,OMRON,Electric Appliances,Equity,"808,815,800.00",0.14,"808,815,800.00","126,200.00","6,409.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6841,YOKOGAWA ELECTRIC,Electric Appliances,Equity,"805,297,500.00",0.14,"805,297,500.00","157,500.00","5,113.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9843,NITORI HOLDINGS,Retail Trade,Equity,"778,057,600.00",0.13,"778,057,600.00","254,600.00","3,056.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4204,SEKISUI CHEMICAL,Chemicals,Equity,"771,818,950.00",0.13,"771,818,950.00","293,300.00","2,631.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2702,MCDONALDS HOLDINGS (JAPAN) LTD,Retail Trade,Equity,"769,600,000.00",0.13,"769,600,000.00","96,200.00","8,000.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3003,HULIC,Real Estate ex REIT,Equity,"753,367,200.00",0.13,"753,367,200.00","427,200.00","1,763.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6869,SYSMEX,Electric Appliances,Equity,"738,622,500.00",0.12,"738,622,500.00","385,000.00","1,918.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7747,ASAHI INTECC,Precision Instruments,Equity,"730,772,800.00",0.12,"730,772,800.00","177,200.00","4,124.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9684,SQUARE ENIX HLDG,Information & Communication,Equity,"723,193,800.00",0.12,"723,193,800.00","245,400.00","2,947.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2875,TOYO SUISAN LTD,Foods,Equity,"721,392,000.00",0.12,"721,392,000.00","67,800.00","10,640.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6856,HORIBA,Electric Appliances,Equity,"719,112,000.00",0.12,"719,112,000.00","30,400.00","23,655.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3088,MATSUKIYOKARA,Retail Trade,Equity,"692,480,000.00",0.12,"692,480,000.00","270,500.00","2,560.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9508,KYUSHU ELECTRIC POWER,Electric Power & Gas,Equity,"658,305,900.00",0.11,"658,305,900.00","342,600.00","1,921.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9005,TOKYU,Land Transportation,Equity,"634,260,900.00",0.11,"634,260,900.00","382,200.00","1,659.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4186,TOKYO OHKA KOGYO,Chemicals,Equity,"630,230,400.00",0.11,"630,230,400.00","71,100.00","8,864.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5406,KOBE STEEL,Iron & Steel,Equity,"620,332,650.00",0.10,"620,332,650.00","308,700.00","2,009.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4021,NISSAN CHEMICAL CORP,Chemicals,Equity,"612,150,000.00",0.10,"612,150,000.00","75,000.00","8,162.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7261,MAZDA MOTOR,Transportation Equipment,Equity,"591,017,850.00",0.10,"591,017,850.00","491,900.00","1,201.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4768,OTSUKA CORP,Information & Communication,Equity,"589,831,200.00",0.10,"589,831,200.00","169,200.00","3,486.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5332,TOTO LTD,Glass & Ceramics Products,Equity,"587,941,200.00",0.10,"587,941,200.00","92,400.00","6,363.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3391,TSURUHA HOLDINGS,Retail Trade,Equity,"586,702,400.00",0.10,"586,702,400.00","246,100.00","2,384.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9602,TOHO (TOKYO),Information & Communication,Equity,"584,920,700.00",0.10,"584,920,700.00","378,100.00","1,547.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3626,TISI,Information & Communication,Equity,"584,758,800.00",0.10,"584,758,800.00","152,400.00","3,837.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4042,TOSOH CORP,Chemicals,Equity,"576,520,200.00",0.10,"576,520,200.00","216,900.00","2,658.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9435,HIKARI TSUSHIN INC,Information & Communication,Equity,"573,780,000.00",0.10,"573,780,000.00","14,600.00","39,300.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4732,USS,Services,Equity,"572,947,500.00",0.10,"572,947,500.00","290,100.00","1,975.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6724,SEIKO EPSON,Electric Appliances,Equity,"572,033,000.00",0.10,"572,033,000.00","187,000.00","3,059.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4183,MITSUI CHEMICALS,Chemicals,Equity,"566,072,700.00",0.10,"566,072,700.00","267,900.00","2,113.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9041,KINTETSU GROUP HOLDINGS LTD,Land Transportation,Equity,"563,090,400.00",0.10,"563,090,400.00","159,200.00","3,537.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5101,YOKOHAMA RUBBER,Rubber Products,Equity,"559,588,000.00",0.09,"559,588,000.00","74,000.00","7,562.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6113,AMADA LTD,Machinery,Equity,"555,975,000.00",0.09,"555,975,000.00","211,800.00","2,625.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2587,SUNTORY BEVERAGE & FOOD LTD,Foods,Equity,"549,891,300.00",0.09,"549,891,300.00","120,300.00","4,571.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2267,YAKULT HONSHA LTD,Foods,Equity,"543,114,300.00",0.09,"543,114,300.00","185,300.00","2,931.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6845,AZBIL CORP,Electric Appliances,Equity,"541,738,600.00",0.09,"541,738,600.00","361,400.00","1,499.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6965,HAMAMATSU PHOTONICS,Electric Appliances,Equity,"539,151,500.00",0.09,"539,151,500.00","230,900.00","2,335.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3086,J.FRONT RETAILING,Retail Trade,Equity,"538,097,700.00",0.09,"538,097,700.00","180,600.00","2,979.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3289,TOKYU FUDOSAN HOLDINGS,Real Estate ex REIT,Equity,"537,668,700.00",0.09,"537,668,700.00","400,200.00","1,343.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6806,HIROSE ELECTRIC LTD,Electric Appliances,Equity,"536,970,000.00",0.09,"536,970,000.00","21,000.00","25,570.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5929,SANWA HOLDINGS,Metal Products,Equity,"530,196,900.00",0.09,"530,196,900.00","146,100.00","3,629.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2413,M3 INC,Services,Equity,"529,176,150.00",0.09,"529,176,150.00","302,300.00","1,750.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9024,SEIBU HOLDINGS,Land Transportation,Equity,"524,943,000.00",0.09,"524,943,000.00","153,000.00","3,431.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9506,TOHOKU ELECTRIC POWER,Electric Power & Gas,Equity,"513,516,800.00",0.09,"513,516,800.00","391,400.00","1,312.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1911,SUMITOMO FORESTRY,Construction,Equity,"507,678,600.00",0.09,"507,678,600.00","378,300.00","1,342.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6465,HOSHIZAKI,Machinery,Equity,"501,121,600.00",0.08,"501,121,600.00","88,600.00","5,656.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2897,NISSIN FOODS HOLDINGS LTD,Foods,Equity,"496,303,200.00",0.08,"496,303,200.00","165,600.00","2,997.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7729,TOKYO SEIMITSU LTD,Precision Instruments,Equity,"487,254,000.00",0.08,"487,254,000.00","28,100.00","17,340.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7459,MEDIPAL HOLDINGS CORP,Wholesale Trade,Equity,"485,797,950.00",0.08,"485,797,950.00","168,300.00","2,886.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4403,NOF CORP,Chemicals,Equity,"472,321,550.00",0.08,"472,321,550.00","171,100.00","2,760.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4151,KYOWA KIRIN LTD,Pharmaceutical,Equity,"460,687,500.00",0.08,"460,687,500.00","175,500.00","2,625.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4527,ROHTO PHARMACEUTICAL LTD,Pharmaceutical,Equity,"452,412,600.00",0.08,"452,412,600.00","157,800.00","2,867.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4704,TREND MICRO,Information & Communication,Equity,"446,936,400.00",0.08,"446,936,400.00","78,300.00","5,708.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3861,OJI HOLDINGS,Pulp & Paper,Equity,"437,763,480.00",0.07,"437,763,480.00","508,200.00",861.40,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1942,KANDENKO LTD,Construction,Equity,"432,019,300.00",0.07,"432,019,300.00","79,900.00","5,407.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8804,TOKYO TATEMONO,Real Estate ex REIT,Equity,"431,292,400.00",0.07,"431,292,400.00","127,300.00","3,388.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9513,ELECTRIC POWER DEVELOPMENT LTD,Electric Power & Gas,Equity,"424,980,000.00",0.07,"424,980,000.00","108,000.00","3,935.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5076,INFRONEER HOLDINGS,Construction,Equity,"419,436,000.00",0.07,"419,436,000.00","152,800.00","2,745.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7276,KOITO MANUFACTURING,Electric Appliances,Equity,"411,411,000.00",0.07,"411,411,000.00","154,000.00","2,671.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3064,MONOTARO LTD,Retail Trade,Equity,"410,874,000.00",0.07,"410,874,000.00","220,900.00","1,860.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4182,MITSUBISHI GAS CHEMICAL INC,Chemicals,Equity,"408,842,000.00",0.07,"408,842,000.00","106,000.00","3,857.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5714,DOWA HOLDINGS LTD,Nonferrous Metal,Equity,"405,264,600.00",0.07,"405,264,600.00","41,400.00","9,789.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2181,PERSOL HOLDINGS LTD,Services,Equity,"404,387,900.00",0.07,"404,387,900.00","1,393,000.00",290.30,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5991,NHK SPRING,Metal Products,Equity,"400,900,500.00",0.07,"400,900,500.00","115,700.00","3,465.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9143,SG HOLDINGS LTD,Land Transportation,Equity,"392,116,200.00",0.07,"392,116,200.00","249,200.00","1,573.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5105,TOYO TIRE,Rubber Products,Equity,"390,267,000.00",0.07,"390,267,000.00","103,000.00","3,789.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9007,ODAKYU ELECTRIC RAILWAY,Land Transportation,Equity,"389,498,400.00",0.07,"389,498,400.00","225,600.00","1,726.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9142,KYUSHU RAILWAY,Land Transportation,Equity,"384,600,300.00",0.07,"384,600,300.00","111,900.00","3,437.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5393,NICHIAS CORP,Glass & Ceramics Products,Equity,"382,964,400.00",0.06,"382,964,400.00","116,900.00","3,276.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6269,MODEC INC,Machinery,Equity,"382,143,000.00",0.06,"382,143,000.00","38,100.00","10,030.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3231,NOMURA REAL ESTATE HOLDINGS INC,Real Estate ex REIT,Equity,"376,727,780.00",0.06,"376,727,780.00","408,200.00",922.90,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4980,DEXERIALS CORP,Chemicals,Equity,"375,850,400.00",0.06,"375,850,400.00","126,400.00","2,973.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3405,KURARAY,Chemicals,Equity,"369,230,400.00",0.06,"369,230,400.00","201,600.00","1,831.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3288,OPEN HOUSE GROUP LTD,Real Estate ex REIT,Equity,"369,141,500.00",0.06,"369,141,500.00","45,500.00","8,113.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2371,KAKAKU.COM,Services,Equity,"368,303,700.00",0.06,"368,303,700.00","99,300.00","3,709.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3132,MACNICA HOLDINGS INC,Wholesale Trade,Equity,"367,050,400.00",0.06,"367,050,400.00","109,600.00","3,349.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8227,SHIMAMURA LTD,Retail Trade,Equity,"364,861,000.00",0.06,"364,861,000.00","110,900.00","3,290.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1808,HASEKO,Construction,Equity,"364,299,600.00",0.06,"364,299,600.00","130,200.00","2,798.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4203,SUMITOMO BAKELITE LTD,Chemicals,Equity,"358,921,000.00",0.06,"358,921,000.00","49,100.00","7,310.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4912,LION,Chemicals,Equity,"356,694,600.00",0.06,"356,694,600.00","186,800.00","1,909.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1951,EXEO GROUP INC,Construction,Equity,"349,585,600.00",0.06,"349,585,600.00","137,200.00","2,548.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5021,COSMO ENERGY HOLDINGS,Oil & Coal Products,Equity,"348,076,400.00",0.06,"348,076,400.00","82,600.00","4,214.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9064,YAMATO HOLDINGS,Land Transportation,Equity,"346,560,000.00",0.06,"346,560,000.00","180,500.00","1,920.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1721,COMSYS HOLDINGS CORP,Construction,Equity,"344,859,200.00",0.06,"344,859,200.00","65,600.00","5,257.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4613,KANSAI PAINT,Chemicals,Equity,"344,460,600.00",0.06,"344,460,600.00","118,800.00","2,899.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6323,RORZE,Machinery,Equity,"343,362,600.00",0.06,"343,362,600.00","88,200.00","3,893.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9009,KEISEI ELECTRIC RAILWAY,Land Transportation,Equity,"343,294,900.00",0.06,"343,294,900.00","258,700.00","1,327.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8088,IWATANI,Wholesale Trade,Equity,"341,359,200.00",0.06,"341,359,200.00","156,300.00","2,184.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3038,KOBE BUSSAN,Wholesale Trade,Equity,"341,283,600.00",0.06,"341,283,600.00","121,800.00","2,802.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4626,TAIYO HOLDINGS LTD,Chemicals,Equity,"340,983,500.00",0.06,"340,983,500.00","71,500.00","4,769.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6305,HITACHI CONSTRUCTION MACHINERY LTD,Machinery,Equity,"337,032,800.00",0.06,"337,032,800.00","59,800.00","5,636.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5344,MARUWA (OWARIASAHI) LTD,Glass & Ceramics Products,Equity,"336,720,000.00",0.06,"336,720,000.00","6,100.00","55,200.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8253,CREDIT SAISON,Other Financing Business,Equity,"333,978,600.00",0.06,"333,978,600.00","71,700.00","4,658.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1969,TAKASAGO THERMAL ENGINEERING,Construction,Equity,"332,784,100.00",0.06,"332,784,100.00","78,100.00","4,261.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6460,SEGA SAMMY HOLDINGS,Machinery,Equity,"330,382,800.00",0.06,"330,382,800.00","118,800.00","2,781.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5444,YAMATO KOGYO,Iron & Steel,Equity,"330,033,000.00",0.06,"330,033,000.00","27,400.00","12,045.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3769,GMO PAYMENT GATEWAY INC,Information & Communication,Equity,"321,958,800.00",0.05,"321,958,800.00","34,200.00","9,414.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7762,CITIZEN WATCH LTD,Precision Instruments,Equity,"316,254,400.00",0.05,"316,254,400.00","123,200.00","2,567.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7003,MITSUI E&S LTD,Machinery,Equity,"313,198,000.00",0.05,"313,198,000.00","74,500.00","4,204.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6141,DMG MORI,Machinery,Equity,"312,193,000.00",0.05,"312,193,000.00","103,000.00","3,031.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5805,SWCC CORP,Nonferrous Metal,Equity,"311,022,000.00",0.05,"311,022,000.00","22,200.00","14,010.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4385,MERCARI,Information & Communication,Equity,"307,839,000.00",0.05,"307,839,000.00","64,200.00","4,795.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7951,YAMAHA,Other Products,Equity,"300,167,350.00",0.05,"300,167,350.00","231,700.00","1,295.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6728,ULVAC,Electric Appliances,Equity,"291,599,000.00",0.05,"291,599,000.00","38,500.00","7,574.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3291,IIDA GROUP HOLDINGS,Real Estate ex REIT,Equity,"290,846,400.00",0.05,"290,846,400.00","124,800.00","2,330.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3774,INTERNET INITIATIVE JAPAN INC,Information & Communication,Equity,"287,313,600.00",0.05,"287,313,600.00","81,600.00","3,521.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8020,KANEMATSU,Wholesale Trade,Equity,"282,611,000.00",0.05,"282,611,000.00","131,600.00","2,147.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7988,NIFCO INC,Chemicals,Equity,"281,232,000.00",0.05,"281,232,000.00","55,800.00","5,040.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2871,NICHIREI,Foods,Equity,"280,887,750.00",0.05,"280,887,750.00","128,700.00","2,182.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5947,RINNAI CORP,Metal Products,Equity,"279,931,000.00",0.05,"279,931,000.00","78,500.00","3,566.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3092,ZOZO INC,Retail Trade,Equity,"279,135,400.00",0.05,"279,135,400.00","247,900.00","1,126.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6368,ORGANO CORP,Machinery,Equity,"275,212,500.00",0.05,"275,212,500.00","20,500.00","13,425.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9065,SANKYU,Land Transportation,Equity,"274,787,500.00",0.05,"274,787,500.00","32,500.00","8,455.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8252,MARUI GROUP,Retail Trade,Equity,"273,678,200.00",0.05,"273,678,200.00","91,900.00","2,978.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8439,TOKYO CENTURY,Other Financing Business,Equity,"273,013,600.00",0.05,"273,013,600.00","109,600.00","2,491.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6417,SANKYO LTD,Machinery,Equity,"268,596,300.00",0.05,"268,596,300.00","140,700.00","1,909.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4716,ORACLE JAPAN CORP,Information & Communication,Equity,"267,472,500.00",0.05,"267,472,500.00","28,500.00","9,385.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4681,RESORT TRUST,Services,Equity,"267,373,200.00",0.05,"267,373,200.00","144,800.00","1,846.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7164,ZENKOKU HOSHO LTD,Other Financing Business,Equity,"266,745,600.00",0.05,"266,745,600.00","84,200.00","3,168.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2531,TAKARA HOLDINGS,Foods,Equity,"264,936,500.00",0.04,"264,936,500.00","120,700.00","2,195.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7867,TOMY LTD,Other Products,Equity,"263,970,900.00",0.04,"263,970,900.00","72,900.00","3,621.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8060,CANON MARKETING JAPAN INC,Wholesale Trade,Equity,"263,203,200.00",0.04,"263,203,200.00","74,100.00","3,552.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9006,KEIKYU,Land Transportation,Equity,"262,568,400.00",0.04,"262,568,400.00","168,800.00","1,555.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1959,KRAFTIA CORP,Construction,Equity,"260,162,800.00",0.04,"260,162,800.00","31,600.00","8,233.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9507,SHIKOKU ELECTRIC POWER INC,Electric Power & Gas,Equity,"256,779,000.00",0.04,"256,779,000.00","138,500.00","1,854.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5857,ARE HOLDINGS,Nonferrous Metal,Equity,"253,838,000.00",0.04,"253,838,000.00","67,600.00","3,755.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5471,DAIDO STEEL,Iron & Steel,Equity,"252,307,200.00",0.04,"252,307,200.00","108,800.00","2,319.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9008,KEIO,Land Transportation,Equity,"251,973,720.00",0.04,"251,973,720.00","325,800.00",773.40,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4401,ADEKA,Chemicals,Equity,"251,421,300.00",0.04,"251,421,300.00","55,100.00","4,563.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8729,SONY FINANCIAL GROUP INC,Insurance,Equity,"251,113,720.00",0.04,"251,113,720.00","1,596,400.00",157.30,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2264,MORINAGA MILK INDUSTRY,Foods,Equity,"249,705,600.00",0.04,"249,705,600.00","210,900.00","1,184.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6951,JEOL,Electric Appliances,Equity,"249,159,000.00",0.04,"249,159,000.00","34,500.00","7,222.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9069,SENKO GROUP HOLDINGS LTD,Land Transportation,Equity,"246,673,000.00",0.04,"246,673,000.00","107,600.00","2,292.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7282,TOYODA GOSEI,Transportation Equipment,Equity,"245,060,100.00",0.04,"245,060,100.00","45,900.00","5,339.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4967,KOBAYASHI PHARMACEUTICAL LTD,Chemicals,Equity,"245,035,500.00",0.04,"245,035,500.00","43,500.00","5,633.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1332,NISSUI CORP,"Fishery, Agriculture & Forestry",Equity,"243,213,600.00",0.04,"243,213,600.00","186,800.00","1,302.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8078,HANWA LTD,Wholesale Trade,Equity,"237,762,000.00",0.04,"237,762,000.00","129,500.00","1,836.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1662,JAPAN PETROLEUM EXPLORATION,Mining,Equity,"237,322,800.00",0.04,"237,322,800.00","128,700.00","1,844.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6787,MEIKO ELECTRONICS,Electric Appliances,Equity,"235,036,000.00",0.04,"235,036,000.00","13,400.00","17,540.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7649,SUGI HOLDINGS LTD,Retail Trade,Equity,"234,576,650.00",0.04,"234,576,650.00","84,700.00","2,769.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2670,ABC MART INC,Retail Trade,Equity,"231,899,500.00",0.04,"231,899,500.00","82,600.00","2,807.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4202,DAICEL,Chemicals,Equity,"230,906,700.00",0.04,"230,906,700.00","156,600.00","1,474.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8056,BIPROGY,Information & Communication,Equity,"226,424,000.00",0.04,"226,424,000.00","49,600.00","4,565.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6005,MIURA,Machinery,Equity,"213,142,600.00",0.04,"213,142,600.00","69,700.00","3,058.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8174,NIPPON GAS LTD,Retail Trade,Equity,"212,976,000.00",0.04,"212,976,000.00","72,000.00","2,958.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7014,NAMURA SHIPBUILDING,Transportation Equipment,Equity,"212,744,000.00",0.04,"212,744,000.00","46,400.00","4,585.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4666,PARK24,Real Estate ex REIT,Equity,"211,808,100.00",0.04,"211,808,100.00","104,700.00","2,023.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2222,KOTOBUKI SPIRITS LTD,Foods,Equity,"210,524,750.00",0.04,"210,524,750.00","77,900.00","2,702.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3107,DAIWABO HOLDINGS LTD,Wholesale Trade,Equity,"209,095,800.00",0.04,"209,095,800.00","59,100.00","3,538.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1719,HAZAMA ANDO CORP,Construction,Equity,"208,968,800.00",0.04,"208,968,800.00","110,800.00","1,886.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2229,CALBEE INC,Foods,Equity,"205,288,000.00",0.03,"205,288,000.00","67,000.00","3,064.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2811,KAGOME LTD,Foods,Equity,"205,086,000.00",0.03,"205,086,000.00","76,000.00","2,698.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6544,JAPAN ELEVATOR SERVICE HOLDINGS LT,Services,Equity,"202,095,900.00",0.03,"202,095,900.00","129,300.00","1,563.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7211,MITSUBISHI MOTORS,Transportation Equipment,Equity,"201,064,540.00",0.03,"201,064,540.00","568,300.00",353.80,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6432,TAKEUCHI MFG,Machinery,Equity,"198,560,000.00",0.03,"198,560,000.00","27,200.00","7,300.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4680,ROUND ONE CORP,Services,Equity,"197,660,200.00",0.03,"197,660,200.00","144,700.00","1,366.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7419,NOJIMA,Retail Trade,Equity,"196,812,000.00",0.03,"196,812,000.00","154,000.00","1,278.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7716,NAKANISHI INC,Precision Instruments,Equity,"190,652,000.00",0.03,"190,652,000.00","61,600.00","3,095.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6590,SHIBAURA MECHATRONICS CORP,Electric Appliances,Equity,"188,668,000.00",0.03,"188,668,000.00","46,700.00","4,040.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9744,MEITEC GROUP HOLDINGS INC,Services,Equity,"187,981,200.00",0.03,"187,981,200.00","56,400.00","3,333.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4194,VISIONAL,Information & Communication,Equity,"187,392,300.00",0.03,"187,392,300.00","20,100.00","9,323.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8111,GOLDWIN INC,Textiles & Apparel,Equity,"186,049,500.00",0.03,"186,049,500.00","87,000.00","2,138.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6849,NIHON KOHDEN,Electric Appliances,Equity,"185,105,250.00",0.03,"185,105,250.00","121,500.00","1,523.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9509,HOKKAIDO ELECTRIC POWER INC,Electric Power & Gas,Equity,"180,445,200.00",0.03,"180,445,200.00","167,700.00","1,076.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6101,TSUGAMI CORP,Machinery,Equity,"179,439,000.00",0.03,"179,439,000.00","32,100.00","5,590.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4812,DENTSU SOKEN INC,Information & Communication,Equity,"179,248,500.00",0.03,"179,248,500.00","65,300.00","2,745.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8424,FUYO GENERAL LEASE,Other Financing Business,Equity,"176,256,000.00",0.03,"176,256,000.00","40,500.00","4,352.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9989,SUNDRUG LTD,Retail Trade,Equity,"172,840,500.00",0.03,"172,840,500.00","46,500.00","3,717.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+417A,BLUE ZONES HOLDINGS LTD,Retail Trade,Equity,"171,726,400.00",0.03,"171,726,400.00","92,800.00","1,850.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3349,COSMOS PHARMACEUTICAL CORP,Retail Trade,Equity,"171,410,400.00",0.03,"171,410,400.00","26,600.00","6,444.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9449,GMO INTERNET GROUP,Information & Communication,Equity,"167,893,300.00",0.03,"167,893,300.00","41,900.00","4,007.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4816,TOEI ANIMATION LTD,Information & Communication,Equity,"167,374,400.00",0.03,"167,374,400.00","58,400.00","2,866.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3116,TOYOTA BOSHOKU CORP,Transportation Equipment,Equity,"165,381,500.00",0.03,"165,381,500.00","73,000.00","2,265.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2127,NIHON M&A CENTER HOLDINGS INC,Services,Equity,"165,093,000.00",0.03,"165,093,000.00","243,500.00",678.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2327,NS SOLUTIONS CORP,Information & Communication,Equity,"158,956,800.00",0.03,"158,956,800.00","40,800.00","3,896.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3635,KOEI TECMO HOLDINGS,Information & Communication,Equity,"158,499,800.00",0.03,"158,499,800.00","93,400.00","1,697.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3923,RAKUS,Information & Communication,Equity,"155,206,450.00",0.03,"155,206,450.00","137,900.00","1,125.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1414,SHO-BOND HOLDINGS LTD,Construction,Equity,"153,163,500.00",0.03,"153,163,500.00","121,800.00","1,257.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3549,KUSURI NO AOKI HOLDINGS LTD,Retail Trade,Equity,"153,116,500.00",0.03,"153,116,500.00","37,300.00","4,105.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6436,AMANO CORP,Machinery,Equity,"152,103,600.00",0.03,"152,103,600.00","39,600.00","3,841.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9759,NSD LTD,Information & Communication,Equity,"152,118,550.00",0.03,"152,118,550.00","52,700.00","2,886.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9302,MITSUI-SOKO HOLDINGS LTD,Warehousing & Harbor Transportation Services,Equity,"151,515,900.00",0.03,"151,515,900.00","45,900.00","3,301.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8410,SEVEN BANK LTD,Banks,Equity,"150,715,800.00",0.03,"150,715,800.00","458,800.00",328.50,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8425,MIZUHO LEASING LIMITED LTD,Other Financing Business,Equity,"150,176,400.00",0.03,"150,176,400.00","110,100.00","1,364.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8919,KATITAS,Real Estate ex REIT,Equity,"149,310,000.00",0.03,"149,310,000.00","39,500.00","3,780.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8098,INABATA LTD,Wholesale Trade,Equity,"149,344,000.00",0.03,"149,344,000.00","35,900.00","4,160.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2201,MORINAGA LTD,Foods,Equity,"147,976,250.00",0.03,"147,976,250.00","57,500.00","2,573.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8876,RELO GROUP INC,Services,Equity,"146,415,000.00",0.02,"146,415,000.00","68,100.00","2,150.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3186,NEXTAGE LTD,Retail Trade,Equity,"145,551,000.00",0.02,"145,551,000.00","40,600.00","3,585.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7004,KANADEVIA,Machinery,Equity,"145,504,200.00",0.02,"145,504,200.00","123,100.00","1,182.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7906,YONEX LTD,Other Products,Equity,"145,047,600.00",0.02,"145,047,600.00","51,600.00","2,811.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4516,NIPPON SHINYAKU,Pharmaceutical,Equity,"144,922,400.00",0.02,"144,922,400.00","39,200.00","3,697.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7564,WORKMAN LTD,Retail Trade,Equity,"143,010,000.00",0.02,"143,010,000.00","22,700.00","6,300.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3697,SHIFT INC,Information & Communication,Equity,"142,008,500.00",0.02,"142,008,500.00","148,700.00",955.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8154,KAGA ELECTRONICS LTD,Wholesale Trade,Equity,"141,571,500.00",0.02,"141,571,500.00","29,100.00","4,865.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3360,SHIP HEALTHCARE HOLDINGS INC,Wholesale Trade,Equity,"139,326,900.00",0.02,"139,326,900.00","57,800.00","2,410.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8850,STARTS CORP INC,Real Estate ex REIT,Equity,"127,506,000.00",0.02,"127,506,000.00","26,900.00","4,740.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8572,ACOM LTD,Other Financing Business,Equity,"126,554,120.00",0.02,"126,554,120.00","261,800.00",483.40,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8130,SANGETSU CORP,Wholesale Trade,Equity,"125,928,000.00",0.02,"125,928,000.00","39,600.00","3,180.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7846,PILOT,Other Products,Equity,"120,432,000.00",0.02,"120,432,000.00","62,400.00","1,930.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6632,JVCKENWOOD CORP,Electric Appliances,Equity,"117,367,600.00",0.02,"117,367,600.00","116,900.00","1,004.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6707,SANKEN ELECTRIC,Electric Appliances,Equity,"115,943,400.00",0.02,"115,943,400.00","15,300.00","7,578.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+547A,MUNINOVA HOLDINGS INC,Other Financing Business,Equity,"108,747,800.00",0.02,"108,747,800.00","242,200.00",449.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7994,OKAMURA CORP,Other Products,Equity,"104,787,200.00",0.02,"104,787,200.00","44,800.00","2,339.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9110,NS UNITED KAIUN KAISHA LTD,Marine Transportation,Equity,"97,185,000.00",0.02,"97,185,000.00","9,300.00","10,450.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6254,NOMURA MICRO SCIENCE LTD,Machinery,Equity,"96,930,000.00",0.02,"96,930,000.00","27,000.00","3,590.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2726,PAL GROUP HOLDINGS LTD,Retail Trade,Equity,"94,830,800.00",0.02,"94,830,800.00","61,900.00","1,532.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2317,SYSTENA CORP,Information & Communication,Equity,"94,367,000.00",0.02,"94,367,000.00","213,500.00",442.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2154,OPEN UP GROUP INC,Services,Equity,"92,820,000.00",0.02,"92,820,000.00","45,500.00","2,040.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7740,TAMRON LTD,Precision Instruments,Equity,"92,036,000.00",0.02,"92,036,000.00","66,500.00","1,384.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4722,FUTURE CORP,Information & Communication,Equity,"90,991,200.00",0.02,"90,991,200.00","37,200.00","2,446.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9119,IINO KAIUN LTD,Marine Transportation,Equity,"90,856,700.00",0.02,"90,856,700.00","54,700.00","1,661.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9418,U-NEXT HOLDINGS LTD,Information & Communication,Equity,"89,105,000.00",0.02,"89,105,000.00","50,200.00","1,775.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+MSJP,CASH COLLATERAL JPY MSJP,Other,Cash Collateral and Margins,"88,491,892.00",0.01,"88,491,892.00","88,491,892.00",100.00,Japan,-,JPY,1.00,JPY
+8923,TOSEI CORPORATION,Real Estate ex REIT,Equity,"88,132,800.00",0.01,"88,132,800.00","48,800.00","1,806.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4587,PEPTIDREAM,Pharmaceutical,Equity,"87,569,250.00",0.01,"87,569,250.00","79,500.00","1,101.50",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+4686,JUSTSYSTEMS CORP,Information & Communication,Equity,"86,349,000.00",0.01,"86,349,000.00","21,400.00","4,035.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8133,ITOCHU ENEX LTD,Wholesale Trade,Equity,"85,550,800.00",0.01,"85,550,800.00","39,100.00","2,188.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7148,FINANCIAL PRODUCTS GROUP LTD,Securities,Equity,"83,926,800.00",0.01,"83,926,800.00","51,300.00","1,636.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7744,NORITSU KOKI LTD,Precision Instruments,Equity,"83,188,800.00",0.01,"83,188,800.00","42,400.00","1,962.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8848,LEOPALACE21,Real Estate ex REIT,Equity,"82,286,400.00",0.01,"82,286,400.00","130,200.00",632.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7944,ROLAND CORP,Other Products,Equity,"80,730,000.00",0.01,"80,730,000.00","20,700.00","3,900.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8194,LIFE,Retail Trade,Equity,"79,614,500.00",0.01,"79,614,500.00","30,100.00","2,645.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3148,CREATE SD HOLDINGS LTD,Retail Trade,Equity,"76,035,000.00",0.01,"76,035,000.00","22,200.00","3,425.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2685,AND ST HD LTD,Retail Trade,Equity,"75,035,000.00",0.01,"75,035,000.00","21,500.00","3,490.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3765,GUNGHO ONLINE ENTERTAINMENT,Information & Communication,Equity,"73,248,500.00",0.01,"73,248,500.00","29,500.00","2,483.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5423,TOKYO STEEL MANUFACTURING LTD,Iron & Steel,Equity,"72,758,400.00",0.01,"72,758,400.00","42,900.00","1,696.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2767,TSUBURAYA FIELDS HOLDINGS INC,Wholesale Trade,Equity,"71,760,600.00",0.01,"71,760,600.00","29,100.00","2,466.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+6966,MITSUI HIGH TEC INC,Electric Appliances,Equity,"70,055,700.00",0.01,"70,055,700.00","75,900.00",923.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5032,ANYCOLOR,Information & Communication,Equity,"67,545,000.00",0.01,"67,545,000.00","23,700.00","2,850.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2384,SBS HOLDINGS,Land Transportation,Equity,"66,000,000.00",0.01,"66,000,000.00","13,200.00","5,000.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+8584,JACCS,Other Financing Business,Equity,"65,800,000.00",0.01,"65,800,000.00","17,500.00","3,760.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2760,TOKYO ELECTRON DEVICE LTD,Wholesale Trade,Equity,"61,429,500.00",0.01,"61,429,500.00","15,300.00","4,015.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+7599,IDOM INC,Wholesale Trade,Equity,"60,544,000.00",0.01,"60,544,000.00","47,300.00","1,280.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1518,MITSUI MATSUSHIMA HOLDINGS LTD,Other Products,Equity,"56,921,400.00",0.01,"56,921,400.00","25,400.00","2,241.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2124,JAC RECRUITMENT LTD,Services,Equity,"55,353,600.00",0.01,"55,353,600.00","55,800.00",992.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+5480,NIPPON YAKIN KOGYO LTD,Iron & Steel,Equity,"55,002,000.00",0.01,"55,002,000.00","10,300.00","5,340.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2379,DIP CORP,Services,Equity,"51,164,800.00",0.01,"51,164,800.00","27,100.00","1,888.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+3465,KI-STAR REAL ESTATE LTD,Real Estate ex REIT,Equity,"46,200,000.00",0.01,"46,200,000.00","12,000.00","3,850.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+9090,AZ-COM MARUWA HOLDINGS,Land Transportation,Equity,"40,629,600.00",0.01,"40,629,600.00","45,600.00",891.00,Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+1419,TAMA HOME LTD,Construction,Equity,"39,300,000.00",0.01,"39,300,000.00","13,100.00","3,000.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2678,ASKUL CORP,Retail Trade,Equity,"38,212,200.00",0.01,"38,212,200.00","29,900.00","1,278.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+2168,PASONA GROUP INC,Services,Equity,"25,533,200.00",0.00,"25,533,200.00","15,400.00","1,658.00",Japan,Tokyo Stock Exchange,JPY,1.00,JPY
+JPWU6,JPX-NIKKEI INDEX 400 SEP 26,Other,Futures,0.00,0.00,"1,425,124,000.00",388.00,"36,730.00",-,Osaka Securities Exchange,JPY,1.00,JPY
+ ,,,,,,,,,,,,,
+Fund Holdings as of,2026/08/20,,,,,,,,,,,,
+ ,,,,,,,,,,,,,

@@ -114,25 +114,36 @@ EXCHANGE_TO_REGION = {
 # Suffix used for regional stock-database files, e.g. "JP_stocks.csv".
 STOCK_FILE_SUFFIX = "_stocks.csv"
 
-# Sheet name used in Japanese ETF XLSX holdings files.
-HOLDINGS_SHEET_NAME = "保有明細"
+# Sheet names used in Japanese ETF XLSX holdings files. Different fund
+# providers label the holdings sheet differently, so this is a list -- each
+# is tried in order as an exact (stripped) match against the workbook's
+# sheet names; the first one found wins. Add more names here as new
+# providers turn up rather than relying on the header-row fallback search.
+HOLDINGS_SHEET_NAMES = ["保有明細"]
 
 # A row is the holdings table header if it contains ALL keywords in one of
-# these combinations (case-insensitive substring match across the row's
-# cells joined together). Combinations are tried in order: every row in the
-# file is checked against combination 1 first, and if no row matches at
-# all, combination 2 is tried against every row, then combination 3. Within
+# these combinations, each in its own cell, appearing left-to-right in the
+# SAME ORDER the keywords are listed here (case-insensitive substring
+# match). Combinations are tried in order: every row in the file is
+# checked against combination 1 first, and if no row matches at all,
+# combination 2 is tried against every row, then combination 3. Within
 # whichever combination matches, the first row in file order wins.
+#
+# These are tuples (not sets) specifically because order matters now --
+# our holdings files consistently lay out columns in this left-to-right
+# order, so enforcing it rules out accidental matches. If a provider's
+# column order ever differs, add a new combination rather than reordering
+# an existing one.
 #
 # This is deliberately specific (rather than "any code-like + name-like +
 # one-of-several-other keywords") so that unrelated metadata rows -- e.g. a
 # fund-level summary row like "ETF Code, ETF Name, Shares Outstanding" --
 # don't get mistaken for the per-holding table header.
 HEADER_KEYWORD_COMBINATIONS = [
-    {"銘柄コード", "name", "isin"},
-    {"code", "name", "isin"},
-    {"code", "name", "weight"},
-    {"ticker", "name", "weight"},
+    ("銘柄コード", "ISINコード", "Name"),
+    ("Code", "Name", "ISIN"),
+    ("Code", "Name", "Weight"),
+    ("Ticker", "Name", "Weight"),
 ]
 
 # Column-name candidates used to identify each field once the header row is
@@ -152,4 +163,6 @@ PRICE_COLUMN_CANDIDATES = ["Stock Price", "Price", "株価"]
 VALUATION_COLUMN_CANDIDATES = ["評価金額(円）Valuation (yen)", "Valuation (yen)", "評価金額", "Valuation"]
 WEIGHT_COLUMN_CANDIDATES = ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight"]
 EXCHANGE_COLUMN_CANDIDATES = ["Exchange", "取引所"]
-REGION_COLUMN_CANDIDATES = ["Region", "Country", "Location", "国", "地域"]
+REGION_COLUMN_CANDIDATES = ["Country", "Region", "Location", "国", "地域"]
+
+MIN_WEIGHT_THRESHOLD = 0.80

@@ -10,7 +10,7 @@ from aggregating_constants import (
     CODE_COLUMN_CANDIDATES,
     EXCHANGE_COLUMN_CANDIDATES,
     HEADER_KEYWORD_COMBINATIONS,
-    HOLDINGS_SHEET_NAME,
+    HOLDINGS_SHEET_NAMES,
     ISIN_COLUMN_CANDIDATES,
     NAME_COLUMN_CANDIDATES,
     PRICE_COLUMN_CANDIDATES,
@@ -25,7 +25,8 @@ from normalize import (
     normalize_region,
     normalize_text,
     normalize_ticker,
-    is_valid_ticker,
+    is_reserved_non_stock,
+    is_valid_isin,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,30 +67,21 @@ def _norm_key(value: str) -> str:
 
 
 def _row_cells(row: Iterable) -> List[str]:
-    """Normalize each cell in a row to lowercase text, dropping blanks."""
-    cells = (normalize_text(cell).replace("\n", " ").lower() for cell in row if not pd.isna(cell))
+    """Normalize each cell in a row to text, dropping blanks."""
+    cells = (normalize_text(cell).replace("\n", " ") for cell in row if not pd.isna(cell))
     return [cell for cell in cells if cell]
 
 
-def _matches_combo(cells: List[str], combo: set) -> bool:
-    """A row matches a header keyword combination only if every keyword in
-    the combo appears in its own distinct cell -- i.e. len(combo) separate
-    cells, each containing at least one keyword, with no single cell
-    covering more than one keyword's match.
-
-    This rules out a free-text cell that happens to contain multiple
-    keywords as ordinary prose (e.g. "... Ticker / Name / Weight
-    breakdown ...") as well as compound cells like "銘柄コード（Code）"
-    counting for two keywords at once -- a real header spreads each
-    column title across a separate cell.
-    """
-    matched_cell_indices = set()
+def _matches_combo(cells: List[str], combo: tuple) -> bool:
+    """Check if keywords in `combo` appear in distinct cells in left-to-right order (case-sensitive)."""
+    last_index = -1
     for keyword in combo:
-        found_in = [i for i, cell in enumerate(cells) if keyword in cell]
+        # Performs exact case-sensitive substring matching
+        found_in = [i for i, cell in enumerate(cells) if i > last_index and keyword in cell]
         if not found_in:
             return False
-        matched_cell_indices.update(found_in)
-    return len(matched_cell_indices) >= len(combo)
+        last_index = found_in[0]
+    return True
 
 
 def _find_header_row(rows: Iterable[Iterable], limit: Optional[int] = None) -> Optional[int]:
@@ -169,9 +161,10 @@ def parse_percent(value: str | float | None) -> float:
 
 
 def _find_holdings_sheet(xls: pd.ExcelFile, path: Path) -> str:
-    for name in xls.sheet_names:
-        if str(name).strip() == HOLDINGS_SHEET_NAME:
-            return name
+    for candidate in HOLDINGS_SHEET_NAMES:
+        for name in xls.sheet_names:
+            if str(name).strip() == candidate:
+                return name
 
     # Fall back to whichever sheet actually contains a recognizable header row.
     for name in xls.sheet_names:
@@ -303,12 +296,19 @@ def parse_holdings(path: Path) -> pd.DataFrame:
     # Enforce numeric type on weight
     result["pct"] = pd.to_numeric(result["pct"], errors="coerce")
 
-    # Filter out footer junk: must be a valid ticker AND weight > 0
+    # Filter out footer junk and non-stock lines (cash, currency balances,
+    # collateral, ...): the Code must be present and not a known non-stock
+    # placeholder, the Name must be present, weight must be positive, and
+    # -- when an ISIN was actually provided -- it must look like a real
+    # ISIN. A blank ISIN doesn't fail the check: plenty of funds simply
+    # don't report one per holding.
     valid_holdings = (
-        result["Code"].apply(is_valid_ticker) &
+        result["Code"].ne("") &
+        ~result["Code"].apply(is_reserved_non_stock) &
+        result["Name"].ne("") &
         result["pct"].notna() &
-        (result["pct"] > 0)
+        (result["pct"] > 0) &
+        (result["ISIN"].eq("") | result["ISIN"].apply(is_valid_isin))
     )
 
     return result[valid_holdings].reset_index(drop=True)
-
