@@ -26,7 +26,7 @@ import numpy as np
 # --------------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-INPUT_DIR = PROJECT_ROOT.parent / "ETFs"
+INPUT_DIR = PROJECT_ROOT.parent.parent / "ETFs"
 OUTPUT_DIR = PROJECT_ROOT / "cleansed_ETFs"
 
 # Reference data files.

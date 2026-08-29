@@ -5,9 +5,9 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
-OUTPUT_DIR = BASE_DIR.parent / "output"
-ETF_DIR = BASE_DIR.parent / "ETFs"
-LOGS_DIR = BASE_DIR.parent / "logs"
+OUTPUT_DIR = BASE_DIR.parent.parent / "output"
+ETF_DIR = BASE_DIR.parent.parent / "ETFs"
+LOGS_DIR = BASE_DIR / "logs"
 
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 LOG_PATH = LOGS_DIR / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.txt"

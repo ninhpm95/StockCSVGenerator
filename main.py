@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from processor import load_and_clean_data, process_batches
 from constants import OUTPUT_DIR, FILE_NAME, FINAL_COLUMNS, MODE, FILTER_ETFS
-from screening.etf_filter import filter_etfs
+from tasks.screening.etf_filter import filter_etfs
 
 def main():
   if MODE == FILTER_ETFS:
