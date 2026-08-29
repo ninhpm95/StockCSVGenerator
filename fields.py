@@ -6,6 +6,7 @@ Using a class with static attributes provides better namespacing.
 # Identifiers
 TICKER = 'Ticker'
 NAME = 'Name'
+ISIN = 'ISIN'
 SECTOR = 'Sector'
 
 # Valuation Metrics
