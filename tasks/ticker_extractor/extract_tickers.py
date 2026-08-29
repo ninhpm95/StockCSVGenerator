@@ -2,16 +2,29 @@
 holdings_dedup.py -- standalone script.
 
 Reads every fund/ETF holdings file (.csv, .xlsx) in HOLDINGS_DIR and writes
-out the deduplicated list of stocks found across all of them: Ticker, Name,
-ISIN, Exchange, Currency, to OUTPUT_FILE. A stock that appears in multiple
+out the deduplicated stocks found across all of them, split by region into
+one file per region under REGION_OUTPUT_DIR (JP.csv, US.csv, CN.csv, ...,
+UNKNOWN.csv for anything that couldn't be placed). Each row has Ticker,
+Name, ISIN, Exchange, Currency, Region. A stock that appears in multiple
 holdings files (or more than once in the same file) is only listed once.
 
+Ticker is the required identifier -- ISIN is used when present (it's the
+more reliable cross-file identifier and the best signal for region) but a
+row with no Ticker is dropped even if it has an ISIN, since a ticker is
+what you actually need to look the stock up or trade it.
+
+Region is worked out per row, in priority order:
+    1. ISIN's 2-letter country prefix (ISO 6166 -- most reliable when present)
+    2. A Location/Country column in the holdings file, if it has one
+    3. The Exchange column, matched against known exchange names
+    4. "UNKNOWN" if none of the above resolve it (still written out, not dropped)
+
 This is a self-contained project with no dependency on any other codebase --
-everything it needs (file reading, header detection, normalization, dedup)
-lives in this one file.
+everything it needs (file reading, header detection, normalization, region
+lookup, dedup) lives in this one file.
 
 Usage:
-    Edit HOLDINGS_DIR / OUTPUT_FILE below if your layout differs, then:
+    Edit HOLDINGS_DIR / REGION_OUTPUT_DIR below if your layout differs, then:
         python holdings_dedup.py
 """
 from __future__ import annotations
@@ -31,7 +44,7 @@ logger = logging.getLogger(__name__)
 # rather than CLI arguments -- edit here if your layout differs.
 # --------------------------------------------------------------------------
 HOLDINGS_DIR = Path("../../ETFs")
-OUTPUT_FILE = Path("./output/extracted_tickers.csv")
+REGION_OUTPUT_DIR = Path("./output/by_region")  # one CSV per region: JP.csv, US.csv, ...
 
 # --------------------------------------------------------------------------
 # What we're looking for in each file, and how to recognize each column.
@@ -46,6 +59,9 @@ FIELD_CANDIDATES: Dict[str, List[str]] = {
     "ISIN": ["ISIN"],
     "Exchange": ["Exchange", "取引所"],
     "Currency": ["Currency", "Ccy", "通貨"],
+    # Not in OUTPUT_FIELDS -- Location is only used as a region-detection
+    # signal, not written out as its own column.
+    "Location": ["Location", "Country", "国", "国名", "所在国", "所在地"],
 }
 
 # A row is treated as the holdings-table header once at least this many
@@ -60,13 +76,25 @@ MIN_FIELDS_FOR_HEADER = 2
 # --------------------------------------------------------------------------
 
 
+
+# Tokens that source files use to mean "no value" (seen in place of a real
+# ticker/ISIN/name for cash, futures, treasury bills, etc.) rather than
+# leaving the cell blank. These normalize to "" -- an *actual* blank --
+# so downstream logic (e.g. "does this row have a Ticker or ISIN?") isn't
+# fooled into treating a placeholder dash as a real identifier.
+PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "na", "null", "none"}
+
+
 def normalize_text(value) -> str:
     """Trim whitespace/quotes/leading apostrophes (common from Excel/CSV
-    exports) and return a clean string, or "" for anything blank/NaN."""
+    exports) and return a clean string, or "" for anything blank/NaN/a
+    placeholder token like '-' or 'N/A'."""
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return ""
     s = str(value).strip()
     s = s.lstrip("'").strip().strip('"').strip("'").strip()
+    if s.lower() in PLACEHOLDER_TOKENS:
+        return ""
     return s
 
 
@@ -216,26 +244,131 @@ def find_column(columns: Iterable, field: str):
 
 
 # --------------------------------------------------------------------------
+# Region detection: ISIN country prefix > Location column > Exchange name > UNKNOWN
+# --------------------------------------------------------------------------
+
+# Country/location names -> region code, matched as a substring against a
+# Location/Country column when the holdings file has one.
+LOCATION_TO_REGION: Dict[str, str] = {
+    "JAPAN": "JP", "UNITED STATES": "US", "USA": "US", "U.S.": "US",
+    "CHINA": "CN", "HONG KONG": "HK", "TAIWAN": "TW",
+    "SOUTH KOREA": "KR", "KOREA": "KR", "INDIA": "IN",
+    "UNITED KINGDOM": "GB", "BRITAIN": "GB",
+    "GERMANY": "DE", "FRANCE": "FR", "NETHERLANDS": "NL", "ITALY": "IT",
+    "SPAIN": "ES", "SWITZERLAND": "CH", "SWEDEN": "SE", "NORWAY": "NO",
+    "DENMARK": "DK", "FINLAND": "FI", "BELGIUM": "BE", "AUSTRIA": "AT",
+    "POLAND": "PL", "CANADA": "CA", "AUSTRALIA": "AU", "SINGAPORE": "SG",
+    "BRAZIL": "BR", "MEXICO": "MX", "ISRAEL": "IL", "SOUTH AFRICA": "ZA",
+    "THAILAND": "TH", "INDONESIA": "ID", "MALAYSIA": "MY",
+    "PHILIPPINES": "PH", "VIETNAM": "VN",
+}
+
+# Exchange name substrings -> region code, used when ISIN and Location
+# aren't available/informative. Extend this as new exchanges turn up --
+# it's a best-effort heuristic, not an exhaustive list of world exchanges.
+EXCHANGE_TO_REGION: Dict[str, str] = {
+    "TOKYO": "JP", "OSAKA": "JP", "NAGOYA": "JP",
+    "NEW YORK": "US", "NASDAQ": "US", "NYSE": "US", "AMEX": "US", "CBOE": "US",
+    "LONDON": "GB", "LSE": "GB",
+    "SHENZHEN": "CN", "SHANGHAI": "CN",
+    "HONG KONG": "HK", "HKEX": "HK",
+    "TAIWAN": "TW", "TAIPEI": "TW",
+    "KOREA": "KR", "KOSPI": "KR", "KOSDAQ": "KR",
+    "NATIONAL STOCK EXCHANGE OF INDIA": "IN", "BOMBAY": "IN", "BSE": "IN", "NSE": "IN",
+    "SINGAPORE": "SG", "SGX": "SG",
+    "AUSTRALIA": "AU", "ASX": "AU",
+    "TORONTO": "CA", "TSX": "CA",
+    "FRANKFURT": "DE", "XETRA": "DE", "DEUTSCHE": "DE",
+    "EURONEXT PARIS": "FR", "PARIS": "FR",
+    "EURONEXT AMSTERDAM": "NL", "AMSTERDAM": "NL",
+    "BORSA ITALIANA": "IT", "MILAN": "IT",
+    "MADRID": "ES", "BME": "ES",
+    "SIX": "CH", "SWISS": "CH", "ZURICH": "CH",
+    "STOCKHOLM": "SE", "OSLO": "NO", "COPENHAGEN": "DK", "HELSINKI": "FI",
+    "BRUSSELS": "BE", "VIENNA": "AT", "WARSAW": "PL",
+    "JOHANNESBURG": "ZA", "SAO PAULO": "BR", "B3": "BR", "MEXICO": "MX",
+    "TEL AVIV": "IL", "BANGKOK": "TH", "JAKARTA": "ID",
+    "KUALA LUMPUR": "MY", "MANILA": "PH", "HO CHI MINH": "VN",
+}
+
+UNKNOWN_REGION = "UNKNOWN"
+
+
+def _match_region(text: str, mapping: Dict[str, str]) -> Optional[str]:
+    text_upper = text.upper()
+    for keyword, code in mapping.items():
+        if keyword in text_upper:
+            return code
+    return None
+
+
+def get_region(isin: str, location: str, exchange: str) -> str:
+    """Work out which region a holding belongs to, in priority order:
+    ISIN's 2-letter ISO 6166 country prefix (most reliable when present),
+    then a Location/Country column, then the Exchange name. Returns
+    UNKNOWN_REGION rather than raising if none of these resolve it -- the
+    row still gets written out, just to an UNKNOWN.csv file for review."""
+    if len(isin) >= 2 and isin[:2].isalpha():
+        return isin[:2].upper()
+
+    if location:
+        region = _match_region(location, LOCATION_TO_REGION)
+        if region:
+            return region
+
+    if exchange:
+        region = _match_region(exchange, EXCHANGE_TO_REGION)
+        if region:
+            return region
+
+    return UNKNOWN_REGION
+
+
+# --------------------------------------------------------------------------
 # Per-file extraction
 # --------------------------------------------------------------------------
 
 
-def extract_stocks(path: Path) -> List[dict]:
-    """Return a list of {Ticker, Name, ISIN, Exchange, Currency} dicts, one
-    per holding row found in `path`. A column missing from the file is left
-    blank ("") for every row; a single row missing just one value is still
-    kept, with only that value blank. Rows blank across every field
-    (leftover blank/footer lines) are dropped."""
+class FileResult:
+    """Outcome of processing one holdings file, used to build the
+    end-of-run summary instead of logging a line per file."""
+
+    def __init__(
+        self,
+        records: List[dict],
+        skipped_no_ticker: int = 0,
+        non_stock: Optional[List[dict]] = None,
+        problem: Optional[str] = None,
+    ):
+        self.records = records
+        self.skipped_no_ticker = skipped_no_ticker
+        self.non_stock = non_stock or []  # e.g. treasury bills, cash, futures
+        # None if the file was processed normally (whether or not some
+        # individual rows were skipped/filtered). Otherwise a short
+        # human-readable reason the file couldn't be processed at all.
+        self.problem = problem
+
+
+def extract_stocks(path: Path) -> FileResult:
+    """Return a FileResult with the {Ticker, Name, ISIN, Exchange, Currency,
+    Region} dicts found in `path`, one per holding row identified as an
+    actual stock. Ticker is required -- a row with an ISIN but no Ticker is
+    dropped, since a ticker is what's actually needed to look the stock up
+    or trade it. A column missing from the file is left blank ("") for
+    every row; a single row missing just one value (other than Ticker) is
+    still kept, with only that value blank. Rows blank across every field
+    (leftover blank/footer lines) are dropped. Rows that look like
+    non-equity instruments (bonds, cash, derivatives -- see
+    NON_STOCK_NAME_KEYWORDS) are pulled out separately rather than counted
+    as stocks."""
     try:
         raw = read_raw_grid(path)
     except Exception as exc:
-        logger.warning("%s: could not be read (%s); skipping.", path.name, exc)
-        return []
+        return FileResult([], problem=f"could not be read ({exc})")
 
     header_row = find_header_row(raw)
     if header_row is None:
-        logger.warning("%s: no recognizable holdings header found; skipping.", path.name)
-        return []
+        return FileResult([], problem="no recognizable holdings header found")
 
     df = raw.iloc[header_row + 1 :].copy()
     df.columns = raw.iloc[header_row].tolist()
@@ -243,11 +376,12 @@ def extract_stocks(path: Path) -> List[dict]:
 
     col_for_field = {field: find_column(df.columns, field) for field in OUTPUT_FIELDS}
     if all(col is None for col in col_for_field.values()):
-        logger.warning("%s: none of %s found; skipping.", path.name, ", ".join(OUTPUT_FIELDS))
-        return []
+        return FileResult([], problem=f"none of {', '.join(OUTPUT_FIELDS)} found")
+    location_col = find_column(df.columns, "Location")  # region signal only, not an output field
 
     records = []
-    skipped_no_id = 0
+    non_stock = []
+    skipped_no_ticker = 0
     for _, row in df.iterrows():
         record = {}
         for field in OUTPUT_FIELDS:
@@ -257,24 +391,23 @@ def extract_stocks(path: Path) -> List[dict]:
         if not any(record.values()):
             continue  # fully blank row -- not even a name, ignore silently
 
-        if not (record["Ticker"] or record["ISIN"]):
-            # We have *something* (usually just a Name), but nothing that
-            # actually identifies which stock it is -- log it so it's
-            # visible, but don't write it to the output.
-            skipped_no_id += 1
-            logger.debug("%s: no Ticker or ISIN, can't identify stock: %s", path.name, record)
+        if not record["Ticker"]:
+            # No ticker -- even with an ISIN, this isn't usable (ISIN alone
+            # doesn't tell you the trading symbol). Also catches rows whose
+            # only "ticker" was a placeholder like "-".
+            skipped_no_ticker += 1
+            logger.debug("%s: no Ticker, can't use: %s", path.name, record)
             continue
 
+        if looks_like_non_stock(record["Name"]):
+            non_stock.append(record)
+            continue
+
+        location = normalize_text(row[location_col]) if location_col is not None else ""
+        record["Region"] = get_region(record["ISIN"], location, record["Exchange"])
         records.append(record)
 
-    if skipped_no_id:
-        logger.info(
-            "%s: skipped %d holding(s) with no Ticker or ISIN (nothing to identify the stock by).",
-            path.name,
-            skipped_no_id,
-        )
-
-    return records
+    return FileResult(records, skipped_no_ticker=skipped_no_ticker, non_stock=non_stock)
 
 
 # --------------------------------------------------------------------------
@@ -282,37 +415,112 @@ def extract_stocks(path: Path) -> List[dict]:
 # --------------------------------------------------------------------------
 
 
+# Filename suffixes that just describe the file's source/format rather
+# than identifying the ETF -- stripped when building the short label used
+# in the run summary (e.g. "586A_brd_data.xlsx" -> "586A").
+_LABEL_SUFFIXES = ["_brd_data", "_holdings"]
+
+
+def short_label(path: Path) -> str:
+    stem = path.stem
+    for suffix in _LABEL_SUFFIXES:
+        if stem.lower().endswith(suffix):
+            return stem[: -len(suffix)]
+    return stem
+
+
+# Name substrings (case-insensitive) that mark a holding as a non-equity
+# instrument -- bonds/bills, cash, repos, derivatives, etc. These show up
+# in holdings files with a real ISIN and no ticker (bills genuinely don't
+# have one), so the "has an identifier" check alone can't tell them apart
+# from a stock. Extend this list as new non-equity instrument types turn up.
+NON_STOCK_NAME_KEYWORDS = [
+    "TREASURY BILL", "TREASURY NOTE", "TREASURY BOND", "T-BILL",
+    "REPURCHASE AGREEMENT", "REPO", "CASH", "MONEY MARKET",
+    "COMMERCIAL PAPER", "CERTIFICATE OF DEPOSIT", "BANKERS ACCEPTANCE",
+    "FUTURES", "FORWARD", "SWAP", "OPTION",
+]
+
+
+def looks_like_non_stock(name: str) -> bool:
+    name_upper = name.upper()
+    return any(keyword in name_upper for keyword in NON_STOCK_NAME_KEYWORDS)
+
+
 def dedupe_key(record: dict) -> str:
     """Identify a stock for dedup purposes. ISIN is the most reliable
-    globally-unique identifier, so it's preferred; fall back to Ticker for
-    holdings files that don't report ISIN; fall back to Name as a last
-    resort so a stock with neither still doesn't collide with an unrelated
-    one that also has neither."""
+    globally-unique identifier, so it's preferred when present. Falling
+    back to bare Ticker isn't safe on its own -- the same ticker symbol can
+    exist in unrelated companies in different countries -- so the fallback
+    is (region, ticker) instead, which only merges rows that are both the
+    same symbol and the same region."""
     if record["ISIN"]:
         return f"isin:{record['ISIN']}"
-    if record["Ticker"]:
-        return f"ticker:{record['Ticker']}"
-    return f"name:{normalize_key(record['Name'])}"
+    return f"region_ticker:{record['Region']}:{record['Ticker']}"
 
 
-def collect_unique_stocks(holdings_dir: Path) -> List[dict]:
+class RunSummary:
+    """Buckets each input file into one category for the end-of-run report,
+    keyed by short_label(path) (e.g. '586A') rather than the full filename."""
+
+    def __init__(self):
+        self.clean: List[str] = []  # every row was a clean, identifiable stock
+        self.partial: List[str] = []  # some rows filtered out, labelled with why
+        self.problems: Dict[str, List[str]] = {}  # reason -> labels
+        self.region_counts: Dict[str, int] = {}  # region -> unique stock count, set later
+
+    def add(self, path: Path, result: "FileResult") -> None:
+        label = short_label(path)
+        if result.problem is not None:
+            self.problems.setdefault(result.problem, []).append(label)
+            return
+
+        notes = []
+        if result.skipped_no_ticker:
+            notes.append(f"{result.skipped_no_ticker} no ticker")
+        if result.non_stock:
+            notes.append(f"{len(result.non_stock)} non-stock")
+
+        if notes:
+            self.partial.append(f"{label} ({', '.join(notes)})")
+        else:
+            self.clean.append(label)
+
+    def print(self) -> None:
+        if self.clean:
+            print(f"Successful ETFs ({len(self.clean)}): {', '.join(self.clean)}")
+        if self.partial:
+            print(f"ETFs with some holdings filtered out ({len(self.partial)}): {', '.join(self.partial)}")
+        if self.problems:
+            print("Others:")
+            for reason, labels in self.problems.items():
+                print(f"  {reason} ({len(labels)}): {', '.join(labels)}")
+        if self.region_counts:
+            ordered = sorted(self.region_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+            breakdown = ", ".join(f"{region} ({count})" for region, count in ordered)
+            print(f"By region: {breakdown}")
+
+
+def collect_unique_stocks(holdings_dir: Path) -> tuple[List[dict], "RunSummary"]:
     files = sorted(
         p for p in holdings_dir.iterdir() if p.is_file() and p.suffix.lower() in (".csv", ".xlsx", ".xls")
     )
     if not files:
         raise FileNotFoundError(f"no holdings files (.csv/.xlsx) found in {holdings_dir.resolve()}")
 
+    summary = RunSummary()
     seen: Dict[str, dict] = {}
     for path in files:
-        logger.info("Reading %s", path.name)
-        for record in extract_stocks(path):
+        result = extract_stocks(path)
+        summary.add(path, result)
+        for record in result.records:
             key = dedupe_key(record)
             if key in seen:
                 logger.debug("Duplicate stock skipped: %s (already seen)", record)
                 continue
             seen[key] = record
 
-    return list(seen.values())
+    return list(seen.values()), summary
 
 
 # --------------------------------------------------------------------------
@@ -321,15 +529,33 @@ def collect_unique_stocks(holdings_dir: Path) -> List[dict]:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
+    # Only debug-level per-row detail (e.g. exactly which row lacked a
+    # ticker) goes through logging now; set to DEBUG if you need that detail.
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s | %(message)s")
 
-    stocks = collect_unique_stocks(HOLDINGS_DIR)
-    stocks.sort(key=lambda r: (r["Ticker"], r["ISIN"], r["Name"]))
+    stocks, summary = collect_unique_stocks(HOLDINGS_DIR)
 
-    pd.DataFrame(stocks, columns=OUTPUT_FIELDS).to_csv(OUTPUT_FILE, index=False)
+    by_region: Dict[str, List[dict]] = {}
+    for stock in stocks:
+        by_region.setdefault(stock["Region"], []).append(stock)
+    summary.region_counts = {region: len(rows) for region, rows in by_region.items()}
 
+    REGION_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    csv_columns = OUTPUT_FIELDS + ["Region"]
+    for region, rows in by_region.items():
+        rows.sort(key=lambda r: (r["Ticker"], r["ISIN"], r["Name"]))
+        out_path = REGION_OUTPUT_DIR / f"{region}.csv"
+        pd.DataFrame(rows, columns=csv_columns).to_csv(out_path, index=False)
+
+    summary.print()
     print(f"Found {len(stocks)} unique stocks across the holdings files in {HOLDINGS_DIR.resolve()}.")
-    print(f"Written to {OUTPUT_FILE.resolve()}")
+    print(f"Written to {len(by_region)} region file(s) in {REGION_OUTPUT_DIR.resolve()}")
+    if UNKNOWN_REGION in by_region:
+        print(
+            f"Note: {len(by_region[UNKNOWN_REGION])} stock(s) couldn't be placed in a region "
+            f"(no usable ISIN prefix, Location, or recognized Exchange) -- see {UNKNOWN_REGION}.csv. "
+            f"You may need to add their exchange to EXCHANGE_TO_REGION."
+        )
 
 
 if __name__ == "__main__":
