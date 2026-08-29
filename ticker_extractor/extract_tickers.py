@@ -1,24 +1,21 @@
 """
 holdings_dedup.py -- standalone script.
 
-Reads every fund/ETF holdings file (.csv, .xlsx) in a directory and writes
+Reads every fund/ETF holdings file (.csv, .xlsx) in HOLDINGS_DIR and writes
 out the deduplicated list of stocks found across all of them: Ticker, Name,
-ISIN, Exchange, Currency. A stock that appears in multiple holdings files
-(or more than once in the same file) is only listed once.
+ISIN, Exchange, Currency, to OUTPUT_FILE. A stock that appears in multiple
+holdings files (or more than once in the same file) is only listed once.
 
 This is a self-contained project with no dependency on any other codebase --
 everything it needs (file reading, header detection, normalization, dedup)
 lives in this one file.
 
 Usage:
-    python holdings_dedup.py <holdings_dir> [-o unique_stocks.csv] [-v]
-
-Example:
-    python holdings_dedup.py ./ETFs -o unique_stocks.csv
+    Edit HOLDINGS_DIR / OUTPUT_FILE below if your layout differs, then:
+        python holdings_dedup.py
 """
 from __future__ import annotations
 
-import argparse
 import csv
 import logging
 import re
@@ -28,6 +25,13 @@ from typing import Dict, Iterable, List, Optional
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+# --------------------------------------------------------------------------
+# Input/output locations. These rarely change, so they're plain constants
+# rather than CLI arguments -- edit here if your layout differs.
+# --------------------------------------------------------------------------
+HOLDINGS_DIR = Path("../ETFs")
+OUTPUT_FILE = Path("./output/extracted_tickers.csv")
 
 # --------------------------------------------------------------------------
 # What we're looking for in each file, and how to recognize each column.
@@ -107,6 +111,36 @@ NORMALIZERS = {
 # --------------------------------------------------------------------------
 
 
+# Sheet names known to hold the actual holdings table in multi-sheet
+# workbooks (tried first, in order, as an exact stripped match). If a
+# workbook's first/default sheet is a cover or summary sheet instead, this
+# is how we find the real one -- add more names here as new providers turn
+# up.
+HOLDINGS_SHEET_NAMES = ["保有明細"]
+
+
+def _resolve_holdings_sheet(xls: pd.ExcelFile, path: Path) -> str:
+    """Pick which sheet in a multi-sheet workbook actually holds the
+    holdings table. Tries HOLDINGS_SHEET_NAMES first (exact match); if none
+    of those exist in this workbook, falls back to whichever sheet actually
+    contains a row find_header_row() recognizes. Defaults to the first
+    sheet if nothing matches -- extraction will then correctly report "no
+    recognizable holdings header found" rather than silently reading the
+    wrong sheet.
+    """
+    for candidate in HOLDINGS_SHEET_NAMES:
+        for name in xls.sheet_names:
+            if str(name).strip() == candidate:
+                return name
+
+    for name in xls.sheet_names:
+        preview = pd.read_excel(path, sheet_name=name, header=None, nrows=50)
+        if find_header_row(preview) is not None:
+            return name
+
+    return xls.sheet_names[0]
+
+
 def read_raw_grid(path: Path) -> pd.DataFrame:
     """Read a holdings file into a raw grid of cells, tolerating ragged
     rows (metadata rows above the real header often have a different
@@ -121,7 +155,9 @@ def read_raw_grid(path: Path) -> pd.DataFrame:
         return pd.DataFrame(padded).replace("", None)
 
     if suffix in (".xlsx", ".xls"):
-        return pd.read_excel(path, header=None)
+        xls = pd.ExcelFile(path)
+        sheet_name = _resolve_holdings_sheet(xls, path)
+        return pd.read_excel(path, sheet_name=sheet_name, header=None)
 
     raise ValueError(f"unsupported file format: {suffix}")
 
@@ -211,13 +247,32 @@ def extract_stocks(path: Path) -> List[dict]:
         return []
 
     records = []
+    skipped_no_id = 0
     for _, row in df.iterrows():
         record = {}
         for field in OUTPUT_FIELDS:
             col = col_for_field[field]
             record[field] = NORMALIZERS[field](row[col]) if col is not None else ""
-        if any(record.values()):
-            records.append(record)
+
+        if not any(record.values()):
+            continue  # fully blank row -- not even a name, ignore silently
+
+        if not (record["Ticker"] or record["ISIN"]):
+            # We have *something* (usually just a Name), but nothing that
+            # actually identifies which stock it is -- log it so it's
+            # visible, but don't write it to the output.
+            skipped_no_id += 1
+            logger.debug("%s: no Ticker or ISIN, can't identify stock: %s", path.name, record)
+            continue
+
+        records.append(record)
+
+    if skipped_no_id:
+        logger.info(
+            "%s: skipped %d holding(s) with no Ticker or ISIN (nothing to identify the stock by).",
+            path.name,
+            skipped_no_id,
+        )
 
     return records
 
@@ -266,25 +321,15 @@ def collect_unique_stocks(holdings_dir: Path) -> List[dict]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Read a directory of fund/ETF holdings files and output the deduplicated list of stocks found across them."
-    )
-    parser.add_argument("holdings_dir", type=Path, help="Directory containing holdings files (.csv/.xlsx)")
-    parser.add_argument(
-        "-o", "--output", type=Path, default=Path("unique_stocks.csv"), help="Output CSV path (default: unique_stocks.csv)"
-    )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Log which file each row came from and why files were skipped")
-    args = parser.parse_args()
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 
-    logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING, format="%(levelname)s | %(message)s")
-
-    stocks = collect_unique_stocks(args.holdings_dir)
+    stocks = collect_unique_stocks(HOLDINGS_DIR)
     stocks.sort(key=lambda r: (r["Ticker"], r["ISIN"], r["Name"]))
 
-    pd.DataFrame(stocks, columns=OUTPUT_FIELDS).to_csv(args.output, index=False)
+    pd.DataFrame(stocks, columns=OUTPUT_FIELDS).to_csv(OUTPUT_FILE, index=False)
 
-    print(f"Found {len(stocks)} unique stocks across the holdings files in {args.holdings_dir.resolve()}.")
-    print(f"Written to {args.output.resolve()}")
+    print(f"Found {len(stocks)} unique stocks across the holdings files in {HOLDINGS_DIR.resolve()}.")
+    print(f"Written to {OUTPUT_FILE.resolve()}")
 
 
 if __name__ == "__main__":
