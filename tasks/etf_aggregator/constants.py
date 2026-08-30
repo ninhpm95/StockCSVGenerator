@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -9,8 +8,6 @@ OUTPUT_DIR = BASE_DIR.parent.parent / "output"
 ETF_DIR = BASE_DIR.parent.parent / "data" / "ETFs"
 LOGS_DIR = BASE_DIR / "logs"
 
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
-LOG_PATH = LOGS_DIR / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.txt"
 
 TARGET_ETF_FILE = OUTPUT_DIR / "JP_ETFs.csv"
 OUTPUT_FILE = OUTPUT_DIR / "JP_ETFs_details.csv"

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
 from .constants import (
     AGGREGATE_COLUMNS,
-    LOG_PATH,
+    LOGS_DIR,
     OUTPUT_DIR,
     OUTPUT_FILE,
     TARGET_ETF_FILE,
@@ -16,15 +18,36 @@ from .normalize import normalize_ticker
 from .processor import process_etf
 from .stats import ETFStats
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    handlers=[logging.FileHandler(LOG_PATH, encoding="utf-8")],
-)
 logger = logging.getLogger(__name__)
 
 
+def _configure_logging() -> Path:
+    """Set up file logging for this run and return the log path.
+
+    Deliberately done here, inside run(), rather than at module import
+    time: this task's log file should only appear when the task actually
+    runs. LOGS_DIR.mkdir() only happens once we know that's the case, and
+    delay=True on the FileHandler means the file itself isn't created on
+    disk until the first record is actually emitted -- so a run that
+    raises before logging anything (e.g. the FileNotFoundError below)
+    still won't leave behind an empty log file.
+    """
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.txt"
+
+    handler = logging.FileHandler(log_path, encoding="utf-8", delay=True)
+    handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(handler)
+
+    return log_path
+
+
 def run() -> None:
+    log_path = _configure_logging()
+
     target_path = OUTPUT_DIR / TARGET_ETF_FILE
     output_path = OUTPUT_DIR / OUTPUT_FILE
 
@@ -70,18 +93,19 @@ def run() -> None:
     logger.info("Output saved to: %s", output_path.resolve())
     total_stats.log_summary(logger)
 
-    _print_summary(output_path, skipped, match_summary)
+    _print_summary(output_path, log_path, skipped, match_summary)
 
 
 def _print_summary(
     output_path,
+    log_path,
     skipped: list[str],
     match_summary: list[tuple[str, int, int, float]],
 ) -> None:
     """Print a compact, scannable summary to the terminal. All the detail
-    (per-holding misses, parsing errors, etc.) lives in LOG_PATH instead."""
+    (per-holding misses, parsing errors, etc.) lives in the log file instead."""
     print(f"Output saved to: {output_path.resolve()}")
-    print(f"Full log: {LOG_PATH.resolve()}")
+    print(f"Full log: {log_path.resolve()}")
     print()
     print(f"Skipped ETFs ({len(skipped)}): {', '.join(sorted(skipped)) if skipped else 'none'}")
     print()

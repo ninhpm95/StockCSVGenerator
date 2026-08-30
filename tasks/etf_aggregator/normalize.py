@@ -14,6 +14,7 @@ _RESERVED_NON_STOCKS = {
     "CASH", "COLLATERAL", "RIGHTS", "MARGIN", "PENDING", "SUSPENSE",
     "OTHER", "FUTURES", "OPTIONS", "SWAP", "FORWARD", "ACCRUED",
     "N/A", "NA", "TBD", "UNKNOWN",
+    "－", "-",
     # currencies
     "USD", "JPY", "EUR", "GBP", "HKD", "AUD", "CNY", "KRW", "TWD",
     "INR", "CAD", "CHF", "SGD", "NZD",
