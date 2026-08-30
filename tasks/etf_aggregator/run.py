@@ -15,10 +15,25 @@ from .constants import (
 )
 from .loaders import load_stock_files
 from .normalize import normalize_ticker
-from .processor import process_etf
+from .processor import (
+    SKIP_EMPTY_HOLDINGS,
+    SKIP_NO_HOLDINGS_FILE,
+    SKIP_NO_TICKER,
+    SKIP_PARSE_ERROR,
+    process_etf,
+)
 from .stats import ETFStats
 
 logger = logging.getLogger(__name__)
+
+# Human-readable labels for the SKIP_* reason codes, in the order they
+# should be displayed in the terminal summary.
+_SKIP_REASON_LABELS = [
+    (SKIP_NO_HOLDINGS_FILE, "no holdings file found"),
+    (SKIP_EMPTY_HOLDINGS, "holdings file had no usable holdings (e.g. bond fund, or file couldn't be parsed into rows -- see full log)"),
+    (SKIP_PARSE_ERROR, "error while parsing holdings file -- see full log"),
+    (SKIP_NO_TICKER, "ETF row has no Ticker value"),
+]
 
 
 def _configure_logging() -> Path:
@@ -71,19 +86,19 @@ def run() -> None:
 
     total_stats = ETFStats()
     updated_rows = []
-    skipped: list[str] = []
+    skipped: list[tuple[str, str]] = []  # (ticker, skip_reason)
     match_summary: list[tuple[str, int, int, float]] = []  # Added float for weight
 
     for _, etf_row in etfs.iterrows():
         total_stats.etfs += 1
         ticker = normalize_ticker(etf_row.get("Ticker", ""))
 
-        updated, row_stats = process_etf(etf_row, stock_data)
+        updated, row_stats, skip_reason = process_etf(etf_row, stock_data)
         total_stats += row_stats
         updated_rows.append(updated)
 
         if row_stats.holdings == 0:
-            skipped.append(ticker)
+            skipped.append((ticker, skip_reason))
         else:
             match_summary.append((ticker, row_stats.matched, row_stats.holdings, row_stats.matched_weight))
 
@@ -99,7 +114,7 @@ def run() -> None:
 def _print_summary(
     output_path,
     log_path,
-    skipped: list[str],
+    skipped: list[tuple[str, str]],
     match_summary: list[tuple[str, int, int, float]],
 ) -> None:
     """Print a compact, scannable summary to the terminal. All the detail
@@ -107,7 +122,24 @@ def _print_summary(
     print(f"Output saved to: {output_path.resolve()}")
     print(f"Full log: {log_path.resolve()}")
     print()
-    print(f"Skipped ETFs ({len(skipped)}): {', '.join(sorted(skipped)) if skipped else 'none'}")
+    print(f"Skipped ETFs ({len(skipped)}):")
+    if not skipped:
+        print("  none")
+    else:
+        by_reason: dict[str, list[str]] = {}
+        for ticker, reason in skipped:
+            by_reason.setdefault(reason, []).append(ticker)
+
+        for reason_code, label in _SKIP_REASON_LABELS:
+            tickers = sorted(by_reason.pop(reason_code, []))
+            if tickers:
+                print(f"  {label} ({len(tickers)}): {', '.join(tickers)}")
+
+        # Anything with an unrecognized/blank reason code (shouldn't
+        # normally happen, but don't silently drop tickers if it does).
+        for reason_code, tickers in by_reason.items():
+            label = reason_code or "unknown reason"
+            print(f"  {label} ({len(tickers)}): {', '.join(sorted(tickers))}")
     print()
     print("Matching:")
     for ticker, matched, holdings, matched_weight in sorted(match_summary):

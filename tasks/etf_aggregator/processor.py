@@ -24,23 +24,42 @@ class MatchedHolding(TypedDict):
     stock: pd.Series
 
 
+# Reason codes returned by process_etf whenever it leaves a row unchanged
+# because it ended up with zero holdings (stats.holdings == 0). Only
+# meaningful in that case -- ignored otherwise. Kept as short machine-
+# readable codes here; run.py maps them to human-readable labels for the
+# terminal summary.
+SKIP_NO_TICKER = "no_ticker"
+SKIP_NO_HOLDINGS_FILE = "no_holdings_file"
+SKIP_PARSE_ERROR = "parse_error"
+SKIP_EMPTY_HOLDINGS = "empty_holdings"
+
+
 def process_etf(
     etf_row: pd.Series,
     stock_data: Dict[str, pd.DataFrame],
-) -> Tuple[pd.Series, ETFStats]:
-    """Process a single ETF row against the loaded stock database."""
+) -> Tuple[pd.Series, ETFStats, str]:
+    """Process a single ETF row against the loaded stock database.
+
+    Returns (result_row, stats, skip_reason). skip_reason is one of the
+    SKIP_* codes above when stats.holdings ends up 0 (the row was left
+    unchanged for lack of any holdings data), and "" otherwise -- including
+    the "matched some holdings but coverage/matching was too poor" cases,
+    which aren't zero-holdings skips and are reported separately via
+    match_summary in run.py.
+    """
     result = etf_row.astype(object)
     ticker = normalize_ticker(etf_row.get("Ticker", ""))
 
     if not ticker:
         logger.warning("ETF row has no Ticker value; leaving row unchanged.")
-        return result, ETFStats()
+        return result, ETFStats(), SKIP_NO_TICKER
 
     stats = ETFStats()
     holdings_path = find_holdings_file(ticker)
     if holdings_path is None:
         logger.warning("ETF %s: missing holdings file; leaving row unchanged.", ticker)
-        return result, stats
+        return result, stats, SKIP_NO_HOLDINGS_FILE
 
     logger.info("ETF %s (%s): using %s", ticker, etf_row.get("Name", ""), holdings_path.name)
     region_hint = extract_region_from_filename(holdings_path)
@@ -49,14 +68,24 @@ def process_etf(
         holdings = parse_holdings(holdings_path)
     except Exception:
         logger.exception("ETF %s: parsing error in %s", ticker, holdings_path.name)
-        return result, stats
+        return result, stats, SKIP_PARSE_ERROR
 
     stats.holdings = len(holdings)
+
+    if stats.holdings == 0:
+        # parse_holdings already logged the specific reason (no header row
+        # found, no Code/Ticker column, or every row filtered out as
+        # invalid/non-equity) -- see full log for detail. From here it's
+        # indistinguishable from a fund that genuinely has no per-holding
+        # equity data to report, e.g. a bond ETF.
+        logger.warning("ETF %s: holdings file parsed to zero usable rows; leaving row unchanged.", ticker)
+        return result, stats, SKIP_EMPTY_HOLDINGS
+
     matched_rows = _match_holdings(ticker, holdings, stock_data, region_hint, stats)
 
     if not matched_rows:
         logger.warning("ETF %s: zero matched stock holdings.", ticker)
-        return result, stats
+        return result, stats, ""
 
     total_weight = sum(item["weight"] for item in matched_rows)
     stats.matched_weight = total_weight
@@ -69,14 +98,12 @@ def process_etf(
             total_weight * 100,
             MIN_WEIGHT_THRESHOLD * 100,
         )
-        return result, stats
-
-    for item in matched_rows:
+        return result, stats, ""
         item["normalized_weight"] = item["weight"] / total_weight
 
     _apply_aggregates(result, matched_rows)
     _apply_growth(result)
-    return result, stats
+    return result, stats, ""
 
 
 def _match_holdings(
