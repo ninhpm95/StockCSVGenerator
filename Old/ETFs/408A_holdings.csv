@@ -1,0 +1,7 @@
+﻿Fund Holdings as of,2026/08/20
+ 
+Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
+BAI,ISHARES A.I. AND TECH ACTIVE CL1,Other,Equity,"13,289,757,685.20",99.95,"13,289,757,685.20","1,881,169.00","7,065.08",United States,NYSE Arca,JPY,0.01,USD
+JPY,JPY CASH,Cash and/or Derivatives,Cash,"5,535,942.00",0.04,"5,535,942.00","5,535,942.00",100.00,Japan,-,JPY,1.00,JPY
+USD,USD CASH,Cash and/or Derivatives,Cash,"807,067.39",0.01,"807,067.39","5,085.00","15,873.02",United States,-,JPY,0.01,USD
+ 

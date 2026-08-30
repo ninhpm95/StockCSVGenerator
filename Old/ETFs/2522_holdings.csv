@@ -1,0 +1,8 @@
+﻿Fund Holdings as of,2026/08/21
+ 
+Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
+RBOD,ISHARES AUTOMATION & ROBOTIC USD_D,Financials,Equity,"5,589,705,791.26",99.93,"5,589,705,791.26","2,456,383.00","2,275.83",Ireland,London Stock Exchange,JPY,0.01,USD
+JPY,JPY CASH,Cash and/or Derivatives,Cash,"3,055,231.00",0.05,"3,055,231.00","3,055,231.00",100.00,Japan,-,JPY,1.00,JPY
+USD,USD CASH,Cash and/or Derivatives,Cash,"609,180.90",0.01,"609,180.90","3,832.00","15,898.25",United States,-,JPY,0.01,USD
+EUR,EUR CASH,Cash and/or Derivatives,Cash,"117,726.59",0.00,"117,726.59",634.00,"18,552.88",European Union,-,JPY,0.01,EUR
+ 

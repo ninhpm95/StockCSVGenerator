@@ -1,0 +1,7 @@
+﻿Fund Holdings as of,2026/08/21
+ 
+Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
+USRT,ISHARES CORE U.S. REIT ETF,Financials,Equity,"11,755,354,569.44",99.89,"11,755,354,569.44","1,101,748.00","10,670.91",United States,NYSE Arca,JPY,0.01,USD
+JPY,JPY CASH,Cash and/or Derivatives,Cash,"11,676,837.00",0.10,"11,676,837.00","11,676,837.00",100.00,Japan,-,JPY,1.00,JPY
+USD,USD CASH,Cash and/or Derivatives,Cash,"1,060,665.35",0.01,"1,060,665.35","6,672.00","15,898.25",United States,-,JPY,0.01,USD
+ 
