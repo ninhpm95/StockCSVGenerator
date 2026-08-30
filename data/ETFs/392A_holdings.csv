@@ -1,47 +1,7 @@
-﻿Fund Holdings as of,"2026/08/20"
+﻿Fund Holdings as of,2026/08/20
  
 Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
-"QTOP","ISHARES NASDAQ TOP 30 STOCKS CL1","Other","Equity","4,916,441,699.02","99.93","4,916,441,699.02","835,146.00","5,887.30","United States","NASDAQ","JPY","0.01","USD"
-"JPY","JPY CASH","Cash and/or Derivatives","Cash","2,948,379.00","0.06","2,948,379.00","2,948,379.00","100.00","Japan","-","JPY","1.00","JPY"
-"USD","USD CASH","Cash and/or Derivatives","Cash","446,633.32","0.01","446,633.32","2,814.00","15,873.02","United States","-","JPY","0.01","USD"
- 
-Fund Holdings as of,"2026/08/19"
- 
-Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
-"NVDA","NVIDIA","Information Technology","Equity","554,215,911.89","11.29","554,215,911.89","145,483.00","-","United States","NASDAQ","JPY","-","USD"
-"AAPL","APPLE","Information Technology","Equity","489,851,914.02","9.98","489,851,914.02","88,298.00","-","United States","NASDAQ","JPY","-","USD"
-"MSFT","MICROSOFT","Information Technology","Equity","378,730,182.87","7.71","378,730,182.87","44,660.00","-","United States","NASDAQ","JPY","-","USD"
-"MU","MICRON TECHNOLOGY","Information Technology","Equity","307,122,837.55","6.26","307,122,837.55","18,717.00","-","United States","NASDAQ","JPY","-","USD"
-"AMZN","AMAZON.COM INC","Consumer Discretionary","Equity","301,030,870.83","6.13","301,030,870.83","64,670.00","-","United States","NASDAQ","JPY","-","USD"
-"GOOGL","ALPHABET CLASS A","Communication","Equity","211,346,799.02","4.31","211,346,799.02","35,014.00","-","United States","NASDAQ","JPY","-","USD"
-"AMD","ADVANCED MICRO DEVICES","Information Technology","Equity","209,068,075.76","4.26","209,068,075.76","25,599.00","-","United States","NASDAQ","JPY","-","USD"
-"GOOG","ALPHABET CLASS C","Communication","Equity","196,230,695.74","4.00","196,230,695.74","32,797.00","-","United States","NASDAQ","JPY","-","USD"
-"TSLA","TESLA INC","Consumer Discretionary","Equity","185,630,340.05","3.78","185,630,340.05","30,193.00","-","United States","NASDAQ","JPY","-","USD"
-"AVGO","BROADCOM INC","Information Technology","Equity","181,874,493.93","3.70","181,874,493.93","28,655.00","-","United States","NASDAQ","JPY","-","USD"
-"META","META PLATFORMS CLASS A","Communication","Equity","171,113,720.05","3.49","171,113,720.05","17,897.00","-","United States","NASDAQ","JPY","-","USD"
-"WMT","WALMART INC","Consumer Staples","Equity","162,907,863.45","3.32","162,907,863.45","81,397.00","-","United States","NASDAQ","JPY","-","USD"
-"INTC","INTEL CORPORATION","Information Technology","Equity","136,273,537.70","2.78","136,273,537.70","83,864.00","-","United States","NASDAQ","JPY","-","USD"
-"CSCO","CISCO SYSTEMS INC","Information Technology","Equity","127,309,741.93","2.59","127,309,741.93","65,768.00","-","United States","NASDAQ","JPY","-","USD"
-"COST","COSTCO WHOLESALE CORP","Consumer Staples","Equity","124,068,509.52","2.53","124,068,509.52","7,404.00","-","United States","NASDAQ","JPY","-","USD"
-"PLTR","PALANTIR TECHNOLOGIES CLASS A","Information Technology","Equity","117,522,269.87","2.39","117,522,269.87","38,311.00","-","United States","NASDAQ","JPY","-","USD"
-"AMAT","APPLIED MATERIAL INC","Information Technology","Equity","115,106,676.05","2.34","115,106,676.05","13,249.00","-","United States","NASDAQ","JPY","-","USD"
-"LRCX","LAM RESEARCH","Information Technology","Equity","112,250,545.41","2.29","112,250,545.41","20,870.00","-","United States","NASDAQ","JPY","-","USD"
-"NFLX","NETFLIX","Communication","Equity","98,692,509.96","2.01","98,692,509.96","70,261.00","-","United States","NASDAQ","JPY","-","USD"
-"PANW","PALO ALTO NETWORKS","Information Technology","Equity","85,772,713.25","1.75","85,772,713.25","13,616.00","-","United States","NASDAQ","JPY","-","USD"
-"KLAC","KLA","Information Technology","Equity","71,481,267.41","1.46","71,481,267.41","21,799.00","-","United States","NASDAQ","JPY","-","USD"
-"TXN","TEXAS INSTRUMENT INC","Information Technology","Equity","71,126,581.31","1.45","71,126,581.31","15,188.00","-","United States","NASDAQ","JPY","-","USD"
-"SNDK","SANDISK","Information Technology","Equity","67,908,405.95","1.38","67,908,405.95","2,472.00","-","United States","NASDAQ","JPY","-","USD"
-"LIN","LINDE PLC","Materials","Equity","64,987,519.35","1.32","64,987,519.35","7,714.00","-","United States","NASDAQ","JPY","-","USD"
-"CRWD","CROWDSTRIKE HOLDINGS CLASS A","Information Technology","Equity","60,005,234.44","1.22","60,005,234.44","16,996.00","-","United States","NASDAQ","JPY","-","USD"
-"TMUS","T MOBILE US INC","Communication","Equity","57,651,943.70","1.17","57,651,943.70","18,055.00","-","United States","NASDAQ","JPY","-","USD"
-"PEP","PEPSICO","Consumer Staples","Equity","56,932,269.42","1.16","56,932,269.42","22,804.00","-","United States","NASDAQ","JPY","-","USD"
-"STX","SEAGATE TECHNOLOGY HOLDINGS PLC","Information Technology","Equity","54,522,562.50","1.11","54,522,562.50","3,740.00","-","United States","NASDAQ","JPY","-","USD"
-"ADI","ANALOG DEVICES","Information Technology","Equity","53,122,950.57","1.08","53,122,950.57","8,128.00","-","United States","NASDAQ","JPY","-","USD"
-"QCOM","QUALCOMM","Information Technology","Equity","49,863,076.28","1.02","49,863,076.28","17,588.00","-","United States","NASDAQ","JPY","-","USD"
-"APP","APPLOVIN CLASS A","Communication","Equity","27,759,215.40","0.57","27,759,215.40","5,101.00","-","United States","NASDAQ","JPY","-","USD"
-"XTSLA","BLK CSH FND TREASURY SL AGENCY","Cash and/or Derivatives","Money Market","4,604,051.19","0.09","4,604,051.19","262,949.00","-","United States","-","JPY","-","USD"
-"JPY","JPY CASH","Cash and/or Derivatives","Cash","2,982,409.00","0.06","2,982,409.00","29,824.00","100.00","Japan","-","JPY","1.00","JPY"
-"BPSFT","CASH COLLATERAL BPSFT USD","Cash and/or Derivatives","Cash Collateral and Margins","227,627.04","0.00","227,627.04","13,000.00","-","United States","-","JPY","-","USD"
-"HWBU6","MICRO E-MINI NASDAQ 100 SEP 26","Cash and/or Derivatives","Futures","0.00","0.00","0.00","3.00","-","-","Chicago Mercantile Exchange","JPY","-","USD"
-"USD","USD CASH","Cash and/or Derivatives","Cash","-112,612.43","0.00","-112,612.43","2,814.00","-","United States","-","JPY","-","USD"
+QTOP,ISHARES NASDAQ TOP 30 STOCKS CL1,Other,Equity,"4,916,441,699.02",99.93,"4,916,441,699.02","835,146.00","5,887.30",United States,NASDAQ,JPY,0.01,USD
+JPY,JPY CASH,Cash and/or Derivatives,Cash,"2,948,379.00",0.06,"2,948,379.00","2,948,379.00",100.00,Japan,-,JPY,1.00,JPY
+USD,USD CASH,Cash and/or Derivatives,Cash,"446,633.32",0.01,"446,633.32","2,814.00","15,873.02",United States,-,JPY,0.01,USD
  

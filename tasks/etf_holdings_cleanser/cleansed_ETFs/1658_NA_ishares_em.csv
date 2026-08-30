@@ -1,7 +1,0 @@
-﻿Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
-IEMG,ISHARES CORE MSCI EMERGING MARKETS,Financials,Equity,"30,793,575,189.39",99.93,"30,793,575,189.39","2,374,806.00","12,968.20",United States,NYSE Arca,JPY,0.01,USD
-JPY,JPY CASH,Cash and/or Derivatives,Cash,"19,311,548.00",0.06,"19,311,548.00","19,311,548.00",100.00,Japan,-,JPY,1.00,JPY
-USD,USD CASH,Cash and/or Derivatives,Cash,"1,617,673.94",0.01,"1,617,673.94","10,176.00","15,898.25",United States,-,JPY,0.01,USD
- ,,,,,,,,,,,,,
-Fund Holdings as of,2026/08/21,,,,,,,,,,,,
- ,,,,,,,,,,,,,

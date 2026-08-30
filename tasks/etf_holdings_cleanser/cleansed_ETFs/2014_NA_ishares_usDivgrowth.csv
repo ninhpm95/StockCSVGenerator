@@ -1,8 +1,0 @@
-﻿Ticker,Name,Sector,Asset Class,Market Value,Weight (%),Notional Value,Shares,Price,Location,Exchange,Currency,FX Rate,Market Currency
-DGRO,ISHARES CORE DIVIDEND GROWTH ETF,Financials,Equity,"10,259,016,770.09",99.90,"10,259,016,770.09","810,656.00","12,656.60",United States,NYSE Arca,JPY,0.01,USD
-JPY,JPY CASH,Cash and/or Derivatives,Cash,"5,274,053.00",0.05,"5,274,053.00","5,274,053.00",100.00,Japan,-,JPY,1.00,JPY
-USD,USD CASH,Cash and/or Derivatives,Cash,"4,789,202.14",0.05,"4,789,202.14","30,127.00","15,898.25",United States,-,JPY,0.01,USD
-ETD_USD,ETD USD BALANCE WITH R93538,Cash and/or Derivatives,Cash,1.59,0.00,1.59,0.00,"15,898.25",United States,-,JPY,0.01,USD
- ,,,,,,,,,,,,,
-Fund Holdings as of,2026/08/21,,,,,,,,,,,,
- ,,,,,,,,,,,,,
