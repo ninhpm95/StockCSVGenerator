@@ -68,7 +68,7 @@ FEE = 'Fee'
 TER = 'TER'
 BOUGHT = 'Bought'
 NOTE = 'Note'
+
+# SPEED
 FAST = 'Fast'
 NORMAL = 'Normal'
-UPDATE_FINANCIALS = 'Update Financials'
-FILTER_ETFS = 'Filter ETFs'

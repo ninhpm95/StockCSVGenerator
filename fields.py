@@ -1,4 +1,7 @@
+# SPEED
 FAST = 'Fast'
 NORMAL = 'Normal'
-UPDATE_FINANCIALS = 'Update Financials'
+
+# TASKS
+UPDATE_FINANCIALS = 'Update financials'
 FILTER_ETFS = 'Filter ETFs'

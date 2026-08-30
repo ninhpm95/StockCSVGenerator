@@ -1,8 +1,8 @@
 import os
 import pandas as pd
-from tasks.financials.processor import load_and_clean_data, process_batches
-from tasks.financials.constants import OUTPUT_DIR, FINAL_COLUMNS
-from tasks.financials.helper import get_region
+from tasks.financials_update.processor import load_and_clean_data, process_batches
+from tasks.financials_update.constants import OUTPUT_DIR, FINAL_COLUMNS
+from tasks.financials_update.helper import get_region
 
 def run(file_name: str, speed: str, mode: str):
   file_path = os.path.join(OUTPUT_DIR, file_name)
