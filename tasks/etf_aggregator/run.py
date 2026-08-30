@@ -3,18 +3,18 @@ from __future__ import annotations
 import logging
 
 import pandas as pd
-from aggregating_constants import (
+
+from .constants import (
     AGGREGATE_COLUMNS,
     LOG_PATH,
     OUTPUT_DIR,
     OUTPUT_FILE,
     TARGET_ETF_FILE,
 )
-
-from loaders import load_stock_files
-from normalize import normalize_ticker
-from processor import process_etf
-from stats import ETFStats
+from .loaders import load_stock_files
+from .normalize import normalize_ticker
+from .processor import process_etf
+from .stats import ETFStats
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+def run() -> None:
     target_path = OUTPUT_DIR / TARGET_ETF_FILE
     output_path = OUTPUT_DIR / OUTPUT_FILE
 
@@ -89,10 +89,10 @@ def _print_summary(
     for ticker, matched, holdings, matched_weight in sorted(match_summary):
         pct = round(matched_weight * 100) if matched_weight <= 1.0 + 1e-9 else round(matched_weight)
         print(f"{ticker}: {matched}/{holdings} holdings ({pct}%)")
-    
+
     print()
     print(f"Success! Aggregated data successfully written to: {output_path.resolve()}")
 
 
 if __name__ == "__main__":
-    main()
+    run()

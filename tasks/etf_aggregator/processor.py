@@ -4,13 +4,13 @@ from typing import Dict, List, Tuple, TypedDict
 import logging
 import pandas as pd
 
-from aggregating_constants import AGGREGATE_COLUMNS, AGGREGATION_METHODS, OVERWRITE_EXISTING, MIN_WEIGHT_THRESHOLD
-from normalize import normalize_isin, normalize_ticker
-from aggregator import rating_label, weighted_average, weighted_harmonic_mean
-from loaders import find_holdings_file, extract_region_from_filename
-from matcher import find_stock
-from parsers import parse_holdings
-from stats import ETFStats
+from .constants import AGGREGATE_COLUMNS, AGGREGATION_METHODS, OVERWRITE_EXISTING, MIN_WEIGHT_THRESHOLD
+from .normalize import normalize_isin, normalize_ticker
+from .aggregator import rating_label, weighted_average, weighted_harmonic_mean
+from .loaders import find_holdings_file, extract_region_from_filename
+from .matcher import find_stock
+from .parsers import parse_holdings
+from .stats import ETFStats
 
 logger = logging.getLogger(__name__)
 

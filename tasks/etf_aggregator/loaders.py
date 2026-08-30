@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import pandas as pd
-from aggregating_constants import AGGREGATE_COLUMNS, ETF_DIR, OUTPUT_DIR, STOCK_FILE_SUFFIX
-from normalize import normalize_region, normalize_ticker
+
+from .constants import AGGREGATE_COLUMNS, ETF_DIR, OUTPUT_DIR, STOCK_FILE_SUFFIX
+from .normalize import normalize_region, normalize_ticker
 
 logger = logging.getLogger(__name__)
 

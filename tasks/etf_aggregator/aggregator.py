@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import pandas as pd
-from aggregating_constants import RATING_THRESHOLDS
+
+from .constants import RATING_THRESHOLDS
 
 
 def weighted_average(values: pd.Series, weights: pd.Series) -> float:

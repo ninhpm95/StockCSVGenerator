@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
-from aggregating_constants import EXCHANGE_TO_REGION
-from normalize import normalize_exchange, normalize_isin, normalize_region, normalize_ticker
+
+from .constants import EXCHANGE_TO_REGION
+from .normalize import normalize_exchange, normalize_isin, normalize_region, normalize_ticker
 
 
 def find_region(

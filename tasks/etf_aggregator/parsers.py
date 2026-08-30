@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Callable, Iterable, List, Optional
 
 import pandas as pd
-from aggregating_constants import (
+
+from .constants import (
     CODE_COLUMN_CANDIDATES,
     EXCHANGE_COLUMN_CANDIDATES,
     HEADER_KEYWORD_COMBINATIONS,
@@ -19,7 +20,7 @@ from aggregating_constants import (
     VALUATION_COLUMN_CANDIDATES,
     WEIGHT_COLUMN_CANDIDATES,
 )
-from normalize import (
+from .normalize import (
     normalize_exchange,
     normalize_isin,
     normalize_region,
