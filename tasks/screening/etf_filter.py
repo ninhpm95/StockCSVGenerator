@@ -5,7 +5,7 @@ import numpy as np
 from .filter_helper import normalize_ticker, load_lookup_fees
 from .filter_constants import *
 
-def filter_etfs():
+def run():
   df = pd.read_csv(DATA_CSV, dtype=str)
   df[TICKER] = df[TICKER].map(normalize_ticker)
 

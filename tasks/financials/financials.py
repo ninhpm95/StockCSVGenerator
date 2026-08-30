@@ -3,12 +3,10 @@ import random
 import yfinance as yf
 from typing import List, Dict
 from tradingview_ta import get_multiple_analysis, Interval
-from helper import get_region
 
-from helper import get_tv_screener, map_exchange
-from fields import *
-from calculators import safe_div, calculate_price_trends, calculate_volume_surges
-from constants import SPEED
+from tasks.financials.helper import get_tv_screener, map_exchange
+from tasks.financials.fields import *
+from tasks.financials.calculators import safe_div, calculate_price_trends, calculate_volume_surges
 
 def format_financials(ticker_data: Dict) -> Dict:
   curr = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')
@@ -81,11 +79,11 @@ def format_financials(ticker_data: Dict) -> Dict:
     SECTOR: ticker_data.get('sector')
   }
 
-def get_tv_scores_batch(tv_symbols: List[str]) -> Dict[str, Dict]:
+def get_tv_scores_batch(tv_symbols: List[str], region: str) -> Dict[str, Dict]:
   if not tv_symbols:
     return {}
     
-  screener = get_tv_screener()
+  screener = get_tv_screener(region)
   intervals = {'1d': Interval.INTERVAL_1_DAY, '1w': Interval.INTERVAL_1_WEEK}
   score_map = {sym: {} for sym in tv_symbols}
 
@@ -109,7 +107,7 @@ def get_tv_scores_batch(tv_symbols: List[str]) -> Dict[str, Dict]:
       
   return score_map
 
-def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
+def fetch_financials_batch(ticker_list: List[str], region: str, speed: str) -> List[Dict]:
   intermediate_data = []
   tv_symbols_to_fetch = []
 
@@ -144,8 +142,8 @@ def fetch_financials_batch(ticker_list: List[str]) -> List[Dict]:
       print(f" [!] Error fetching {symbol}: {e}")
       intermediate_data.append({'shortName': symbol, 'error': True})
 
-  # Step 2: Fetch TV scores (unchanged from previous fix)
-  tv_scores = {} if SPEED == FAST else get_tv_scores_batch(tv_symbols_to_fetch)
+  # Step 2: Fetch TV scores
+  tv_scores = {} if speed == FAST else get_tv_scores_batch(tv_symbols_to_fetch, region)
 
   # Step 3: Combine and Format
   final_results = []

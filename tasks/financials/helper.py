@@ -1,9 +1,8 @@
 import os
-from typing import Literal
-from constants import FILE_NAME, TV_SLEEP_LOOKUP, SPEED
-from fields import FAST
+from tasks.financials.constants import TV_SLEEP_LOOKUP
+from tasks.financials.fields import FAST
 
-def get_region(filename: str = FILE_NAME) -> str:
+def get_region(filename: str) -> str:
   # Extract just the filename in case a full path is passed
   base_name = os.path.basename(filename).upper()
 
@@ -13,20 +12,19 @@ def get_region(filename: str = FILE_NAME) -> str:
     return 'US'
   if 'HK' in base_name:
     return 'HK'
-    
+
   return 'Unknown'
 
-def get_tv_sleep_range(ticker_num: int) -> tuple[int, int]:
-  if SPEED == FAST:
+def get_tv_sleep_range(ticker_num: int, speed: str) -> tuple[int, int]:
+  if speed == FAST:
     return (1, 2)
   for limit, sleep_range in TV_SLEEP_LOOKUP:
     if ticker_num < limit:
       return sleep_range
 
-def prepare_ticker(ticker: str) -> str:
+def prepare_ticker(ticker: str, region: str) -> str:
   """Standardizes ticker format based on region."""
   ticker = str(ticker).strip().lstrip("'")
-  region = get_region()
   if region == 'JP' and not ticker.endswith('.T'):
     return f"{ticker}.T"
   if region == 'HK' and not ticker.endswith('.HK'):
@@ -35,9 +33,8 @@ def prepare_ticker(ticker: str) -> str:
     return ticker.replace('.', '-')
   return ticker
 
-def get_tv_screener():
+def get_tv_screener(region: str) -> str:
   """Returns the TradingView screener name based on region."""
-  region = get_region()
   if region == 'JP':
     return "japan"
   if region == 'HK':
@@ -48,7 +45,7 @@ def map_exchange(yf_exchange: str) -> str:
   """Maps yfinance exchange codes to TradingView exchange codes."""
   if not yf_exchange:
     return "TSE"
-  
+
   # Common yfinance exchange mappings
   mapping = {
     "NMS": "NASDAQ",

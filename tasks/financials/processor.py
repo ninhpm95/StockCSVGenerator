@@ -4,11 +4,11 @@ import random
 import os
 import pandas as pd
 from typing import List, Dict
-from financials import fetch_financials_batch
-from helper import prepare_ticker, get_tv_sleep_range
-from constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
+from tasks.financials.financials import fetch_financials_batch
+from tasks.financials.helper import prepare_ticker, get_tv_sleep_range
+from tasks.financials.constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
 
-def load_and_clean_data(file_path: str) -> pd.DataFrame:
+def load_and_clean_data(file_path: str, region: str) -> pd.DataFrame:
   if not os.path.exists(file_path):
     raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -22,13 +22,13 @@ def load_and_clean_data(file_path: str) -> pd.DataFrame:
   ticker_col = 'Ticker' if 'Ticker' in df.columns else df.columns[0]
   df = df.drop_duplicates(subset=[ticker_col], keep='first')
   
-  df['api_ticker'] = df[ticker_col].apply(prepare_ticker)
+  df['api_ticker'] = df[ticker_col].apply(lambda t: prepare_ticker(t, region))
   return df
 
-def process_batches(tickers: List[str]) -> List[Dict]:
+def process_batches(tickers: List[str], region: str, speed: str) -> List[Dict]:
   results = []
   total_batches = math.ceil(len(tickers) / BATCH_SIZE)
-  sleep_range = get_tv_sleep_range(len(tickers))
+  sleep_range = get_tv_sleep_range(len(tickers), speed)
 
   for i in range(0, len(tickers), BATCH_SIZE):
     batch_num = (i // BATCH_SIZE) + 1
@@ -36,7 +36,7 @@ def process_batches(tickers: List[str]) -> List[Dict]:
     print(f"[*] Processing batch {batch_num}/{total_batches}...")
     
     try:
-      batch_data = fetch_financials_batch(batch)
+      batch_data = fetch_financials_batch(batch, region, speed)
       results.extend(batch_data)
     except Exception as e:
       print(f" [!] Batch {batch_num} failed: {e}")
