@@ -4,9 +4,9 @@ import random
 import os
 import pandas as pd
 from typing import List, Dict
-from tasks.financials_update.financials import fetch_financials_batch
-from tasks.financials_update.helper import prepare_ticker, get_tv_sleep_range
-from tasks.financials_update.constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
+from .financials import fetch_financials_batch
+from .helper import prepare_ticker, get_tv_sleep_range
+from .constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
 
 def load_and_clean_data(file_path: str, region: str) -> pd.DataFrame:
   if not os.path.exists(file_path):

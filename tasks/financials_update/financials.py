@@ -4,9 +4,9 @@ import yfinance as yf
 from typing import List, Dict
 from tradingview_ta import get_multiple_analysis, Interval
 
-from tasks.financials_update.helper import get_tv_screener, map_exchange
-from tasks.financials_update.fields import *
-from tasks.financials_update.calculators import safe_div, calculate_price_trends, calculate_volume_surges
+from .helper import get_tv_screener, map_exchange
+from .fields import *
+from .calculators import safe_div, calculate_price_trends, calculate_volume_surges
 
 def format_financials(ticker_data: Dict) -> Dict:
   curr = ticker_data.get('currentPrice') or ticker_data.get('regularMarketPrice')

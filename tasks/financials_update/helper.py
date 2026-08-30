@@ -1,6 +1,6 @@
 import os
-from tasks.financials_update.constants import TV_SLEEP_LOOKUP
-from tasks.financials_update.fields import FAST
+from .constants import TV_SLEEP_LOOKUP
+from .fields import FAST
 
 def get_region(filename: str) -> str:
   # Extract just the filename in case a full path is passed

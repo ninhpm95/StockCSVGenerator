@@ -1,4 +1,4 @@
-from tasks.financials_update.fields import *
+from .fields import *
 
 # Paths
 OUTPUT_DIR = "output"
