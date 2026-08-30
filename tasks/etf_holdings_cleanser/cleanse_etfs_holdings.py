@@ -1,7 +1,7 @@
 """
 cleanse_etfs.py
 
-Cleanses and normalizes ETF holding files (.xlsx, .csv) from ../ETFs
+Cleanses and normalizes ETF holding files (.xlsx, .csv) from ../data/ETFs
 and writes standardized .csv files into ./cleansed_ETFs.
 
 Usage:
@@ -26,12 +26,12 @@ import numpy as np
 # --------------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-INPUT_DIR = PROJECT_ROOT.parent.parent / "ETFs"
+INPUT_DIR = PROJECT_ROOT.parent.parent / "data" / "ETFs"
 OUTPUT_DIR = PROJECT_ROOT / "cleansed_ETFs"
 
 # Reference data files.
-STOCK_LIST_CSV = Path("./data/stock_list.csv")   # Ticker,Name,ISIN,Region
-ETF_LIST_CSV = Path("./data/etf_list.csv")       # Ticker,Name,Short Name,Region,Company
+STOCK_LIST_CSV = Path("../../data/stock_list.csv")   # Ticker,Name,ISIN,Region
+ETF_LIST_CSV = Path("../../data/etf_list.csv")       # Ticker,Name,Short Name,Region,Company
 
 XLSX_SHEET_NAMES = ["保有明細"]
 TRUNCATE_MARKER = "fund holdings as of"  # case-insensitive substring match

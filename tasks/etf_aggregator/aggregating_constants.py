@@ -6,7 +6,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 OUTPUT_DIR = BASE_DIR.parent.parent / "output"
-ETF_DIR = BASE_DIR.parent.parent / "ETFs"
+ETF_DIR = BASE_DIR.parent.parent / "data" / "ETFs"
 LOGS_DIR = BASE_DIR / "logs"
 
 LOGS_DIR.mkdir(parents=True, exist_ok=True)

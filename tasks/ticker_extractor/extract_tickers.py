@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 # Input/output locations. These rarely change, so they're plain constants
 # rather than CLI arguments -- edit here if your layout differs.
 # --------------------------------------------------------------------------
-HOLDINGS_DIR = Path("../../ETFs")
+HOLDINGS_DIR = Path("../../data/ETFs")
 REGION_OUTPUT_DIR = Path("./output/by_region")  # one CSV per region: JP.csv, US.csv, ...
 
 # --------------------------------------------------------------------------
