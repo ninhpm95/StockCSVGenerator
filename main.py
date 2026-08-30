@@ -1,4 +1,3 @@
-from NpSimpleInvesting.fields import ENRICH_STOCKS
 from constants import FILE_NAME, SPEED, MODE, UPDATE_FINANCIALS, SCREEN_ETFS, AGGREGATE_ETFS, CLEANSE_ETFS, ENRICH_STOCKS, EXTRACT_TICKERS
 from tasks.financials_update.run import run as run_financials_update
 from tasks.etf_screening.run import run as run_etf_screening
