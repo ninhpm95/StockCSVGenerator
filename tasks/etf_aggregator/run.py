@@ -92,7 +92,3 @@ def _print_summary(
 
     print()
     print(f"Success! Aggregated data successfully written to: {output_path.resolve()}")
-
-
-if __name__ == "__main__":
-    run()

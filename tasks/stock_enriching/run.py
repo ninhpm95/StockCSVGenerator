@@ -153,11 +153,7 @@ def enrich_file(stocks_path, stock_list_lookup, region):
     }
 
 
-# ----------------------------------------------------------------------------
-# Main
-# ----------------------------------------------------------------------------
-
-def main():
+def run():
     stock_list_path = os.path.join(STOCK_LIST_DIR, STOCK_LIST_FILENAME)
     if not os.path.isfile(stock_list_path):
         print(f"ERROR: {stock_list_path} not found.", file=sys.stderr)

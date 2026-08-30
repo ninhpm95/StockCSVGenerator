@@ -43,8 +43,9 @@ logger = logging.getLogger(__name__)
 # Input/output locations. These rarely change, so they're plain constants
 # rather than CLI arguments -- edit here if your layout differs.
 # --------------------------------------------------------------------------
-HOLDINGS_DIR = Path("../../data/ETFs")
-REGION_OUTPUT_DIR = Path("./output/by_region")  # one CSV per region: JP.csv, US.csv, ...
+PROJECT_ROOT = Path(__file__).resolve().parent
+HOLDINGS_DIR = PROJECT_ROOT.parent.parent / "data" / "ETFs"
+REGION_OUTPUT_DIR = PROJECT_ROOT / "output" / "by_region"
 
 # --------------------------------------------------------------------------
 # What we're looking for in each file, and how to recognize each column.
