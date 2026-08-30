@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """
-Enrich *_stocks.csv files with data looked up from stock_list.csv by Ticker.
+Enrich *_stocks.csv files with data looked up from per-region lookup files
+in the "stocks" data directory, by Ticker.
 
 Usage:
     python enrich_stocks.py --data-dir /data
 
 For each <REGION>_stocks.csv file in --data-dir, this script:
-  1. Loads stock_list.csv as a lookup table.
-  2. Matches each row's Ticker against stock_list.csv.
-  3. If a ticker has multiple matches (e.g. same ticker on different
-     exchanges), prefers the row whose Country matches the region's
-     mapped country (REGION_COUNTRY_MAP). Falls back to the first match
-     otherwise, and logs it as an ambiguous match.
+  1. Loads the matching <REGION>_lookup.csv from STOCK_LOOKUP_DIR as a
+     lookup table for that region.
+  2. Matches each row's Ticker against that region's lookup table.
+  3. If a ticker has multiple matches within the region's lookup file
+     (e.g. same ticker listed against different exchanges/countries),
+     prefers the row whose Country matches the region's mapped country
+     (REGION_COUNTRY_MAP). Falls back to the first match otherwise, and
+     logs it as an ambiguous match.
   4. Fills in / updates the ENRICH_COLUMNS (currently just ISIN) in the
      *_stocks.csv file, and overwrites the file in place.
   5. Prints a summary: how many rows matched, unmatched tickers, and
      ambiguous matches that fell back to a non-country-preferred row.
+  6. If a region has no <REGION>_lookup.csv, that region's *_stocks.csv
+     is skipped (reported, not treated as fatal).
 
 Adding a new column to enrich later (e.g. Exchange) is a one-line change:
 just add it to ENRICH_COLUMNS below.
@@ -32,21 +37,26 @@ from collections import defaultdict
 # Config
 # ----------------------------------------------------------------------------
 
-# stock_list.csv lives in the parent-of-parent folder's "data" dir:
-#   <script_dir>/../../data/stock_list.csv
-STOCK_LIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
+# Per-region lookup files now live in the parent-of-parent folder's "data/stocks"
+# dir:
+#   <script_dir>/../../data/stocks/<REGION>_lookup.csv
+STOCK_LOOKUP_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "stocks"
+)
 
 # *_stocks.csv files live in the current folder's "data" dir:
 #   <script_dir>/data/*_stocks.csv
 STOCKS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
-# Columns to pull from stock_list.csv into the *_stocks.csv files.
+# Columns to pull from the region lookup files into the *_stocks.csv files.
 # Add more here later (e.g. "Exchange") -- no other code changes needed
-# as long as the column exists in stock_list.csv.
+# as long as the column exists in the lookup files.
 ENRICH_COLUMNS = ["ISIN"]
 
-# Maps the region prefix used in "<REGION>_stocks.csv" filenames to the
-# "Country" value used in stock_list.csv. Extend as needed.
+# Maps the region prefix used in "<REGION>_stocks.csv" / "<REGION>_lookup.csv"
+# filenames to the "Country" value used inside the lookup files (used only to
+# disambiguate a ticker that appears more than once within the same region's
+# lookup file). Extend as needed.
 REGION_COUNTRY_MAP = {
     "JP": "Japan",
     "US": "United States",
@@ -64,16 +74,16 @@ REGION_COUNTRY_MAP = {
     "TW": "Taiwan",
 }
 
-STOCK_LIST_FILENAME = "stock_list.csv"
 STOCKS_FILE_PATTERN = re.compile(r"^([A-Za-z]{2,3})_stocks\.csv$")
+LOOKUP_FILENAME_TEMPLATE = "{region}_lookup.csv"
 
 
 # ----------------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------------
 
-def load_stock_list(path):
-    """Load stock_list.csv into a dict: ticker -> list of row dicts."""
+def load_region_lookup(path):
+    """Load a <REGION>_lookup.csv into a dict: ticker -> list of row dicts."""
     lookup = defaultdict(list)
     with open(path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
@@ -87,8 +97,9 @@ def load_stock_list(path):
 
 def pick_best_match(candidates, preferred_country):
     """
-    Given multiple stock_list.csv rows for the same ticker, pick the one
-    whose Country matches preferred_country. Returns (row, was_ambiguous).
+    Given multiple lookup rows for the same ticker (within one region's
+    lookup file), pick the one whose Country matches preferred_country.
+    Returns (row, was_ambiguous).
     """
     if len(candidates) == 1:
         return candidates[0], False
@@ -103,7 +114,7 @@ def pick_best_match(candidates, preferred_country):
     return candidates[0], True
 
 
-def enrich_file(stocks_path, stock_list_lookup, region):
+def enrich_file(stocks_path, region_lookup, region):
     preferred_country = REGION_COUNTRY_MAP.get(region.upper())
 
     with open(stocks_path, newline="", encoding="utf-8-sig") as f:
@@ -123,7 +134,7 @@ def enrich_file(stocks_path, stock_list_lookup, region):
 
     for row in rows:
         ticker = (row.get("Ticker") or "").strip().upper()
-        candidates = stock_list_lookup.get(ticker)
+        candidates = region_lookup.get(ticker)
 
         if not candidates:
             unmatched.append(ticker)
@@ -154,15 +165,6 @@ def enrich_file(stocks_path, stock_list_lookup, region):
 
 
 def run():
-    stock_list_path = os.path.join(STOCK_LIST_DIR, STOCK_LIST_FILENAME)
-    if not os.path.isfile(stock_list_path):
-        print(f"ERROR: {stock_list_path} not found.", file=sys.stderr)
-        sys.exit(1)
-
-    print(f"Loading {stock_list_path} ...")
-    lookup = load_stock_list(stock_list_path)
-    print(f"  {sum(len(v) for v in lookup.values())} rows across {len(lookup)} unique tickers.\n")
-
     stocks_files = []
     for path in glob.glob(os.path.join(STOCKS_DIR, "*_stocks.csv")):
         fname = os.path.basename(path)
@@ -174,9 +176,26 @@ def run():
         print(f"No *_stocks.csv files found in {STOCKS_DIR}.")
         return
 
+    skipped_regions = []
+
     for path, region in sorted(stocks_files):
+        lookup_path = os.path.join(
+            STOCK_LOOKUP_DIR, LOOKUP_FILENAME_TEMPLATE.format(region=region.upper())
+        )
+
+        if not os.path.isfile(lookup_path):
+            print(f"Skipping {os.path.basename(path)} (region={region}): "
+                  f"lookup file not found at {lookup_path}\n")
+            skipped_regions.append(region)
+            continue
+
+        print(f"Loading {lookup_path} ...")
+        region_lookup = load_region_lookup(lookup_path)
+        print(f"  {sum(len(v) for v in region_lookup.values())} rows across "
+              f"{len(region_lookup)} unique tickers.")
+
         print(f"Enriching {os.path.basename(path)} (region={region}) ...")
-        result = enrich_file(path, lookup, region)
+        result = enrich_file(path, region_lookup, region)
         print(f"  {result['matched']}/{result['total']} rows matched.")
         if result["ambiguous"]:
             print(f"  {len(result['ambiguous'])} ambiguous (no country match, used first): "
@@ -187,3 +206,7 @@ def run():
                   f"{', '.join(result['unmatched'][:20])}"
                   f"{' ...' if len(result['unmatched']) > 20 else ''}")
         print()
+
+    if skipped_regions:
+        print(f"Skipped {len(skipped_regions)} region(s) with no lookup file: "
+              f"{', '.join(sorted(skipped_regions))}")
