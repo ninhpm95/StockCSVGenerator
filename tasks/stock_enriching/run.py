@@ -187,7 +187,3 @@ def run():
                   f"{', '.join(result['unmatched'][:20])}"
                   f"{' ...' if len(result['unmatched']) > 20 else ''}")
         print()
-
-
-if __name__ == "__main__":
-    main()

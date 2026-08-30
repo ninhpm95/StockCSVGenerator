@@ -524,12 +524,7 @@ def collect_unique_stocks(holdings_dir: Path) -> tuple[List[dict], "RunSummary"]
     return list(seen.values()), summary
 
 
-# --------------------------------------------------------------------------
-# main
-# --------------------------------------------------------------------------
-
-
-def main() -> None:
+def run() -> None:
     # Only debug-level per-row detail (e.g. exactly which row lacked a
     # ticker) goes through logging now; set to DEBUG if you need that detail.
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s | %(message)s")
@@ -557,7 +552,3 @@ def main() -> None:
             f"(no usable ISIN prefix, Location, or recognized Exchange) -- see {UNKNOWN_REGION}.csv. "
             f"You may need to add their exchange to EXCHANGE_TO_REGION."
         )
-
-
-if __name__ == "__main__":
-    main()
