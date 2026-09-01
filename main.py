@@ -9,7 +9,7 @@ from tasks.ticker_extractor.run import run as run_extract_tickers
 
 def main():
     if MODE == UPDATE_FINANCIALS:
-        run_financials_update(FILE_NAME, SPEED, MODE)
+        run_financials_update(FILE_NAME, SPEED)
         return
     
     if MODE == SCREEN_ETFS:

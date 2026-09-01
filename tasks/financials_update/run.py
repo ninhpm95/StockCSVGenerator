@@ -1,10 +1,10 @@
 import os
 import pandas as pd
 from .processor import load_and_clean_data, process_batches
-from .constants import OUTPUT_DIR, FINAL_COLUMNS
 from .helper import get_region
+from .constants import OUTPUT_DIR, FINAL_COLUMNS
 
-def run(file_name: str, speed: str, mode: str):
+def run(file_name: str, speed: str):
   file_path = os.path.join(OUTPUT_DIR, file_name)
   region = get_region(file_path)
   

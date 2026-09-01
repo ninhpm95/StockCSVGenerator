@@ -99,6 +99,8 @@ def process_etf(
             MIN_WEIGHT_THRESHOLD * 100,
         )
         return result, stats, ""
+
+    for item in matched_rows:
         item["normalized_weight"] = item["weight"] / total_weight
 
     _apply_aggregates(result, matched_rows)

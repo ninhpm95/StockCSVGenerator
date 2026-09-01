@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from .constants import TV_SLEEP_LOOKUP
 from .fields import FAST
 
@@ -41,10 +42,15 @@ def get_tv_screener(region: str) -> str:
     return "hongkong"
   return "america"
 
-def map_exchange(yf_exchange: str) -> str:
-  """Maps yfinance exchange codes to TradingView exchange codes."""
+def map_exchange(yf_exchange: str) -> Optional[str]:
+  """Maps yfinance exchange codes to TradingView exchange codes.
+
+  Returns None when the exchange is missing or unrecognized, so callers
+  can skip the TradingView lookup instead of silently building a wrong
+  symbol (e.g. defaulting to TSE for a US/HK ticker).
+  """
   if not yf_exchange:
-    return "TSE"
+    return None
 
   # Common yfinance exchange mappings
   mapping = {
@@ -55,6 +61,7 @@ def map_exchange(yf_exchange: str) -> str:
     "ASE": "AMEX",
     "TSE": "TSE",
     "TYO": "TSE",
+    "JPX": "TSE",
     "HKG": "HKEX",
   }
-  return mapping.get(yf_exchange, "TSE")
+  return mapping.get(yf_exchange)

@@ -25,7 +25,7 @@ def calculate_volume_surges(volume_data: List[int]):
   if not volume_data or len(volume_data) <= 30:
     return None, None, None, None
   n = len(volume_data)
-  # Logic preserved exactly as requested
+
   base1 = sum(volume_data[:-1]) / (n - 1)
   recent1 = volume_data[-1]
   avg_last_1 = safe_div(recent1 - base1, base1, default=0)
