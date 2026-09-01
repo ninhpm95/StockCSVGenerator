@@ -9,41 +9,41 @@ from .helper import prepare_ticker, get_tv_sleep_range
 from .constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
 
 def load_and_clean_data(file_path: str, region: str) -> pd.DataFrame:
-  if not os.path.exists(file_path):
-    raise FileNotFoundError(f"File not found: {file_path}")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
 
-  df = pd.read_csv(file_path, encoding='utf-8-sig')
-  if df.empty:
-    raise ValueError("CSV file is empty.")
+    df = pd.read_csv(file_path, encoding='utf-8-sig')
+    if df.empty:
+        raise ValueError("CSV file is empty.")
 
-  existing_cols = [c for c in COLUMNS_TO_PRESERVE if c in df.columns]
-  df = df[existing_cols].copy()
-  
-  ticker_col = 'Ticker' if 'Ticker' in df.columns else df.columns[0]
-  df = df.drop_duplicates(subset=[ticker_col], keep='first')
-  
-  df['api_ticker'] = df[ticker_col].apply(lambda t: prepare_ticker(t, region))
-  return df
+    existing_cols = [c for c in COLUMNS_TO_PRESERVE if c in df.columns]
+    df = df[existing_cols].copy()
+    
+    ticker_col = 'Ticker' if 'Ticker' in df.columns else df.columns[0]
+    df = df.drop_duplicates(subset=[ticker_col], keep='first')
+    
+    df['api_ticker'] = df[ticker_col].apply(lambda t: prepare_ticker(t, region))
+    return df
 
 def process_batches(tickers: List[str], region: str, speed: str) -> List[Dict]:
-  results = []
-  total_batches = math.ceil(len(tickers) / BATCH_SIZE)
-  sleep_range = get_tv_sleep_range(len(tickers), speed)
+    results = []
+    total_batches = math.ceil(len(tickers) / BATCH_SIZE)
+    sleep_range = get_tv_sleep_range(len(tickers), speed)
 
-  for i in range(0, len(tickers), BATCH_SIZE):
-    batch_num = (i // BATCH_SIZE) + 1
-    batch = tickers[i : i + BATCH_SIZE]
-    print(f"[*] Processing batch {batch_num}/{total_batches}...")
-    
-    try:
-      batch_data = fetch_financials_batch(batch, region, speed)
-      results.extend(batch_data)
-    except Exception as e:
-      print(f" [!] Batch {batch_num} failed: {e}")
-      results.extend([{}] * len(batch))
+    for i in range(0, len(tickers), BATCH_SIZE):
+        batch_num = (i // BATCH_SIZE) + 1
+        batch = tickers[i : i + BATCH_SIZE]
+        print(f"[*] Processing batch {batch_num}/{total_batches}...")
+        
+        try:
+            batch_data = fetch_financials_batch(batch, region, speed)
+            results.extend(batch_data)
+        except Exception as e:
+            print(f" [!] Batch {batch_num} failed: {e}")
+            results.extend([{}] * len(batch))
 
-    if batch_num < total_batches:
-      wait = random.uniform(*sleep_range)
-      print(f"   Cooling down for {wait:.1f}s...")
-      time.sleep(wait)
-  return results
+        if batch_num < total_batches:
+            wait = random.uniform(*sleep_range)
+            print(f"   Cooling down for {wait:.1f}s...")
+            time.sleep(wait)
+    return results
