@@ -1,6 +1,6 @@
 import re
 import pandas as pd
-from .filter_constants import *
+from .constants import *
 
 def normalize_ticker(t):
     return str(t).strip()
@@ -23,4 +23,7 @@ def load_lookup_fees(lookup_path):
     lookup = pd.read_csv(lookup_path, dtype=str)
     lookup[TICKER] = lookup[TICKER].map(normalize_ticker)
     lookup[FEE] = lookup[FEE].map(parse_number)
+    # If a ticker appears more than once, keep the first occurrence
+    # (dict(zip(...)) would otherwise silently keep the last one).
+    lookup = lookup.drop_duplicates(subset=[TICKER], keep="first")
     return dict(zip(lookup[TICKER], lookup[FEE]))

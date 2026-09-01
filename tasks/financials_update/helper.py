@@ -23,8 +23,11 @@ def get_tv_sleep_range(ticker_num: int, speed: str) -> tuple[int, int]:
         if ticker_num < limit:
             return sleep_range
 
-def prepare_ticker(ticker: str, region: str) -> str:
-    """Standardizes ticker format based on region."""
+def prepare_ticker(ticker: str) -> str:
+    ticker = str(ticker).strip().lstrip("'")
+    return ticker
+
+def format_ticker_for_yfinance(ticker: str, region: str) -> str:
     ticker = str(ticker).strip().lstrip("'")
     if region == 'JP' and not ticker.endswith('.T'):
         return f"{ticker}.T"

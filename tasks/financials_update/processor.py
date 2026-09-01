@@ -22,7 +22,7 @@ def load_and_clean_data(file_path: str, region: str) -> pd.DataFrame:
     ticker_col = 'Ticker' if 'Ticker' in df.columns else df.columns[0]
     df = df.drop_duplicates(subset=[ticker_col], keep='first')
     
-    df['api_ticker'] = df[ticker_col].apply(lambda t: prepare_ticker(t, region))
+    df['api_ticker'] = df[ticker_col].apply(lambda t: prepare_ticker(t))
     return df
 
 def process_batches(tickers: List[str], region: str, speed: str) -> List[Dict]:

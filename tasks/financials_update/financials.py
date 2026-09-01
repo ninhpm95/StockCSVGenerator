@@ -4,7 +4,7 @@ import yfinance as yf
 from typing import List, Dict
 from tradingview_ta import get_multiple_analysis, Interval
 
-from .helper import get_tv_screener, map_exchange
+from .helper import format_ticker_for_yfinance, get_tv_screener, map_exchange
 from .fields import *
 from .calculators import safe_div, calculate_price_trends, calculate_volume_surges
 
@@ -125,7 +125,7 @@ def fetch_financials_batch(ticker_list: List[str], region: str, speed: str) -> L
     # Step 1: Fetch yfinance data & map TradingView symbols
     for symbol in ticker_list:
         try:
-            yf_sym = symbol
+            yf_sym = format_ticker_for_yfinance(symbol, region)
             
             ticker = yf.Ticker(yf_sym)
             
@@ -152,9 +152,7 @@ def fetch_financials_batch(ticker_list: List[str], region: str, speed: str) -> L
                 time.sleep(0.05)
                 continue
 
-            # TradingView needs the clean symbol (no .T)
-            clean_tv_name = symbol.replace('.T', '')
-            tv_sym = f"{mapped_exch}:{clean_tv_name}"
+            tv_sym = f"{mapped_exch}:{symbol}"
             
             info['tv_key'] = tv_sym
             tv_symbols_to_fetch.append(tv_sym)

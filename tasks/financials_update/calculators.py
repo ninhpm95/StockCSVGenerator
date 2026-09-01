@@ -9,8 +9,8 @@ def safe_div(numerator: Optional[float], denominator: Optional[float], default: 
         return default
 
 def calculate_price_trends(current: float, history: List[float]):
-    if not current or not history or len(history) <= 30:
-        return None, None, None, None, None, None, None, None
+    if not isinstance(current, (int, float)) or current < 0 or not isinstance(history, list) or len(history) <= 30:
+        return (None,) * 8
     hp1  = safe_div(current - history[-2],  history[-2])
     hp3  = safe_div(current - history[-4],  history[-4])
     hp5  = safe_div(current - history[-6],  history[-6])
@@ -22,8 +22,8 @@ def calculate_price_trends(current: float, history: List[float]):
     return hp1, hp3, hp5, hp7, hp10, hp15, hp20, hp30
 
 def calculate_volume_surges(volume_data: List[int]):
-    if not volume_data or len(volume_data) <= 30:
-        return None, None, None, None
+    if not isinstance(volume_data, list) or len(volume_data) <= 30:
+        return (None,) * 4
     n = len(volume_data)
 
     base1 = sum(volume_data[:-1]) / (n - 1)
