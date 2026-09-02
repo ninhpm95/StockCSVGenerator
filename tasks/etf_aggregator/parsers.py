@@ -40,24 +40,33 @@ logger = logging.getLogger(__name__)
 def find_column(columns: Iterable[str], candidates: Iterable[str]) -> Optional[str]:
     """Find a column name using exact or substring normalized text matching.
 
-    A column matches a candidate if the candidate text appears anywhere in
-    the column name (case-insensitive, whitespace-insensitive) -- e.g. the
-    candidate "Code" matches a real column named "銘柄コード（Code）".
+    Candidate priority is enforced in two full passes, not interleaved:
+    first every candidate is checked for an EXACT match (in candidate
+    order), and only if none match at all is a second pass run checking
+    every candidate for a SUBSTRING match (again in candidate order). This
+    matters because a lower-priority candidate could substring-match some
+    column while a higher-priority candidate is still waiting to be tried
+    -- e.g. the candidate "Code" would substring-match a stray column
+    before the exact candidate "銘柄コード（Code）" got a chance, if the two
+    passes weren't kept separate like this.
     """
+    columns = list(columns)
+    candidates = list(candidates)
     normalized = {_norm_key(c): c for c in columns}
 
-    # Exact match check
+    # Pass 1: exact match, in candidate priority order.
     for candidate in candidates:
         key = _norm_key(candidate)
         if key in normalized:
             return normalized[key]
 
-    # Substring match fallback
-    for col in columns:
-        col_norm = _norm_key(col)
-        for candidate in candidates:
-            cand_norm = _norm_key(candidate)
-            if cand_norm and cand_norm in col_norm:
+    # Pass 2: substring match, in candidate priority order.
+    for candidate in candidates:
+        cand_norm = _norm_key(candidate)
+        if not cand_norm:
+            continue
+        for col in columns:
+            if cand_norm in _norm_key(col):
                 return col
 
     return None

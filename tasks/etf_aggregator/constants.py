@@ -8,9 +8,15 @@ OUTPUT_DIR = BASE_DIR.parent.parent / "output"
 ETF_DIR = BASE_DIR.parent.parent / "data" / "ETFs"
 LOGS_DIR = BASE_DIR / "logs"
 
+# If True, a detailed per-run log file is written to LOGS_DIR (one
+# timestamped file per run -- see run._configure_logging). Only needed
+# while debugging; the terminal summary printed at the end of a run is
+# sufficient for normal use, so leave this off otherwise to skip the file
+# I/O and avoid accumulating log files.
+ENABLE_LOG_FILE = False
+
 
 TARGET_ETF_FILE = OUTPUT_DIR / "JP_ETFs.csv"
-OUTPUT_FILE = OUTPUT_DIR / "JP_ETFs_details.csv"
 
 # Only these columns are recalculated from ETF holdings.
 # Add/remove columns here as desired.
@@ -54,6 +60,7 @@ AGGREGATE_COLUMNS = [
 AGGREGATION_METHODS = {
     "PE ratio": "harmonic",
     "Forward PE ratio": "harmonic",
+    "PB": "harmonic",
     "ROA": "skip",  # TODO: figure out the right way to aggregate ROA across holdings
     "ROE": "skip",  # TODO: figure out the right way to aggregate ROE across holdings
 }
