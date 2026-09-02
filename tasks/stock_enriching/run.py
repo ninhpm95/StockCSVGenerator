@@ -4,9 +4,8 @@ Enrich *_stocks.csv files with data looked up from per-region lookup files
 in the "stocks" data directory, by Ticker.
 
 Usage:
-    python enrich_stocks.py --data-dir /data
-
-For each <REGION>_stocks.csv file in --data-dir, this script:
+For each <REGION>_stocks.csv file in STOCKS_DIR (see constants.py), this
+script:
   1. Loads the matching <REGION>_lookup.csv from STOCK_LOOKUP_DIR as a
      lookup table for that region.
   2. Matches each row's Ticker against that region's lookup table.
@@ -16,66 +15,32 @@ For each <REGION>_stocks.csv file in --data-dir, this script:
      (REGION_COUNTRY_MAP). Falls back to the first match otherwise, and
      logs it as an ambiguous match.
   4. Fills in / updates the ENRICH_COLUMNS (currently just ISIN) in the
-     *_stocks.csv file, and overwrites the file in place.
+     *_stocks.csv file, and overwrites the file in place. Lookup files
+     are only ever read, never modified.
   5. Prints a summary: how many rows matched, unmatched tickers, and
      ambiguous matches that fell back to a non-country-preferred row.
   6. If a region has no <REGION>_lookup.csv, that region's *_stocks.csv
      is skipped (reported, not treated as fatal).
 
 Adding a new column to enrich later (e.g. Exchange) is a one-line change:
-just add it to ENRICH_COLUMNS below.
+just add it to ENRICH_COLUMNS in constants.py.
+
+All paths, column lists, and region mappings live in constants.py.
 """
 
 import csv
 import glob
 import os
-import re
-import sys
-from collections import defaultdict
+from collections import defaultdict, Counter
 
-# ----------------------------------------------------------------------------
-# Config
-# ----------------------------------------------------------------------------
-
-# Per-region lookup files now live in the parent-of-parent folder's "data/stocks"
-# dir:
-#   <script_dir>/../../data/stocks/<REGION>_lookup.csv
-STOCK_LOOKUP_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "stocks"
+from .constants import (
+    STOCK_LOOKUP_DIR,
+    STOCKS_DIR,
+    ENRICH_COLUMNS,
+    REGION_COUNTRY_MAP,
+    STOCKS_FILE_PATTERN,
+    LOOKUP_FILENAME_TEMPLATE,
 )
-
-# *_stocks.csv files live in the current folder's "data" dir:
-#   <script_dir>/data/*_stocks.csv
-STOCKS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-
-# Columns to pull from the region lookup files into the *_stocks.csv files.
-# Add more here later (e.g. "Exchange") -- no other code changes needed
-# as long as the column exists in the lookup files.
-ENRICH_COLUMNS = ["ISIN"]
-
-# Maps the region prefix used in "<REGION>_stocks.csv" / "<REGION>_lookup.csv"
-# filenames to the "Country" value used inside the lookup files (used only to
-# disambiguate a ticker that appears more than once within the same region's
-# lookup file). Extend as needed.
-REGION_COUNTRY_MAP = {
-    "JP": "Japan",
-    "US": "United States",
-    "HK": "Hong Kong",
-    "IN": "India",
-    "GB": "United Kingdom",
-    "UK": "United Kingdom",
-    "DE": "Germany",
-    "FR": "France",
-    "CA": "Canada",
-    "AU": "Australia",
-    "SG": "Singapore",
-    "CN": "China",
-    "KR": "South Korea",
-    "TW": "Taiwan",
-}
-
-STOCKS_FILE_PATTERN = re.compile(r"^([A-Za-z]{2,3})_stocks\.csv$")
-LOOKUP_FILENAME_TEMPLATE = "{region}_lookup.csv"
 
 
 # ----------------------------------------------------------------------------
@@ -100,14 +65,27 @@ def pick_best_match(candidates, preferred_country):
     Given multiple lookup rows for the same ticker (within one region's
     lookup file), pick the one whose Country matches preferred_country.
     Returns (row, was_ambiguous).
+
+    "Ambiguous" covers two cases:
+      - no candidate matches preferred_country (falls back to the first
+        candidate), or
+      - more than one candidate matches preferred_country (the choice
+        among them is arbitrary, even though a match was found).
     """
     if len(candidates) == 1:
         return candidates[0], False
 
     if preferred_country:
-        for row in candidates:
-            if (row.get("Country") or "").strip().lower() == preferred_country.lower():
-                return row, False
+        country_matches = [
+            row for row in candidates
+            if (row.get("Country") or "").strip().lower() == preferred_country.lower()
+        ]
+        if len(country_matches) == 1:
+            return country_matches[0], False
+        if len(country_matches) > 1:
+            # Multiple rows for the same preferred country -- still
+            # ambiguous, just pick the first one deterministically.
+            return country_matches[0], True
 
     # No country match found (or no preferred country known) -> fall back
     # to the first candidate, but flag it as ambiguous.
@@ -129,20 +107,25 @@ def enrich_file(stocks_path, region_lookup, region):
             fieldnames.append(col)
 
     matched = 0
-    unmatched = []
-    ambiguous = []
+    blank_ticker_rows = 0
+    unmatched = Counter()
+    ambiguous = Counter()
 
     for row in rows:
         ticker = (row.get("Ticker") or "").strip().upper()
-        candidates = region_lookup.get(ticker)
 
+        if not ticker:
+            blank_ticker_rows += 1
+            continue
+
+        candidates = region_lookup.get(ticker)
         if not candidates:
-            unmatched.append(ticker)
+            unmatched[ticker] += 1
             continue
 
         best, was_ambiguous = pick_best_match(candidates, preferred_country)
         if was_ambiguous:
-            ambiguous.append(ticker)
+            ambiguous[ticker] += 1
 
         for col in ENRICH_COLUMNS:
             value = (best.get(col) or "").strip()
@@ -159,22 +142,40 @@ def enrich_file(stocks_path, region_lookup, region):
     return {
         "total": len(rows),
         "matched": matched,
+        "blank_ticker_rows": blank_ticker_rows,
         "unmatched": unmatched,
         "ambiguous": ambiguous,
     }
 
 
+def format_counter(counter, limit=20):
+    """Render a Counter of ticker -> occurrence count as 'TICKER (xN)' list,
+    most frequent first, truncated to `limit` entries."""
+    items = counter.most_common(limit)
+    parts = [f"{ticker} (x{count})" if count > 1 else ticker for ticker, count in items]
+    suffix = " ..." if len(counter) > limit else ""
+    return ", ".join(parts) + suffix
+
+
 def run():
     stocks_files = []
+    skipped_filenames = []
     for path in glob.glob(os.path.join(STOCKS_DIR, "*_stocks.csv")):
         fname = os.path.basename(path)
         m = STOCKS_FILE_PATTERN.match(fname)
         if m:
             stocks_files.append((path, m.group(1)))
+        else:
+            skipped_filenames.append(fname)
 
     if not stocks_files:
         print(f"No *_stocks.csv files found in {STOCKS_DIR}.")
         return
+
+    if skipped_filenames:
+        print(f"Ignoring {len(skipped_filenames)} file(s) with unrecognized "
+              f"naming pattern (expected <REGION>_stocks.csv): "
+              f"{', '.join(sorted(skipped_filenames))}\n")
 
     skipped_regions = []
 
@@ -189,24 +190,35 @@ def run():
             skipped_regions.append(region)
             continue
 
-        print(f"Loading {lookup_path} ...")
-        region_lookup = load_region_lookup(lookup_path)
-        print(f"  {sum(len(v) for v in region_lookup.values())} rows across "
-              f"{len(region_lookup)} unique tickers.")
+        try:
+            print(f"Loading {lookup_path} ...")
+            region_lookup = load_region_lookup(lookup_path)
+            print(f"  {sum(len(v) for v in region_lookup.values())} rows across "
+                  f"{len(region_lookup)} unique tickers.")
 
-        print(f"Enriching {os.path.basename(path)} (region={region}) ...")
-        result = enrich_file(path, region_lookup, region)
+            print(f"Enriching {os.path.basename(path)} (region={region}) ...")
+            result = enrich_file(path, region_lookup, region)
+        except Exception as exc:
+            print(f"  ERROR processing region={region} ({os.path.basename(path)}): {exc}")
+            print("  Skipping this region; other regions are unaffected.\n")
+            skipped_regions.append(region)
+            continue
+
         print(f"  {result['matched']}/{result['total']} rows matched.")
+        if result["blank_ticker_rows"]:
+            print(f"  {result['blank_ticker_rows']} row(s) had a blank Ticker (skipped).")
         if result["ambiguous"]:
-            print(f"  {len(result['ambiguous'])} ambiguous (no country match, used first): "
-                  f"{', '.join(result['ambiguous'][:20])}"
-                  f"{' ...' if len(result['ambiguous']) > 20 else ''}")
+            total_ambiguous = sum(result["ambiguous"].values())
+            print(f"  {total_ambiguous} ambiguous match(es) across "
+                  f"{len(result['ambiguous'])} ticker(s) (no unique country match, "
+                  f"used first candidate): {format_counter(result['ambiguous'])}")
         if result["unmatched"]:
-            print(f"  {len(result['unmatched'])} unmatched tickers: "
-                  f"{', '.join(result['unmatched'][:20])}"
-                  f"{' ...' if len(result['unmatched']) > 20 else ''}")
+            total_unmatched = sum(result["unmatched"].values())
+            print(f"  {total_unmatched} unmatched row(s) across "
+                  f"{len(result['unmatched'])} ticker(s): "
+                  f"{format_counter(result['unmatched'])}")
         print()
 
     if skipped_regions:
-        print(f"Skipped {len(skipped_regions)} region(s) with no lookup file: "
+        print(f"Skipped {len(skipped_regions)} region(s) (no lookup file or error): "
               f"{', '.join(sorted(skipped_regions))}")
