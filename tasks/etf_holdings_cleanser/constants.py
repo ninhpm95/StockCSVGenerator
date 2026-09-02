@@ -12,5 +12,4 @@ SHEET_NAMES = ["保有明細"]
 # top-down) to hit its target count wins.
 SEARCH_STRS = [
     ("Fund Holdings as of", 2),
-    ("Test", 1),
 ]
