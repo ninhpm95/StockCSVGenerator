@@ -11,13 +11,13 @@ def main():
     if MODE == UPDATE_FINANCIALS:
         run_financials_update(FILE_NAME, SPEED)
         return
-    
-    if MODE == SCREEN_ETFS:
-        run_etf_screening()
-        return
 
     if MODE == AGGREGATE_ETFS:
         run_etf_aggregator()
+        return
+
+    if MODE == SCREEN_ETFS:
+        run_etf_screening()
         return
 
     if MODE == CLEANSE_ETFS:
