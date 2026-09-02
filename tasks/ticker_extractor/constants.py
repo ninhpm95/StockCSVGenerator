@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 # --------------------------------------------------------------------------
 # Input/output locations.
@@ -33,9 +33,19 @@ FIELD_CANDIDATES: Dict[str, List[str]] = {
     "Shares": ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares"],
 }
 
-# A row is treated as the holdings-table header once at least this many
-# distinct fields can be matched to distinct cells in it.
-MIN_FIELDS_FOR_HEADER = 2
+# A row is treated as the holdings-table header if it matches one of these
+# keyword sequences. Combinations are tried in order, top to bottom, row by
+# row; the first row where ANY combination matches wins. Within a
+# combination, keywords are matched left to right: once a cell containing
+# keyword N (case-sensitive substring) is found, the search for keyword N+1
+# resumes from the next cell onward -- so the matched cells must appear in
+# order, but don't need to be adjacent.
+HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
+    ("銘柄コード", "ISINコード", "Name"),
+    ("Code", "Name", "ISIN"),
+    ("Code", "Name", "Weight"),
+    ("Ticker", "Name", "Weight"),
+]
 
 
 # --------------------------------------------------------------------------
@@ -51,6 +61,13 @@ PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "na", "null", "none
 # --------------------------------------------------------------------------
 # File reading: CSV/XLSX -> a raw grid of cells (no header assumed yet)
 # --------------------------------------------------------------------------
+
+# Encodings to try, in order, when reading a holdings CSV. Source files come
+# from more than one provider (e.g. iShares exports are plain UTF-8, Next
+# Funds exports are Shift-JIS/CP932) and don't declare their own encoding,
+# so we try each until one decodes cleanly. utf-8-sig also handles plain
+# utf-8 (with or without a BOM), so it's tried first.
+CSV_ENCODINGS: List[str] = ["utf-8-sig", "cp932"]
 
 # Sheet names known to hold the actual holdings table in multi-sheet
 # workbooks (tried first, in order, as an exact stripped match).

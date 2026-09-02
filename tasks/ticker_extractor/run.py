@@ -30,9 +30,12 @@ Reads every ETF holdings file (.csv, .xlsx) in HOLDINGS_DIR. For each file:
      ISIN across every source file that contributes to that region.
 
 Usage:
-    Edit HOLDINGS_DIR / LOOKUP_DIR / OUTPUT_DIR below if your layout
-    differs, then:
-        python run.py
+    This is a subtask of the larger project and is not meant to be run as
+    a standalone script -- the `from .constants import *` below requires
+    it to be executed in its package context (e.g. invoked by the parent
+    project's runner, or via `python -m parent.tasks.ticker_extractor.run`
+    from REPO_ROOT). Edit HOLDINGS_DIR / LOOKUP_DIR / OUTPUT_DIR in
+    constants.py if your layout differs.
 """
 from __future__ import annotations
 
@@ -147,6 +150,21 @@ def _resolve_holdings_sheet(xls: pd.ExcelFile, path: Path) -> str:
     return xls.sheet_names[0]
 
 
+def _read_csv_rows(path: Path) -> List[List[str]]:
+    """Read a CSV's rows as raw strings, trying each of CSV_ENCODINGS in
+    order until one decodes without error. Different providers export in
+    different encodings (e.g. iShares in UTF-8, Next Funds in Shift-JIS)
+    and don't declare which, so we sniff by trying."""
+    last_error: Optional[UnicodeDecodeError] = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            with open(path, newline="", encoding=encoding) as f:
+                return list(csv.reader(f))
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    raise last_error  # every configured encoding failed to decode
+
+
 def read_raw_grid(path: Path) -> pd.DataFrame:
     """Read a holdings file into a raw grid of cells, tolerating ragged
     rows (metadata rows above the real header often have a different
@@ -154,8 +172,7 @@ def read_raw_grid(path: Path) -> pd.DataFrame:
     suffix = path.suffix.lower()
 
     if suffix == ".csv":
-        with open(path, newline="", encoding="utf-8-sig") as f:
-            rows = list(csv.reader(f))
+        rows = _read_csv_rows(path)
         width = max((len(row) for row in rows), default=0)
         padded = [row + [None] * (width - len(row)) for row in rows]
         return pd.DataFrame(padded).replace("", None)
@@ -173,28 +190,34 @@ def read_raw_grid(path: Path) -> pd.DataFrame:
 # --------------------------------------------------------------------------
 
 
-def _cell_matches_field(cell: str, field: str) -> bool:
-    cell_norm = normalize_key(cell)
-    if not cell_norm:
-        return False
-    return any(normalize_key(candidate) in cell_norm for candidate in FIELD_CANDIDATES[field])
+def _row_matches_combination(cells: List[str], combination: Tuple[str, ...]) -> bool:
+    """True if every keyword in `combination` occurs (case-sensitive
+    substring) in `cells`, in order, at strictly increasing cell indices.
+    Once keyword N is found in cell j, the search for keyword N+1 only
+    looks at cells after j -- matched cells don't need to be adjacent."""
+    search_from = 0
+    for keyword in combination:
+        found_at = None
+        for j in range(search_from, len(cells)):
+            if keyword in cells[j]:
+                found_at = j
+                break
+        if found_at is None:
+            return False
+        search_from = found_at + 1
+    return True
 
 
 def find_header_row(raw: pd.DataFrame) -> Optional[int]:
     """Return the index of the first row that looks like a holdings-table
-    header, or None if no row qualifies (see MIN_FIELDS_FOR_HEADER)."""
+    header, or None if no row qualifies.
+
+    Scans row by row, top to bottom. For each row, tries each sequence in
+    HEADER_KEYWORD_COMBINATIONS in order; the row is a header as soon as
+    any combination matches (see _row_matches_combination)."""
     for i, row in raw.iterrows():
-        matched_cells = set()
-        matched_fields = 0
-        for field in FIELD_CANDIDATES:
-            for j, cell in enumerate(row):
-                if j in matched_cells or pd.isna(cell):
-                    continue
-                if _cell_matches_field(str(cell), field):
-                    matched_cells.add(j)
-                    matched_fields += 1
-                    break
-        if matched_fields >= MIN_FIELDS_FOR_HEADER:
+        cells = ["" if pd.isna(cell) else str(cell) for cell in row]
+        if any(_row_matches_combination(cells, combo) for combo in HEADER_KEYWORD_COMBINATIONS):
             return i
     return None
 
