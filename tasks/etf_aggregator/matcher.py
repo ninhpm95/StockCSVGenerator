@@ -1,11 +1,34 @@
 from __future__ import annotations
 
 from typing import Dict, Optional, Tuple
+from pathlib import Path
 
 import pandas as pd
 
 from .constants import EXCHANGE_TO_REGION
 from .normalize import normalize_exchange, normalize_isin, normalize_region, normalize_ticker
+
+
+def region_from_filename(source: str, stock_data: Dict[str, pd.DataFrame]) -> Optional[str]:
+    """Infer region from a holdings filename of the form
+    `{ticker}_{region}_{whatever}.ext`, e.g. "1655_us_sp500.xlsx" -> "US".
+
+    Only used when the second underscore-delimited token actually matches
+    a loaded region code -- most filenames use that slot for something
+    else entirely (a provider name, a description, ...), e.g.
+    "221A_Maxis_JpSemi.csv" or "1329_brd_data.xlsx" ("brd" isn't a region
+    we load), and those are correctly ignored rather than misread.
+    """
+    if not source:
+        return None
+
+    stem = Path(source).stem
+    parts = stem.split("_")
+    if len(parts) < 2:
+        return None
+
+    candidate = normalize_region(parts[1])
+    return candidate if candidate in stock_data else None
 
 
 def find_region(
@@ -17,7 +40,10 @@ def find_region(
     a loaded region.
 
     Priority: explicit Region column on holding -> mapped Exchange -> ISIN
-    country prefix.
+    country prefix -> holdings filename's region token (see
+    region_from_filename), tried last as it's the weakest signal --
+    fund-level, not holding-level, and only present at all when the
+    provider happens to have put a real region code in that filename slot.
     """
     region = normalize_region(holding.get("Region", ""))
     if region in stock_data:
@@ -32,6 +58,10 @@ def find_region(
     isin_region = isin[:2]
     if len(isin_region) == 2 and isin_region in stock_data:
         return isin_region, "isin"
+
+    filename_region = region_from_filename(holding.get("_source", ""), stock_data)
+    if filename_region:
+        return filename_region, f"filename:{filename_region}"
 
     return None, None
 

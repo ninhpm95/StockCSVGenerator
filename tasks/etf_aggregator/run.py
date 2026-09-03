@@ -29,9 +29,9 @@ logger = logging.getLogger(__name__)
 # Human-readable labels for the SKIP_* reason codes, in the order they
 # should be displayed in the terminal summary.
 _SKIP_REASON_LABELS = [
-    (SKIP_NO_HOLDINGS_FILE, "no holdings file found"),
-    (SKIP_EMPTY_HOLDINGS, "holdings file had no usable holdings (e.g. bond fund, or file couldn't be parsed into rows -- see full log)"),
-    (SKIP_PARSE_ERROR, "error while parsing holdings file -- see full log"),
+    (SKIP_NO_HOLDINGS_FILE, "No holdings file found"),
+    (SKIP_EMPTY_HOLDINGS, "Holdings file had no usable holdings (e.g. bond fund, or file couldn't be parsed into rows -- see full log)"),
+    (SKIP_PARSE_ERROR, "Error while parsing holdings file -- see full log"),
     (SKIP_NO_TICKER, "ETF row has no Ticker value"),
 ]
 

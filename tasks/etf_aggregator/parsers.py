@@ -198,8 +198,21 @@ def _read_csv_grid(path: Path) -> pd.DataFrame:
     Empty cells are mapped to NaN (matching pd.read_csv's default behavior)
     so downstream blank-row/column cleanup and pd.isna checks still work.
     """
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        rows = list(csv.reader(f))
+    encodings = ["utf-8-sig", "cp932"]
+    rows = None
+    last_error = None
+
+    for encoding in encodings:
+        try:
+            with open(path, newline="", encoding=encoding) as f:
+                rows = list(csv.reader(f))
+            break
+        except UnicodeDecodeError as e:
+            last_error = e
+            continue
+
+    if rows is None:
+        raise ValueError(f"{path.name}: could not decode as any of {encodings}") from last_error
 
     width = max((len(row) for row in rows), default=0)
     padded = [row + [None] * (width - len(row)) for row in rows]
