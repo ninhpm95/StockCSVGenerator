@@ -7,7 +7,7 @@ import pandas as pd
 from .constants import AGGREGATE_COLUMNS, AGGREGATION_METHODS, OVERWRITE_EXISTING, MIN_WEIGHT_THRESHOLD
 from .normalize import normalize_isin, normalize_ticker
 from .aggregator import rating_label, weighted_average, weighted_harmonic_mean
-from .loaders import find_holdings_file, extract_region_from_filename
+from .loaders import find_holdings_file
 from .matcher import find_stock
 from .parsers import parse_holdings
 from .stats import ETFStats
@@ -62,7 +62,6 @@ def process_etf(
         return result, stats, SKIP_NO_HOLDINGS_FILE
 
     logger.info("ETF %s (%s): using %s", ticker, etf_row.get("Name", ""), holdings_path.name)
-    region_hint = extract_region_from_filename(holdings_path)
 
     try:
         holdings = parse_holdings(holdings_path)
@@ -81,7 +80,7 @@ def process_etf(
         logger.warning("ETF %s: holdings file parsed to zero usable rows; leaving row unchanged.", ticker)
         return result, stats, SKIP_EMPTY_HOLDINGS
 
-    matched_rows = _match_holdings(ticker, holdings, stock_data, region_hint, stats)
+    matched_rows = _match_holdings(ticker, holdings, stock_data, stats)
 
     if not matched_rows:
         logger.warning("ETF %s: zero matched stock holdings.", ticker)
@@ -112,7 +111,6 @@ def _match_holdings(
     ticker: str,
     holdings: pd.DataFrame,
     stock_data: Dict[str, pd.DataFrame],
-    region_hint: str | None,
     stats: ETFStats,
 ) -> List[MatchedHolding]:
     """Look up each holding in the stock database, returning the matches.
@@ -124,7 +122,7 @@ def _match_holdings(
         code = normalize_ticker(holding.get("Code", ""))
         isin = normalize_isin(holding.get("ISIN", ""))
 
-        stock, region, _reason = find_stock(holding, stock_data, region_hint)
+        stock, region, _reason = find_stock(holding, stock_data)
         if stock is None:
             stats.missed += 1
             logger.warning("ETF %s | %s | %s | NOT FOUND", ticker, code, isin)

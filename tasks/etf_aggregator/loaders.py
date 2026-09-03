@@ -7,7 +7,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 from .constants import AGGREGATE_COLUMNS, ETF_DIR, OUTPUT_DIR, STOCK_FILE_SUFFIX
-from .normalize import normalize_region, normalize_ticker
+from .normalize import normalize_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -55,11 +55,11 @@ def load_stock_files() -> Dict[str, pd.DataFrame]:
 def find_holdings_file(ticker: str) -> Optional[Path]:
     """Find a holdings file for `ticker`, any extension.
 
-    Holdings files follow `{ticker}_{region}_{anything}.ext` (region and
-    anything are optional), e.g. "1655_US_sp500.csv" or plain "VT.xlsx". A
-    file matches if the first underscore-delimited token of its filename
-    equals the ticker -- extension and everything after the first
-    underscore are irrelevant to matching.
+    Holdings files follow `{ticker}_{anything}.ext` (the trailing part is
+    optional), e.g. "1655_sp500.csv" or plain "VT.xlsx". A file matches if
+    the first underscore-delimited token of its filename equals the ticker
+    -- extension and everything after the first underscore are irrelevant
+    to matching.
     """
     ticker = normalize_ticker(ticker)
 
@@ -72,14 +72,3 @@ def find_holdings_file(ticker: str) -> Optional[Path]:
     if len(matches) > 1:
         logger.warning("%s: multiple holdings files found; using %s", ticker, matches[0].name)
     return matches[0]
-
-
-def extract_region_from_filename(path: Path) -> Optional[str]:
-    """Extract the region hint from a holdings filename, e.g. "US" from
-    "1655_US_sp500.csv". Returns None for filenames with no region token,
-    e.g. "VT.xlsx".
-    """
-    parts = path.stem.split("_")
-    if len(parts) >= 2 and parts[1].strip():
-        return normalize_region(parts[1])
-    return None

@@ -11,18 +11,14 @@ from .normalize import normalize_exchange, normalize_isin, normalize_region, nor
 def find_region(
     holding: pd.Series,
     stock_data: Dict[str, pd.DataFrame],
-    region_hint: Optional[str] = None,
 ) -> Tuple[Optional[str], Optional[str]]:
     """Return the (region_key, match_reason) for a holding, trying each
     criterion in priority order and stopping at the first one that matches
     a loaded region.
 
-    Priority: region hint parsed from holdings filename -> explicit Region
-    column on holding -> mapped Exchange -> ISIN country prefix.
+    Priority: explicit Region column on holding -> mapped Exchange -> ISIN
+    country prefix.
     """
-    if region_hint and region_hint in stock_data:
-        return region_hint, "filename"
-
     region = normalize_region(holding.get("Region", ""))
     if region in stock_data:
         return region, "region"
@@ -69,7 +65,6 @@ def find_stock_by_isin(
 def find_stock(
     holding: pd.Series,
     stock_data: Dict[str, pd.DataFrame],
-    region_hint: Optional[str] = None,
 ) -> Tuple[Optional[pd.Series], Optional[str], Optional[str]]:
     """Attempt to locate a stock in the database, primarily by ticker symbol
     within the holding's region.
@@ -82,7 +77,7 @@ def find_stock(
     if not ticker:
         return None, None, None
 
-    region, reason = find_region(holding, stock_data, region_hint)
+    region, reason = find_region(holding, stock_data)
 
     if region is None:
         # No way to narrow down which region's stock file to look in --

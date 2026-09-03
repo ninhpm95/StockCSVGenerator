@@ -80,11 +80,10 @@ RATING_THRESHOLDS = [
 ]
 
 # Matching priority for locating a holding in the stock database:
-#   1. Region info parsed from the holdings filename (see loaders.extract_region_from_filename)
-#   2. Region column on the holding row, if present
-#   3. Exchange -> region mapping
-#   4. ISIN first two characters
-#   5. Search all stock files
+#   1. Region column on the holding row, if present
+#   2. Exchange -> region mapping
+#   3. ISIN first two characters
+#   4. Search all stock files
 #
 # Add/change exchange mappings here if your files contain other exchange names.
 EXCHANGE_TO_REGION = {
