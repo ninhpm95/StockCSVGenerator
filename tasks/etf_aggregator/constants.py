@@ -147,6 +147,7 @@ HEADER_KEYWORD_COMBINATIONS = [
     ("Code", "Name", "ISIN"),
     ("Code", "Name", "Weight"),
     ("Ticker", "Name", "Weight"),
+    ("code", "Name", "Shares Held"), # Maxis
 ]
 
 # Column-name candidates used to identify each field once the header row is
@@ -161,10 +162,10 @@ HEADER_KEYWORD_COMBINATIONS = [
 CODE_COLUMN_CANDIDATES = ["銘柄コード（Code）", "銘柄コード", "Code", "Ticker", "コード"]
 ISIN_COLUMN_CANDIDATES = ["ISINコード", "ISIN"]
 NAME_COLUMN_CANDIDATES = ["銘柄（Name）", "銘柄名", "銘柄", "Name"]
-SHARES_COLUMN_CANDIDATES = ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares"]
-PRICE_COLUMN_CANDIDATES = ["Stock Price", "Price", "株価"]
+SHARES_COLUMN_CANDIDATES = ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares", "Shares Held"]
+PRICE_COLUMN_CANDIDATES = ["Stock Price", "Price", "Market Value", "株価"]
 VALUATION_COLUMN_CANDIDATES = ["評価金額(円）Valuation (yen)", "Valuation (yen)", "評価金額", "Valuation"]
-WEIGHT_COLUMN_CANDIDATES = ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight"]
+WEIGHT_COLUMN_CANDIDATES = ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight", "% of net asset"]
 EXCHANGE_COLUMN_CANDIDATES = ["Exchange", "取引所"]
 REGION_COLUMN_CANDIDATES = ["Country", "Region", "Location", "国", "地域"]
 

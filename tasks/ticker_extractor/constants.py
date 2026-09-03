@@ -28,9 +28,9 @@ FIELD_CANDIDATES: Dict[str, List[str]] = {
     # Region-detection signal only, not written out as its own column.
     "Location": ["Location", "Country", "国", "国名", "所在国", "所在地"],
     # Used to pick the top-N holdings, not written out as its own column.
-    "Weight": ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight"],
-    "Price": ["Stock Price", "Price", "株価"],
-    "Shares": ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares"],
+    "Weight": ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight", "% of net asset"],
+    "Price": ["Stock Price", "Price", "Market Value", "株価"],
+    "Shares": ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares", "Shares Held"],
 }
 
 # A row is treated as the holdings-table header if it matches one of these
@@ -45,6 +45,7 @@ HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
     ("Code", "Name", "ISIN"),
     ("Code", "Name", "Weight"),
     ("Ticker", "Name", "Weight"),
+    ("code", "Name", "Shares Held"), # Maxis
 ]
 
 
