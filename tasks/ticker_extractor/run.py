@@ -255,10 +255,40 @@ def _match_region(text: str, mapping: Dict[str, str]) -> Optional[str]:
     return None
 
 
-def get_region(isin: str, location: str, exchange: str) -> str:
-    """ISIN's 2-letter ISO 6166 country prefix, then a Location/Country
-    column, then the Exchange name. Returns UNKNOWN_REGION if none of
-    these resolve it."""
+def _region_from_filename(path: Path, ticker: str) -> Optional[str]:
+    """Return a manually supplied region from a holdings filename.
+
+    Some providers (notably Maxis) use filenames such as
+    ``221A_JP_Maxis_JpSemi.csv`` where the region cannot be inferred from
+    the holding rows themselves. In that convention, the region is the
+    two-letter token immediately after the ETF ticker.
+    """
+    if not ticker:
+        return None
+
+    parts = path.stem.split("_")
+    ticker_upper = normalize_ticker(ticker).upper()
+
+    for i, part in enumerate(parts[:-1]):
+        if normalize_ticker(part) == ticker_upper:
+            candidate = normalize_text(parts[i + 1]).upper()
+            if re.fullmatch(r"[A-Z]{2}", candidate):
+                return candidate
+
+    return None
+
+
+def get_region(isin: str, location: str, exchange: str, path: Optional[Path] = None, ticker: str = "") -> str:
+    """Resolve a holding's region in priority order.
+
+    Priority:
+      1. ISIN country prefix
+      2. Location/Country column
+      3. Exchange name
+      4. Region manually encoded in the filename immediately after the ETF
+         ticker (e.g. ``221A_JP_Maxis_JpSemi.csv`` -> ``JP``)
+      5. UNKNOWN
+    """
     if len(isin) >= 2 and isin[:2].isalpha():
         return isin[:2].upper()
 
@@ -269,6 +299,11 @@ def get_region(isin: str, location: str, exchange: str) -> str:
 
     if exchange:
         region = _match_region(exchange, EXCHANGE_TO_REGION)
+        if region:
+            return region
+
+    if path is not None:
+        region = _region_from_filename(path, ticker)
         if region:
             return region
 
@@ -389,7 +424,13 @@ def extract_holdings(path: Path) -> FileResult:
         if not record["Ticker"] and not record["ISIN"]:
             skipped_no_id += 1
             continue
-        region = get_region(record["ISIN"], rows[i]["location"], record["Exchange"])
+        region = get_region(
+            record["ISIN"],
+            rows[i]["location"],
+            record["Exchange"],
+            path=path,
+            ticker=record["Ticker"],
+        )
         kept.append({**record, "Region": region})
 
     return FileResult(
