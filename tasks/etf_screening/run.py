@@ -12,6 +12,11 @@ def run():
     current_df = pd.read_csv(CURRENT_CSV, dtype=str)
     current_df[TICKER] = current_df[TICKER].map(normalize_ticker)
 
+    # If a ticker appears more than once in CURRENT_CSV, keep the first
+    # occurrence. Otherwise the later merge on TICKER (a many-to-one match)
+    # would duplicate that ticker's row in the final output.
+    current_df = current_df.drop_duplicates(subset=[TICKER], keep="first")
+
     # Keep only columns we want to restore later
     current_df = current_df[[TICKER, BOUGHT, NOTE]].copy()
 
@@ -54,10 +59,6 @@ def run():
     #     df = df.drop(columns=[FEE])
     # df.insert(df.columns.get_loc(NAME) + 1, FEE, fee)
     fee_lookup = load_lookup_fees(LOOKUP_CSV)
-    looked_up = df[TICKER].map(fee_lookup)
-    looked_up = pd.to_numeric(looked_up, errors="coerce")
-    found_mask = looked_up.notna()
-    fee_fixed_n = int(found_mask.sum())
 
     # ---- Step 5: group dedup by cascading volume + lowest fee ----
 
@@ -143,6 +144,10 @@ def run():
                 f"WARNING: {len(still_missing)} ticker(s) with non-empty Bought are not "
                 f"present in DATA_CSV at all, could not be preserved: {sorted(still_missing)}"
             )
+
+    # A ticker listed in more than one TICKER_GROUPS entry can independently
+    # win its dedup round in each group, so guard against emitting it twice.
+    result = result.drop_duplicates(subset=[TICKER], keep="first")
 
     # Keep the original DATA_CSV row order rather than sorting alphabetically.
     # keep_rows/recovered entries still carry their original index from the

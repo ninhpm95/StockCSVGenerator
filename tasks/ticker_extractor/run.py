@@ -427,7 +427,7 @@ def load_lookup(region: str) -> Tuple[Dict[str, dict], Dict[str, dict]]:
         }
         if rec["ISIN"]:
             by_isin[rec["ISIN"]] = rec
-        if rec["Ticker"]:
+        if rec["Ticker"] and rec["ISIN"]:
             by_ticker[rec["Ticker"]] = rec
     return by_isin, by_ticker
 
@@ -443,7 +443,8 @@ def resolve_holding(record: dict) -> Optional[dict]:
         if not match:
             return None
         resolved = dict(record)
-        resolved["Ticker"] = match["Ticker"]
+        if match["Ticker"]:
+            resolved["Ticker"] = match["Ticker"]
         return resolved
 
     if record["Ticker"]:

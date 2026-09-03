@@ -60,6 +60,20 @@ REGION_COUNTRY_MAP = {
     "TW": "Taiwan",
 }
 
+# Some lookup files spell out Country differently than the full names above
+# (e.g. "UK" or "U.K." instead of "United Kingdom", "USA" instead of
+# "United States"). Maps those variants to the corresponding value used in
+# REGION_COUNTRY_MAP so ambiguity resolution still matches. Comparison is
+# case-insensitive, so only add one canonical casing per variant here.
+COUNTRY_ALIASES = {
+    "uk": "United Kingdom",
+    "u.k.": "United Kingdom",
+    "usa": "United States",
+    "u.s.": "United States",
+    "u.s.a.": "United States",
+    "s. korea": "South Korea",
+}
+
 # ----------------------------------------------------------------------------
 # Filename patterns
 # ----------------------------------------------------------------------------

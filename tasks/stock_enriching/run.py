@@ -38,9 +38,18 @@ from .constants import (
     STOCKS_DIR,
     ENRICH_COLUMNS,
     REGION_COUNTRY_MAP,
+    COUNTRY_ALIASES,
     STOCKS_FILE_PATTERN,
     LOOKUP_FILENAME_TEMPLATE,
 )
+
+
+def normalize_country(name):
+    """Lowercase a Country value and resolve known aliases (e.g. "UK" ->
+    "united kingdom") so lookup-file spelling variants still match
+    REGION_COUNTRY_MAP."""
+    name = (name or "").strip().lower()
+    return COUNTRY_ALIASES.get(name, name).lower()
 
 
 # ----------------------------------------------------------------------------
@@ -76,9 +85,10 @@ def pick_best_match(candidates, preferred_country):
         return candidates[0], False
 
     if preferred_country:
+        preferred_norm = normalize_country(preferred_country)
         country_matches = [
             row for row in candidates
-            if (row.get("Country") or "").strip().lower() == preferred_country.lower()
+            if normalize_country(row.get("Country")) == preferred_norm
         ]
         if len(country_matches) == 1:
             return country_matches[0], False
