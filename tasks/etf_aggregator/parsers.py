@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import openpyxl
 from pathlib import Path
 from typing import Callable, Iterable, List, Optional
 
@@ -205,6 +206,33 @@ def _read_csv_grid(path: Path) -> pd.DataFrame:
     return pd.DataFrame(padded).replace("", None)
 
 
+def _read_xlsx_grid(path: Path, sheet_name: str) -> pd.DataFrame:
+    """Read a sheet into a raw grid, undoing Excel's native percentage cell
+    formatting so percent columns always come out as 'percentage points'
+    (e.g. 3.23 for a cell displaying "3.23%"), matching how a CSV text cell
+    like "3.23%" parses. Native Excel percent cells store the underlying
+    0-1 fraction and only *display* the "%" -- pd.read_excel returns that
+    raw fraction with no indication it was percent-formatted, which
+    silently double-divides in parse_percent. Reading via openpyxl lets us
+    inspect each cell's number_format and rescale percent cells by *100
+    up front.
+    """
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb[sheet_name]
+
+    rows = []
+    for row in ws.iter_rows():
+        cells = []
+        for cell in row:
+            value = cell.value
+            if isinstance(value, (int, float)) and cell.number_format and "%" in cell.number_format:
+                value = value * 100
+            cells.append(value)
+        rows.append(cells)
+
+    return pd.DataFrame(rows)
+
+
 def _read_raw_grid(path: Path) -> pd.DataFrame:
     suffix = path.suffix.lower()
     if suffix == ".csv":
@@ -212,7 +240,7 @@ def _read_raw_grid(path: Path) -> pd.DataFrame:
     if suffix == ".xlsx":
         xls = pd.ExcelFile(path)
         sheet_name = _find_holdings_sheet(xls, path)
-        return pd.read_excel(path, sheet_name=sheet_name, header=None)
+        return _read_xlsx_grid(path, sheet_name)
     raise ValueError(f"Unsupported file format: {path}")
 
 
