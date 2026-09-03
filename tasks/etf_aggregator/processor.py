@@ -128,13 +128,13 @@ def _match_holdings(
             logger.warning("ETF %s | %s | %s | NOT FOUND", ticker, code, isin)
             continue
 
-        stats.matched += 1
         pct = holding.get("pct", float("nan"))
 
         if pd.isna(pct) or pct <= 0:
             logger.warning("ETF %s | %s | %s | matched %s but invalid weight=%s", ticker, code, isin, region, pct)
             continue
 
+        stats.matched += 1
         matched_rows.append(
             MatchedHolding(
                 holding_code=code,
@@ -165,7 +165,7 @@ def _apply_aggregates(result: pd.Series, matched_rows: List[MatchedHolding]) -> 
         for item in matched_rows:
             stock = item["stock"]
             if column in stock.index:
-                val = pd.to_numeric(stock[column], errors="coerce")
+                val = stock[column]
                 if pd.notna(val):
                     vals.append(val)
                     weights.append(item["normalized_weight"])

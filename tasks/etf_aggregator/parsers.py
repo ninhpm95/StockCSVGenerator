@@ -83,11 +83,13 @@ def _row_cells(row: Iterable) -> List[str]:
 
 
 def _matches_combo(cells: List[str], combo: tuple) -> bool:
-    """Check if keywords in `combo` appear in distinct cells in left-to-right order (case-sensitive)."""
+    """Check if keywords in `combo` appear in distinct cells in left-to-right
+    order, using case-insensitive substring matching (per the contract
+    documented on HEADER_KEYWORD_COMBINATIONS in constants.py)."""
     last_index = -1
     for keyword in combo:
-        # Performs exact case-sensitive substring matching
-        found_in = [i for i, cell in enumerate(cells) if i > last_index and keyword in cell]
+        keyword_lower = keyword.lower()
+        found_in = [i for i, cell in enumerate(cells) if i > last_index and keyword_lower in cell.lower()]
         if not found_in:
             return False
         last_index = found_in[0]
@@ -145,20 +147,16 @@ def parse_number(value: str | float | None) -> float:
 def parse_percent(value: str | float | None) -> float:
     """Parse a percentage field into a 0-1 fraction.
 
-    Handles two distinct representations:
-    - Native numeric values from Excel cells with a "%" number format
-      (e.g. a cell displaying "8.05%") are already stored as a 0-1
-      fraction (0.0805) by the time pandas reads them -- these must NOT
-      be divided by 100 again.
-    - Text values (from CSV, or Excel cells stored as plain text/numbers
-      without percent formatting), e.g. "27.78%" or "27.78", still need
-      the "%" stripped and the number divided by 100.
+    In our holdings files, a weight is expressed in percentage points
+    regardless of whether the cell is text with a "%" sign or a plain
+    number -- "8.8%" and 8.8 (numeric, no percent formatting) both mean
+    the same 8.8% weight. So both representations get the "%" stripped
+    (a no-op for numeric input) and the result divided by 100; there is
+    no case where a numeric value should be treated as an already-scaled
+    0-1 fraction.
     """
     if pd.isna(value):
         return float("nan")
-
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return float(value)
 
     n = parse_number(value)
     return n / 100.0 if pd.notna(n) else float("nan")

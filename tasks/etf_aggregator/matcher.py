@@ -79,20 +79,20 @@ def find_stock(
 
     region, reason = find_region(holding, stock_data)
 
-    if region is None:
-        # No way to narrow down which region's stock file to look in --
-        # fall back to matching by ISIN across all of them instead of
-        # giving up outright. This only works if the holding actually
-        # carries an ISIN and at least one stock file has an ISIN column;
-        # find_stock_by_isin returns (None, None) otherwise.
-        isin = normalize_isin(holding.get("ISIN", ""))
-        stock, isin_region = find_stock_by_isin(isin, stock_data)
-        if stock is not None:
-            return stock, isin_region, "isin_search"
-        return None, None, None
+    if region is not None:
+        df = stock_data[region]
+        if ticker in df.index:
+            return df.loc[ticker], region, reason
 
-    df = stock_data[region]
-    if ticker in df.index:
-        return df.loc[ticker], region, reason
+    # Either the region couldn't be determined, or it could but the
+    # ticker wasn't found in that region's file (e.g. a stale/mismatched
+    # ticker). Either way, fall back to matching by ISIN across all
+    # loaded stock files instead of giving up outright. This only works
+    # if the holding actually carries an ISIN and at least one stock file
+    # has an ISIN column; find_stock_by_isin returns (None, None) otherwise.
+    isin = normalize_isin(holding.get("ISIN", ""))
+    stock, isin_region = find_stock_by_isin(isin, stock_data)
+    if stock is not None:
+        return stock, isin_region, "isin_search"
 
     return None, None, None

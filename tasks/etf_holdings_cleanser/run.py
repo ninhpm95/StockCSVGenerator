@@ -19,6 +19,7 @@ Requires: pip install openpyxl
 """
 
 import csv
+import io
 from pathlib import Path
 import openpyxl
 from .constants import INPUT_FOLDER, SHEET_NAMES, SEARCH_STRS
@@ -68,16 +69,25 @@ def _near_misses(rows, search_strs):
 
 
 def _read_csv_rows(csv_path: Path):
-    """Try utf-8-sig first; fall back to cp932 (Shift-JIS) for Japanese
-    exports that aren't UTF-8. Returns (rows, encoding_used)."""
-    for encoding in ("utf-8-sig", "cp932"):
-        try:
-            with open(csv_path, "r", newline="", encoding=encoding) as f:
-                return list(csv.reader(f)), encoding
-        except UnicodeDecodeError:
-            continue
+    """Try utf-8 (with or without BOM) first; fall back to cp932
+    (Shift-JIS) for Japanese exports that aren't UTF-8. Returns
+    (rows, encoding_used), where encoding_used is 'utf-8-sig' only if
+    the file actually had a BOM, so writes can preserve that instead of
+    always adding one."""
+    raw = csv_path.read_bytes()
+    has_bom = raw.startswith(b"\xef\xbb\xbf")
+    try:
+        text = raw.decode("utf-8-sig" if has_bom else "utf-8")
+        return list(csv.reader(io.StringIO(text, newline=""))), ("utf-8-sig" if has_bom else "utf-8")
+    except UnicodeDecodeError:
+        pass
+    try:
+        text = raw.decode("cp932")
+        return list(csv.reader(io.StringIO(text, newline=""))), "cp932"
+    except UnicodeDecodeError:
+        pass
     raise UnicodeDecodeError(
-        "unknown", b"", 0, 1, f"Could not decode {csv_path.name} as utf-8-sig or cp932"
+        "unknown", b"", 0, 1, f"Could not decode {csv_path.name} as utf-8(-sig) or cp932"
     )
 
 
