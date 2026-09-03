@@ -112,6 +112,22 @@ def process_csv(csv_path: Path):
     }, []
 
 
+def _unmerge_from_row(ws, start_row):
+    """Unmerge any merged cell range that overlaps or lies entirely
+    within [start_row, end of sheet]. These ranges are either about to
+    be deleted wholesale or straddle the cutoff; either way, leaving
+    them merged across a delete_rows() call can corrupt the merge
+    metadata (openpyxl doesn't rewrite merged ranges when rows are
+    deleted). Ranges entirely above start_row are left untouched."""
+    to_unmerge = [
+        str(merged_range)
+        for merged_range in list(ws.merged_cells.ranges)
+        if merged_range.max_row >= start_row
+    ]
+    for merged_range in to_unmerge:
+        ws.unmerge_cells(merged_range)
+
+
 def process_xlsx(xlsx_path: Path):
     """Returns (change_detail_or_None, near_misses)."""
     wb = openpyxl.load_workbook(xlsx_path)
@@ -133,7 +149,9 @@ def process_xlsx(xlsx_path: Path):
         return None, _near_misses(rows, [s for s, _ in SEARCH_STRS])
     cutoff, search_str, target_count = match
 
-    # delete bottom-up so row numbers don't shift mid-delete
+    # Unmerge any merged ranges touching the rows we're about to remove,
+    # then delete bottom-up so row numbers don't shift mid-delete.
+    _unmerge_from_row(ws, cutoff + 1)
     ws.delete_rows(cutoff + 1, ws.max_row - cutoff)
     wb.save(xlsx_path)
 
