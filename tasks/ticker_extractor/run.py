@@ -473,14 +473,25 @@ def load_lookup(region: str) -> Tuple[Dict[str, dict], Dict[str, dict]]:
     return by_isin, by_ticker
 
 
+GLOBAL_REGION = "GLOBAL"
+
+
 def resolve_holding(record: dict) -> Optional[dict]:
-    """Cross-reference one holding against its region's lookup table.
+    """Cross-reference one holding against its region's lookup table. If
+    the region's table has no match (or the region has no lookup file at
+    all), fall back to GLOBAL_lookup.csv, which covers every stock, before
+    giving up. GLOBAL_lookup.csv is large, so it's only loaded (once, then
+    cached via load_lookup's lru_cache) the first time a fallback is
+    actually needed -- files for regions that never miss are never touched.
     Returns the resolved holding, or None if it should be skipped (no
-    Ticker/ISIN to key off of, or no match found)."""
+    Ticker/ISIN to key off of, or no match found in either table)."""
     by_isin, by_ticker = load_lookup(record["Region"])
 
     if record["ISIN"]:
         match = by_isin.get(record["ISIN"])
+        if not match and record["Region"] != GLOBAL_REGION:
+            global_by_isin, _ = load_lookup(GLOBAL_REGION)
+            match = global_by_isin.get(record["ISIN"])
         if not match:
             return None
         resolved = dict(record)
@@ -490,6 +501,9 @@ def resolve_holding(record: dict) -> Optional[dict]:
 
     if record["Ticker"]:
         match = by_ticker.get(record["Ticker"])
+        if not match and record["Region"] != GLOBAL_REGION:
+            _, global_by_ticker = load_lookup(GLOBAL_REGION)
+            match = global_by_ticker.get(record["Ticker"])
         if not match:
             return None
         resolved = dict(record)

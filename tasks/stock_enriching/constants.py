@@ -81,3 +81,13 @@ COUNTRY_ALIASES = {
 # Region prefix can be 2-4 uppercase letters (e.g. "JP", "APAC").
 STOCKS_FILE_PATTERN = re.compile(r"^([A-Za-z]{2,4})_stocks\.csv$")
 LOOKUP_FILENAME_TEMPLATE = "{region}_lookup.csv"
+
+# ----------------------------------------------------------------------------
+# Global fallback lookup
+# ----------------------------------------------------------------------------
+
+# If a ticker isn't found in its own region's lookup file, fall back to this
+# file (also in STOCK_LOOKUP_DIR), which covers all regions. It's large, so
+# it's only loaded lazily -- at most once per run, and only if some region
+# actually needs it (see run.py).
+GLOBAL_LOOKUP_FILENAME = "GLOBAL_lookup.csv"

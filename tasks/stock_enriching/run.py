@@ -41,6 +41,7 @@ from .constants import (
     COUNTRY_ALIASES,
     STOCKS_FILE_PATTERN,
     LOOKUP_FILENAME_TEMPLATE,
+    GLOBAL_LOOKUP_FILENAME,
 )
 
 
@@ -67,6 +68,32 @@ def load_region_lookup(path):
                 continue
             lookup[ticker].append(row)
     return lookup
+
+
+class LazyGlobalLookup:
+    """Wraps GLOBAL_lookup.csv so it's only read from disk if/when a region
+    actually needs a fallback match -- and even then, at most once for the
+    whole run (the parsed table is cached and reused across all regions).
+    This matters because the file is large and most runs may never need it.
+    """
+
+    def __init__(self, path):
+        self._path = path
+        self._lookup = None  # populated lazily; stays None until first use
+
+    def get(self, ticker):
+        if self._lookup is None:
+            if os.path.isfile(self._path):
+                print(f"Loading {self._path} (global fallback) ...")
+                self._lookup = load_region_lookup(self._path)
+                print(f"  {sum(len(v) for v in self._lookup.values())} rows "
+                      f"across {len(self._lookup)} unique tickers.\n")
+            else:
+                print(f"Global fallback lookup file not found at "
+                      f"{self._path}; unmatched tickers will not be "
+                      f"retried against it.\n")
+                self._lookup = {}
+        return self._lookup.get(ticker)
 
 
 def pick_best_match(candidates, preferred_country):
@@ -102,7 +129,7 @@ def pick_best_match(candidates, preferred_country):
     return candidates[0], True
 
 
-def enrich_file(stocks_path, region_lookup, region):
+def enrich_file(stocks_path, region_lookup, region, global_lookup=None):
     preferred_country = REGION_COUNTRY_MAP.get(region.upper())
 
     with open(stocks_path, newline="", encoding="utf-8-sig") as f:
@@ -120,6 +147,7 @@ def enrich_file(stocks_path, region_lookup, region):
     blank_ticker_rows = 0
     unmatched = Counter()
     ambiguous = Counter()
+    global_fallback = Counter()
 
     for row in rows:
         ticker = (row.get("Ticker") or "").strip().upper()
@@ -129,6 +157,11 @@ def enrich_file(stocks_path, region_lookup, region):
             continue
 
         candidates = region_lookup.get(ticker)
+        used_global = False
+        if not candidates and global_lookup is not None:
+            candidates = global_lookup.get(ticker)
+            used_global = candidates is not None
+
         if not candidates:
             unmatched[ticker] += 1
             continue
@@ -136,6 +169,8 @@ def enrich_file(stocks_path, region_lookup, region):
         best, was_ambiguous = pick_best_match(candidates, preferred_country)
         if was_ambiguous:
             ambiguous[ticker] += 1
+        if used_global:
+            global_fallback[ticker] += 1
 
         for col in ENRICH_COLUMNS:
             value = (best.get(col) or "").strip()
@@ -155,6 +190,7 @@ def enrich_file(stocks_path, region_lookup, region):
         "blank_ticker_rows": blank_ticker_rows,
         "unmatched": unmatched,
         "ambiguous": ambiguous,
+        "global_fallback": global_fallback,
     }
 
 
@@ -189,6 +225,14 @@ def run():
 
     skipped_regions = []
 
+    # Shared across all regions and created up front, but the file itself is
+    # only actually read from disk the first time some region's unmatched
+    # ticker triggers a .get() call -- see LazyGlobalLookup. If every region
+    # matches entirely within its own lookup file, GLOBAL_lookup.csv is
+    # never opened at all.
+    global_lookup_path = os.path.join(STOCK_LOOKUP_DIR, GLOBAL_LOOKUP_FILENAME)
+    global_lookup = LazyGlobalLookup(global_lookup_path)
+
     for path, region in sorted(stocks_files):
         lookup_path = os.path.join(
             STOCK_LOOKUP_DIR, LOOKUP_FILENAME_TEMPLATE.format(region=region.upper())
@@ -207,7 +251,7 @@ def run():
                   f"{len(region_lookup)} unique tickers.")
 
             print(f"Enriching {os.path.basename(path)} (region={region}) ...")
-            result = enrich_file(path, region_lookup, region)
+            result = enrich_file(path, region_lookup, region, global_lookup)
         except Exception as exc:
             print(f"  ERROR processing region={region} ({os.path.basename(path)}): {exc}")
             print("  Skipping this region; other regions are unaffected.\n")
@@ -215,6 +259,12 @@ def run():
             continue
 
         print(f"  {result['matched']}/{result['total']} rows matched.")
+        if result["global_fallback"]:
+            total_global = sum(result["global_fallback"].values())
+            print(f"  {total_global} row(s) matched only via GLOBAL fallback "
+                  f"(not found in {region.upper()}_lookup.csv) across "
+                  f"{len(result['global_fallback'])} ticker(s): "
+                  f"{format_counter(result['global_fallback'])}")
         if result["blank_ticker_rows"]:
             print(f"  {result['blank_ticker_rows']} row(s) had a blank Ticker (skipped).")
         if result["ambiguous"]:
