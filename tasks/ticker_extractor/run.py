@@ -455,7 +455,17 @@ def load_lookup(region: str) -> Tuple[Dict[str, dict], Dict[str, dict]]:
     if not path.exists():
         return {}, {}
 
-    df = pd.read_csv(path, dtype=str, keep_default_na=False)
+    df = None
+    last_error: Optional[UnicodeDecodeError] = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding=encoding)
+            break
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    if df is None:
+        raise last_error  # every configured encoding failed to decode
+
     by_isin: Dict[str, dict] = {}
     by_ticker: Dict[str, dict] = {}
     for _, row in df.iterrows():

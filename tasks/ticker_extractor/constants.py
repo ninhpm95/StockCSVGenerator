@@ -68,7 +68,7 @@ PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "na", "null", "none
 # Funds exports are Shift-JIS/CP932) and don't declare their own encoding,
 # so we try each until one decodes cleanly. utf-8-sig also handles plain
 # utf-8 (with or without a BOM), so it's tried first.
-CSV_ENCODINGS: List[str] = ["utf-8-sig", "cp932"]
+CSV_ENCODINGS: List[str] = ["utf-8-sig", "cp932", "cp1252"]
 
 # Sheet names known to hold the actual holdings table in multi-sheet
 # workbooks (tried first, in order, as an exact stripped match).
