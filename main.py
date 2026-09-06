@@ -1,7 +1,7 @@
-from constants import FILE_NAME, SPEED, MODE, UPDATE_FINANCIALS, SCREEN_ETFS, AGGREGATE_ETFS, CLEANSE_ETFS, ENRICH_STOCKS, EXTRACT_TICKERS
+from constants import MODE, UPDATE_FINANCIALS, AGGREGATE_ETFS, SCREEN_ETFS, CLEANSE_ETFS, ENRICH_STOCKS, EXTRACT_TICKERS, FILE_NAME, SPEED
 from tasks.financials_update.run import run as run_financials_update
-from tasks.etf_screening.run import run as run_etf_screening
 from tasks.etf_aggregator.run import run as run_etf_aggregator
+from tasks.etf_screening.run import run as run_etf_screening
 from tasks.etf_holdings_cleanser.run import run as run_etf_holdings_cleanser
 from tasks.stock_enriching.run import run as run_stock_enriching
 from tasks.ticker_extractor.run import run as run_extract_tickers
