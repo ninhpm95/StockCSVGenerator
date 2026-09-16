@@ -1,6 +1,7 @@
 """
 Centralized field names for the stock analysis tool.
-Using a class with static attributes provides better namespacing.
+Module-level constants, so every csv column / dict key name lives in
+one place instead of being retyped (and possibly mistyped) at each call site.
 """
 
 # Identifiers
@@ -30,7 +31,7 @@ PAYOUT_RATIO = 'Payout Ratio'
 DIVIDEND_YIELD = 'Dividend yield'
 
 # Momentum & Volume
-AVG_VOLUME = 'Avg Volume'
+NOTIONAL_VOLUME = 'Notional Volume'  # averageVolume10days * price - notional volume, not share volume
 VOL_1D = 'Vol 1D'
 VOL_3D = 'Vol 3D'
 VOL_5D = 'Vol 5D'
@@ -61,11 +62,11 @@ AVG_RATING = 'Avg Rating'
 AVG_RATING_SCORE = 'Avg Rating Score'
 AVG_RATING_LABEL = 'Avg Rating Label'
 GROWTH = 'Growth'
-SCORE = 'Score'
+SCORE = 'Score'  # unused - was used previously, kept for potential reuse
 
 # Others
 FEE = 'Fee'
-TER = 'TER'
+TER = 'TER'  # unused - was used previously, kept for potential reuse
 BOUGHT = 'Bought'
 NOTE = 'Note'
 

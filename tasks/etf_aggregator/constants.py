@@ -4,28 +4,23 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
-OUTPUT_DIR = BASE_DIR.parent.parent / "output"
-ETF_DIR = BASE_DIR.parent.parent / "data" / "ETFs"
-LOGS_DIR = BASE_DIR / "logs"
+PROJECT_DIR = BASE_DIR.parent.parent
 
-# If True, a detailed per-run log file is written to LOGS_DIR (one
-# timestamped file per run -- see run._configure_logging). Only needed
-# while debugging; the terminal summary printed at the end of a run is
-# sufficient for normal use, so leave this off otherwise to skip the file
-# I/O and avoid accumulating log files.
-ENABLE_LOG_FILE = False
-
+OUTPUT_DIR = PROJECT_DIR / "output"
+ETF_DIR = PROJECT_DIR / "data" / "ETFs"
 
 TARGET_ETF_FILE = OUTPUT_DIR / "JP_ETFs.csv"
 
 # Only these columns are recalculated from ETF holdings.
 # Add/remove columns here as desired.
 AGGREGATE_COLUMNS = [
-    # "ROA",
-    # "Net Margin",
-    # "Operating Margin",
-    # "Debt To Equity",
-    # "Earnings Growth",
+    "ROA",
+    "ROE",
+    "ROIC",
+    "Net Margin",
+    "Operating Margin",
+    "Debt To Equity",
+    "Earnings Growth",
     # "Vol 1D",
     # "Vol 3D",
     # "Vol 5D",
@@ -61,8 +56,12 @@ AGGREGATION_METHODS = {
     "PE ratio": "harmonic",
     "Forward PE ratio": "harmonic",
     "PB": "harmonic",
-    "ROA": "skip",  # TODO: figure out the right way to aggregate ROA across holdings
-    "ROE": "skip",  # TODO: figure out the right way to aggregate ROE across holdings
+    "ROA": "harmonic", # Not entirely accurate, but good enough for reference.
+    "ROE": "harmonic", # Not entirely accurate, but good enough for reference.
+    "ROIC": "harmonic", # Not entirely accurate, but good enough for reference.
+    "Net Margin": "harmonic",
+    "Operating Margin": "harmonic",
+    "Debt To Equity": "harmonic", # Not entirely accurate, but good enough for reference.
 }
 
 # If True, values already present in the ETF CSV are replaced.
@@ -79,11 +78,17 @@ RATING_THRESHOLDS = [
     (float("inf"), "Strong Sell"),
 ]
 
-# Matching priority for locating a holding in the stock database:
+# Priority for locating a holding's region (see matcher.find_region):
 #   1. Region column on the holding row, if present
-#   2. Exchange -> region mapping
+#   2. Exchange -> region mapping (this dict)
 #   3. ISIN first two characters
-#   4. Search all stock files
+#   4. Holdings filename's region token, e.g. "1655_us_sp500.xlsx" -> "US"
+#      (weakest signal -- fund-level, not holding-level; see
+#      matcher.region_from_filename)
+#
+# If none of these resolve a region (or the ticker isn't found within it),
+# find_stock falls back separately to searching every loaded stock file by
+# ISIN, ignoring region -- see matcher.find_stock_by_isin.
 #
 # Add/change exchange mappings here if your files contain other exchange names.
 EXCHANGE_TO_REGION = {

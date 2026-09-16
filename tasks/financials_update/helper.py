@@ -14,7 +14,10 @@ def get_region(filename: str) -> str:
     if 'HK' in base_name:
         return 'HK'
 
-    return 'Unknown'
+    # Raise rather than return a silent 'Unknown' sentinel - get_tv_screener
+    # has no 'Unknown' branch and would otherwise default to "america" for
+    # any unrecognized filename, silently screening it as a US file.
+    raise ValueError(f"Could not determine region from file name: {filename!r}")
 
 def get_tv_sleep_range(ticker_num: int, speed: str) -> tuple[int, int]:
     if speed == FAST:

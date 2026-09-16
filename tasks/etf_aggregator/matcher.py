@@ -96,12 +96,15 @@ def find_stock(
     holding: pd.Series,
     stock_data: Dict[str, pd.DataFrame],
 ) -> Tuple[Optional[pd.Series], Optional[str], Optional[str]]:
-    """Attempt to locate a stock in the database, primarily by ticker symbol
-    within the holding's region.
+    """Attempt to locate a stock in the database using primary security identifiers.
 
-    A holding that isn't a real equity (cash, FX, derivatives, ...) simply
-    won't be found here and is reported as a miss like any other unmatched
-    ticker -- there's no separate non-stock classification step.
+    Matches holdings primarily by ISIN or regional security codes (SEDOL, CUSIP,
+    Local Code) within the resolved region. If region resolution fails or the
+    stock is missing from the regional file, falls back to a global,
+    region-agnostic ISIN search across all loaded databases.
+
+    Returns:
+        Tuple of (matched_stock_series, matched_region, match_reason).
     """
     ticker = normalize_ticker(holding.get("Code", ""))
     if not ticker:

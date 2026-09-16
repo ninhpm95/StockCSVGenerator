@@ -7,8 +7,9 @@ from typing import List, Dict
 from .financials import fetch_financials_batch
 from .helper import prepare_ticker, get_tv_sleep_range
 from .constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
+from .fields import TICKER
 
-def load_and_clean_data(file_path: str, region: str) -> pd.DataFrame:
+def load_and_clean_data(file_path: str) -> pd.DataFrame:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -19,7 +20,7 @@ def load_and_clean_data(file_path: str, region: str) -> pd.DataFrame:
     existing_cols = [c for c in COLUMNS_TO_PRESERVE if c in df.columns]
     df = df[existing_cols].copy()
     
-    ticker_col = 'Ticker' if 'Ticker' in df.columns else df.columns[0]
+    ticker_col = TICKER if TICKER in df.columns else df.columns[0]
     df = df.drop_duplicates(subset=[ticker_col], keep='first')
     
     df['api_ticker'] = df[ticker_col].apply(lambda t: prepare_ticker(t))
@@ -34,13 +35,17 @@ def process_batches(tickers: List[str], region: str, speed: str) -> List[Dict]:
         batch_num = (i // BATCH_SIZE) + 1
         batch = tickers[i : i + BATCH_SIZE]
         print(f"[*] Processing batch {batch_num}/{total_batches}...")
-        
+
         try:
             batch_data = fetch_financials_batch(batch, region, speed)
             results.extend(batch_data)
         except Exception as e:
             print(f" [!] Batch {batch_num} failed: {e}")
-            results.extend([{}] * len(batch))
+            # Tag each row with which ticker it was and that it failed,
+            # rather than a bare {} - keeps the row count aligned for the
+            # positional concat in run.py, but makes a failed batch
+            # visible/traceable in the output instead of just blank cells.
+            results.extend([{'error': True, 'error_ticker': t} for t in batch])
 
         if batch_num < total_batches:
             wait = random.uniform(*sleep_range)
