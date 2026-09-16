@@ -1,6 +1,11 @@
 """
-Reads and overwrites files in INPUT_FOLDER in place (or reports only, in
---dry-run mode). No xlsx->csv conversion; each file keeps its original
+Subtask module: called from the main project via `run(dry_run=...)`, not
+run directly. Logging configuration (handlers, level, format) is owned by
+the caller; this module only does `logger = logging.getLogger(__name__)`
+and emits records.
+
+Reads and overwrites files in INPUT_FOLDER in place (or reports only, when
+dry_run=True). No xlsx->csv conversion; each file keeps its original
 format. Only files that actually get trimmed are logged in detail;
 everything else is folded into a single "kept as is" count, except
 near-misses and missing-sheet cases, which get their own report sections.
@@ -300,15 +305,3 @@ def run(dry_run: bool = False) -> RunSummary:
                 logger.warning("  %s row %d: %s", name, row_index + 1, raw)
 
     return summary
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dry-run", action="store_true", help="Report what would change without writing files.")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Debug-level logging.")
-    args = parser.parse_args()
-
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s: %(message)s")
-    run(dry_run=args.dry_run)

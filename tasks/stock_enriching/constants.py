@@ -25,15 +25,30 @@ STOCK_LOOKUP_DIR = os.path.normpath(os.path.join(
 STOCKS_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"))
 
 # ----------------------------------------------------------------------------
+# CSV column names
+# ----------------------------------------------------------------------------
+
+# Column names used in both the lookup files and the *_stocks.csv files.
+# Centralized so a rename only has to happen in one place, and so a typo
+# like "ticker" vs "Ticker" shows up as a single import instead of a
+# scattered string literal. Matching against these is case-insensitive
+# (see build_header_map in run.py), so a source file spelled "TICKER" or
+# "ticker" still works.
+COL_TICKER = "Ticker"
+COL_COUNTRY = "Country"
+COL_ISIN = "ISIN"
+
+# ----------------------------------------------------------------------------
 # Enrichment columns
 # ----------------------------------------------------------------------------
 
 # Columns to pull from the region lookup files into the *_stocks.csv files.
 # Add more here later (e.g. "Exchange") -- no other code changes needed
-# as long as the column exists in the lookup files. A blank value in the
+# as long as the column exists in the lookup files (if it's missing, that's
+# reported as a warning rather than failing the run). A blank value in the
 # lookup file will NOT clear an existing value in the stocks file -- only
 # non-blank lookup values overwrite.
-ENRICH_COLUMNS = ["ISIN"]
+ENRICH_COLUMNS = [COL_ISIN]
 
 # ----------------------------------------------------------------------------
 # Region mapping
@@ -78,8 +93,13 @@ COUNTRY_ALIASES = {
 # Filename patterns
 # ----------------------------------------------------------------------------
 
-# Region prefix can be 2-4 uppercase letters (e.g. "JP", "APAC").
-STOCKS_FILE_PATTERN = re.compile(r"^([A-Za-z]{2,4})_stocks\.csv$")
+# Region prefix can be 2-4 letters, case-insensitive (e.g. "JP", "jp",
+# "APAC" all match; the extension is matched case-insensitively too, so
+# "JP_stocks.CSV" also matches). The matched region is upper-cased wherever
+# it's used for lookups (REGION_COUNTRY_MAP, <REGION>_lookup.csv). Typical
+# usage here is a 2-letter country code (JP, US, GB, AU, ...), but longer
+# codes are accepted too.
+STOCKS_FILE_PATTERN = re.compile(r"^([A-Za-z]{2,4})_stocks\.csv$", re.IGNORECASE)
 LOOKUP_FILENAME_TEMPLATE = "{region}_lookup.csv"
 
 # ----------------------------------------------------------------------------
