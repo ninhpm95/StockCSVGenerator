@@ -7,7 +7,14 @@ import logging
 from .constants import AGGREGATE_COLUMNS, TARGET_ETF_FILE
 from .loaders import load_stock_files
 from .normalize import normalize_ticker
-from .processor import SKIP_EMPTY_HOLDINGS, SKIP_NO_HOLDINGS_FILE, SKIP_NO_TICKER, SKIP_PARSE_ERROR, process_etf
+from .processor import (
+    SKIP_EMPTY_HOLDINGS,
+    SKIP_LOW_COVERAGE,
+    SKIP_NO_HOLDINGS_FILE,
+    SKIP_NO_TICKER,
+    SKIP_PARSE_ERROR,
+    process_etf,
+)
 from .stats import ETFStats
 
 logger = logging.getLogger(__name__)
@@ -22,15 +29,29 @@ _SKIP_REASON_LABELS = [
 ]
 
 
+def _format_pct(matched_weight: float) -> int:
+    """Round a matched-weight fraction to a display percentage, clamping
+    away float rounding noise just over 100% (e.g. a holdings file whose
+    weights sum to 100.0002% due to rounding). The clamp is applied to the
+    raw float *before* rounding -- rounding first and then checking the
+    rounded value would miss cases like 101.9999%, which rounds to 102 and
+    is no longer caught by a post-rounding "< 102" check."""
+    raw_pct = matched_weight * 100
+    if 100.0 < raw_pct < 102.0:
+        raw_pct = 100.0
+    return round(raw_pct)
+
+
 def _print_summary(
     target_path, # TARGET_ETF_FILE
     skipped: list[tuple[str, str]], # Stores (ticker, skip_reason)
+    low_coverage: list[tuple[str, int, int, float]], # Stores (ticker, matched_count, total_holdings, matched_weight)
     match_summary: list[tuple[str, int, int, float]], # Stores (ticker, matched_count, total_holdings, matched_weight)
 ) -> None:
     """Print a compact, scannable summary to the terminal. All the detail
     (per-holding misses, parsing errors, etc.) lives in the log file instead,
-    when file logging is enabled -- see logging_config.py at the project
-    root, which prints the log file's path itself if one was created."""
+    when file logging is enabled by whatever configures logging at the
+    project's entry point."""
     print(f"Output saved to: {target_path.resolve()}")
     print()
     print(f"Skipped ETFs ({len(skipped)}):")
@@ -51,16 +72,22 @@ def _print_summary(
         for reason_code, tickers in by_reason.items():
             label = reason_code or "unknown reason"
             print(f"  {label} ({len(tickers)}): {', '.join(sorted(tickers))}")
+
+    print()
+    print(f"Low coverage, aggregation skipped ({len(low_coverage)}):")
+    if not low_coverage:
+        print(" none")
+    else:
+        for ticker, matched, holdings, matched_weight in sorted(low_coverage):
+            print(f"  {ticker}: {matched}/{holdings} holdings ({_format_pct(matched_weight)}%)")
+
     print()
     print("Matching:")
     for ticker, matched, holdings, matched_weight in sorted(match_summary):
-        pct = round(matched_weight * 100)
-        if pct > 100 and pct < 102:
-            pct = 100 # Round up to 100% if it's just a rounding error (e.g. 101.9999%).
-        print(f"{ticker}: {matched}/{holdings} holdings ({pct}%)")
+        print(f"{ticker}: {matched}/{holdings} holdings ({_format_pct(matched_weight)}%)")
 
     print()
-    print(f"Success! Aggregated data successfully written to: {target_path.resolve()}")
+    print("Success!")
 
 
 def run() -> None:
@@ -90,7 +117,8 @@ def run() -> None:
     total_stats = ETFStats()
     updated_rows = []
     skipped: list[tuple[str, str]] = []  # (ticker, skip_reason)
-    match_summary: list[tuple[str, int, int, float]] = []  # Added float for weight
+    low_coverage: list[tuple[str, int, int, float]] = []  # (ticker, matched, holdings, matched_weight)
+    match_summary: list[tuple[str, int, int, float]] = []  # (ticker, matched, holdings, matched_weight)
 
     for _, etf_row in etfs.iterrows():
         total_stats.etfs += 1
@@ -100,15 +128,22 @@ def run() -> None:
         total_stats += row_stats
         updated_rows.append(updated)
 
+        row_summary = (ticker, row_stats.matched, row_stats.holdings, row_stats.matched_weight)
         if row_stats.holdings == 0:
             skipped.append((ticker, skip_reason))
+        elif skip_reason == SKIP_LOW_COVERAGE:
+            low_coverage.append(row_summary)
         else:
-            match_summary.append((ticker, row_stats.matched, row_stats.holdings, row_stats.matched_weight))
+            match_summary.append(row_summary)
 
-    result = pd.DataFrame(updated_rows)[original_columns]
+    # reindex rather than plain [] column selection: updated_rows are
+    # pd.Series (not dicts) and an empty updated_rows list produces a
+    # DataFrame with zero columns, which raises KeyError on []. reindex
+    # handles both that empty case and any per-row index quirks safely.
+    result = pd.DataFrame(updated_rows).reindex(columns=original_columns)
     result.to_csv(target_path, index=False)
 
     logger.info("Output saved to: %s", target_path.resolve())
     total_stats.log_summary(logger)
 
-    _print_summary(target_path, skipped, match_summary)
+    _print_summary(target_path, skipped, low_coverage, match_summary)

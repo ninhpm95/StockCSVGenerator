@@ -82,10 +82,16 @@ def find_stock_by_isin(
         return None, None
 
     for region, df in stock_data.items():
-        if "ISIN" not in df.columns:
+        # loaders.load_stock_files precomputes this normalized column once
+        # per stock file at load time (mirroring _ticker), rather than
+        # re-normalizing the whole ISIN column here on every single
+        # fallback lookup -- this function can run once per unmatched
+        # holding, so that would otherwise be a full-column regex pass
+        # repeated many times per ETF.
+        if "_isin" not in df.columns:
             continue
 
-        matches = df.index[df["ISIN"].map(normalize_isin) == isin]
+        matches = df.index[df["_isin"] == isin]
         if len(matches):
             return df.loc[matches[0]], region
 
@@ -96,12 +102,13 @@ def find_stock(
     holding: pd.Series,
     stock_data: Dict[str, pd.DataFrame],
 ) -> Tuple[Optional[pd.Series], Optional[str], Optional[str]]:
-    """Attempt to locate a stock in the database using primary security identifiers.
+    """Attempt to locate a stock in the database.
 
-    Matches holdings primarily by ISIN or regional security codes (SEDOL, CUSIP,
-    Local Code) within the resolved region. If region resolution fails or the
-    stock is missing from the regional file, falls back to a global,
-    region-agnostic ISIN search across all loaded databases.
+    Matches primarily by normalized ticker (the holding's Code) within the
+    resolved region (see find_region). If region resolution fails, or the
+    ticker isn't found in that region's file, falls back to a global,
+    region-agnostic ISIN search across all loaded databases (see
+    find_stock_by_isin).
 
     Returns:
         Tuple of (matched_stock_series, matched_region, match_reason).

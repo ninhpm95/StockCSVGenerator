@@ -31,6 +31,15 @@ def weighted_harmonic_mean(values: pd.Series, weights: pd.Series) -> float:
     Implemented as the inverse of the current-method weighted average of
     1/x: invert each value, weighted_average() the inverted values, then
     invert the result back.
+
+    Holdings with a non-positive value for the metric (e.g. negative ROA,
+    a loss-making margin) are excluded from the average entirely rather
+    than included with a flipped sign -- 1/x is undefined in the direction
+    this aggregation needs for x <= 0. This is a reasonable approximation
+    for the ratio-like metrics this is used for (see the AGGREGATION_METHODS
+    comment in constants.py) but does mean a fund's negative-value holdings
+    don't contribute to that particular column's average, even though they
+    still count toward the overall matched-weight coverage check.
     """
     numeric_values = pd.to_numeric(values, errors="coerce")
     numeric_weights = pd.to_numeric(weights, errors="coerce")

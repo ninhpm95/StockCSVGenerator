@@ -34,6 +34,14 @@ SKIP_NO_HOLDINGS_FILE = "no_holdings_file"
 SKIP_PARSE_ERROR = "parse_error"
 SKIP_EMPTY_HOLDINGS = "empty_holdings"
 
+# Not one of the SKIP_* codes above: those all mean stats.holdings == 0
+# (nothing to report at all). This one covers the "matched some holdings,
+# but coverage was too poor to aggregate" case, where stats.holdings > 0
+# and there IS a matched/total/weight figure worth showing -- run.py uses
+# it to route the row into its own "low coverage" summary section instead
+# of either the zero-holdings skip list or the normal match summary.
+SKIP_LOW_COVERAGE = "low_coverage"
+
 
 def process_etf(
     etf_row: pd.Series,
@@ -42,11 +50,12 @@ def process_etf(
     """Process a single ETF row against the loaded stock database.
 
     Returns (result_row, stats, skip_reason). skip_reason is one of the
-    SKIP_* codes above when stats.holdings ends up 0 (the row was left
-    unchanged for lack of any holdings data), and "" otherwise -- including
-    the "matched some holdings but coverage/matching was too poor" cases,
-    which aren't zero-holdings skips and are reported separately via
-    match_summary in run.py.
+    zero-holdings SKIP_* codes above when stats.holdings ends up 0 (the
+    row was left unchanged for lack of any holdings data), SKIP_LOW_COVERAGE
+    when holdings were matched but not enough to clear MIN_WEIGHT_THRESHOLD,
+    and "" otherwise (including "zero matched holdings", which run.py's
+    match_summary already shows as 0/N holdings without needing a separate
+    reason code).
     """
     result = etf_row.astype(object)
     ticker = normalize_ticker(etf_row.get("Ticker", ""))
@@ -90,6 +99,14 @@ def process_etf(
     stats.matched_weight = total_weight
 
     # --- COVERAGE GUARD: Skip aggregation if matched weight is below 80% ---
+    # Note: this checks the raw sum of matched holding weights, not a
+    # weight normalized against the holdings file's own total. If a fund's
+    # weight column doesn't sum to exactly 100% (rounding, an included
+    # cash line, ...), total_weight can run slightly over 1.0 and still
+    # clear this threshold on that basis alone. The per-holding
+    # normalization a few lines down (normalized_weight) corrects for this
+    # in the actual aggregated averages either way, so this only affects
+    # whether the 80% gate itself is a little generous in that scenario.
     if total_weight < MIN_WEIGHT_THRESHOLD:
         logger.warning(
             "ETF %s: matched weight (%.1f%%) is below the required %.0f%% threshold; leaving row unchanged.",
@@ -97,7 +114,7 @@ def process_etf(
             total_weight * 100,
             MIN_WEIGHT_THRESHOLD * 100,
         )
-        return result, stats, ""
+        return result, stats, SKIP_LOW_COVERAGE
 
     for item in matched_rows:
         item["normalized_weight"] = item["weight"] / total_weight
@@ -114,7 +131,12 @@ def _match_holdings(
     stats: ETFStats,
 ) -> List[MatchedHolding]:
     """Look up each holding in the stock database, returning the matches.
-    A holding that isn't a real equity (cash, FX, derivatives, ...) is never found here and is simply counted as a miss.
+    Known non-stock codes (cash, currency balances, collateral, ...) are
+    already filtered out in parse_holdings via is_reserved_non_stock, so
+    they don't reach here. Anything else that isn't found in the stock
+    database -- an unlisted holding, a stale/mismatched ticker, a
+    non-stock code not on that known list, etc. -- is simply counted as a
+    miss.
     """
     matched_rows: List[MatchedHolding] = []
 

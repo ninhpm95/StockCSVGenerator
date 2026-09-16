@@ -7,7 +7,7 @@ from typing import Dict, Optional
 import pandas as pd
 
 from .constants import AGGREGATE_COLUMNS, ETF_DIR, OUTPUT_DIR, STOCK_FILE_SUFFIX
-from .normalize import normalize_ticker
+from .normalize import normalize_isin, normalize_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,9 @@ def load_stock_files() -> Dict[str, pd.DataFrame]:
             continue
 
         df["_ticker"] = df["Ticker"].map(normalize_ticker)
+
+        if "ISIN" in df.columns:
+            df["_isin"] = df["ISIN"].map(normalize_isin)
 
         for col in AGGREGATE_COLUMNS:
             if col in df.columns:
