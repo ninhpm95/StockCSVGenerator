@@ -3,21 +3,23 @@ run.py -- ETF holdings -> resolved ticker/ISIN extractor.
 
 Expected location: parent/tasks/ticker_extractor/run.py
 
-Reads every ETF holdings file (.csv, .xlsx) in HOLDINGS_DIR. For each file:
+Reads every ETF holdings file (.csv, .xlsx, .xls) in HOLDINGS_DIR. For each
+file:
 
   1. Find the header row (same detection as before). Every row below it is
      treated as a holdings data row -- no more "does this look like a
      stock name" filtering.
   2. Work out each row's weight in the fund:
-       - a Weight/% of NAV column if the file has one ("8.8" and "8.8%"
-         both mean 8.8% == 0.088), otherwise
+       - a Weight/% of NAV column if the file has one and its values are
+         parseable ("8.8" and "8.8%" both mean 8.8% == 0.088), otherwise
        - Stock Price x No. of Shares, normalized against the same product
          summed across every row in the file.
      Weight is *only* used to pick the top 100 holdings, so if a file has
      100 rows or fewer we don't bother computing it at all.
   3. Keep the top 100 holdings by weight (or all of them, if <=100).
   4. Work out each kept holding's region (ISIN prefix > Location column >
-     Exchange name > UNKNOWN -- unchanged from before).
+     Exchange name > filename convention > UNKNOWN -- unchanged from
+     before).
   5. Look up that region's canonical reference table,
      data/stocks/{region}_lookup.csv:
        - if the holding has an ISIN, look it up by ISIN and overwrite the
@@ -26,39 +28,78 @@ Reads every ETF holdings file (.csv, .xlsx) in HOLDINGS_DIR. For each file:
          reference row.
        - if it has neither ISIN nor Ticker, or the lookup has no match,
          the holding is dropped.
+     Either way, any of Name/Exchange/Currency the holding itself left
+     blank is backfilled from the matched reference row.
   6. Append the resolved holding to output/{region}.csv, deduplicated by
      ISIN across every source file that contributes to that region.
 
+Known limitation: parse_percentage() assumes a bare number in a Weight
+column means a percentage ("8.8" -> 8.8%), matching every provider seen so
+far. A provider that instead exports weight as a raw decimal fraction
+(e.g. "0.088" meaning 8.8%) would be misread as 0.088%. If that ever shows
+up, parse_percentage needs a per-provider or per-file override.
+
 Usage:
     This is a subtask of the larger project and is not meant to be run as
-    a standalone script -- the `from .constants import *` below requires
-    it to be executed in its package context (e.g. invoked by the parent
-    project's runner, or via `python -m parent.tasks.ticker_extractor.run`
-    from REPO_ROOT). Edit HOLDINGS_DIR / LOOKUP_DIR / OUTPUT_DIR in
-    constants.py if your layout differs.
+    a standalone script -- the imports below require it to be executed in
+    its package context (e.g. invoked by the parent project's runner, or
+    via `python -m parent.tasks.ticker_extractor.run` from REPO_ROOT).
+    Edit HOLDINGS_DIR / LOOKUP_DIR / OUTPUT_DIR in constants.py if your
+    layout differs. This module does not call logging.basicConfig() --
+    the calling process is expected to configure logging handlers/level;
+    this module only logs through its own `logger`.
 """
 from __future__ import annotations
 
 import csv
 import logging
 import re
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
-from .constants import *
 
 import pandas as pd
+
+from .constants import (
+    CSV_ENCODINGS,
+    EXCHANGE_TO_REGION,
+    FIELD_CANDIDATES,
+    GLOBAL_REGION,
+    HEADER_KEYWORD_COMBINATIONS,
+    HOLDINGS_DIR,
+    HOLDINGS_SHEET_NAMES,
+    LABEL_SUFFIXES,
+    LOCATION_TO_REGION,
+    LOOKUP_DIR,
+    OUTPUT_DIR,
+    OUTPUT_FIELDS,
+    PLACEHOLDER_TOKENS,
+    TOP_N_HOLDINGS,
+    UNKNOWN_REGION,
+)
+from .fields import Fields
 
 logger = logging.getLogger(__name__)
 
 
 def normalize_text(value) -> str:
     """Trim whitespace/quotes/leading apostrophes (common from Excel/CSV
-    exports) and return a clean string, or "" for anything blank/NaN/a
-    placeholder token like '-' or 'N/A'."""
-    if value is None or (isinstance(value, float) and pd.isna(value)):
+    exports) and return a clean string, or "" for anything blank/NaN/NA/NaT
+    or a placeholder token like '-' or 'N/A'."""
+    if value is None:
         return ""
+    try:
+        # Catches float('nan'), pandas.NA, and pandas.NaT alike -- a plain
+        # isinstance(value, float) check (the previous approach) misses
+        # pd.NA/pd.NaT, which then get stringified into the literal text
+        # "<NA>" / "NaT" instead of being treated as blank.
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass  # pd.isna() raises on some array-likes; not expected here for scalar cells
     s = str(value).strip()
+    s = s.replace("\u3000", " ").strip()  # full-width space, seen in some JP exports
     s = s.lstrip("'").strip().strip('"').strip("'").strip()
     if s.lower() in PLACEHOLDER_TOKENS:
         return ""
@@ -93,17 +134,18 @@ def normalize_currency(value) -> str:
 
 
 NORMALIZERS = {
-    "Ticker": normalize_ticker,
-    "Name": normalize_text,
-    "ISIN": normalize_isin,
-    "Exchange": normalize_exchange,
-    "Currency": normalize_currency,
+    Fields.TICKER: normalize_ticker,
+    Fields.NAME: normalize_text,
+    Fields.ISIN: normalize_isin,
+    Fields.EXCHANGE: normalize_exchange,
+    Fields.CURRENCY: normalize_currency,
 }
 
 
 def parse_percentage(value) -> Optional[float]:
     """"8.8" and "8.8%" both mean 8.8% -> 0.088. Returns None if the cell
-    doesn't hold a parseable number."""
+    doesn't hold a parseable number. See the module docstring for the
+    decimal-fraction ambiguity this assumes away."""
     s = normalize_text(value)
     if not s:
         return None
@@ -130,7 +172,12 @@ def format_ticker_for_output(ticker: str) -> str:
     """Tickers that start with '0' lose their leading zero when a plain
     CSV is opened in Excel unless the cell is forced to text -- prefix
     with a single quote in that case, matching the convention already
-    used in the data/stocks/*_lookup.csv reference files."""
+    used in the data/stocks/*_lookup.csv reference files.
+
+    Only call this at the final CSV-writing step (see run(), below) --
+    never before a Ticker value is used for lookup matching, or the
+    leading quote would break exact-match comparisons against
+    data/stocks/*_lookup.csv (which does not store the quote)."""
     if ticker.startswith("0"):
         return f"'{ticker}"
     return ticker
@@ -191,15 +238,16 @@ def read_raw_grid(path: Path) -> pd.DataFrame:
 
 
 def _row_matches_combination(cells: List[str], combination: Tuple[str, ...]) -> bool:
-    """True if every keyword in `combination` occurs (case-sensitive
+    """True if every keyword in `combination` occurs (case-insensitive
     substring) in `cells`, in order, at strictly increasing cell indices.
     Once keyword N is found in cell j, the search for keyword N+1 only
     looks at cells after j -- matched cells don't need to be adjacent."""
     search_from = 0
     for keyword in combination:
+        keyword_key = keyword.lower()
         found_at = None
         for j in range(search_from, len(cells)):
-            if keyword in cells[j]:
+            if keyword_key in cells[j].lower():
                 found_at = j
                 break
         if found_at is None:
@@ -225,25 +273,50 @@ def find_header_row(raw: pd.DataFrame) -> Optional[int]:
 def find_column(columns: Iterable, field: str):
     """Return the actual column label matching `field`, or None."""
     candidates = FIELD_CANDIDATES[field]
+    columns = list(columns)
 
+    # Pass 1: exact (normalized) match, trying candidates in priority order.
     for candidate in candidates:
         key = normalize_key(candidate)
         for col in columns:
             if normalize_key(col) == key:
                 return col
 
-    for col in columns:
-        col_norm = normalize_key(col)
-        for candidate in candidates:
-            cand_norm = normalize_key(candidate)
-            if cand_norm and cand_norm in col_norm:
+    # Pass 2: substring match. Candidates are tried in priority order
+    # *outer*, columns inner, so a generic candidate (e.g. "Code" for
+    # Ticker) only gets a chance to match once every more specific
+    # candidate for this field has failed to match ANY column -- it can no
+    # longer win against a more specific candidate just because it happens
+    # to sit on an earlier column (e.g. "Country Code" appearing before the
+    # real "Ticker Symbol" column).
+    for candidate in candidates:
+        cand_norm = normalize_key(candidate)
+        if not cand_norm:
+            continue
+        for col in columns:
+            if cand_norm in normalize_key(col):
                 return col
 
     return None
 
 
+def _dedupe_columns(labels: List[str]) -> List[str]:
+    """Append a numeric suffix to repeated column labels so that
+    `df[col]` always returns a single Series rather than silently
+    returning a DataFrame (and `row[col]` a Series) when a source file has
+    two columns with the same header text."""
+    seen: Dict[str, int] = {}
+    deduped = []
+    for label in labels:
+        count = seen.get(label, 0)
+        seen[label] = count + 1
+        deduped.append(label if count == 0 else f"{label}__dup{count}")
+    return deduped
+
+
 # --------------------------------------------------------------------------
-# Region detection: ISIN country prefix > Location column > Exchange name > UNKNOWN
+# Region detection: ISIN country prefix > Location column > Exchange name >
+# filename convention > UNKNOWN
 # --------------------------------------------------------------------------
 
 
@@ -255,38 +328,42 @@ def _match_region(text: str, mapping: Dict[str, str]) -> Optional[str]:
     return None
 
 
-def _region_from_filename(path: Path, ticker: str) -> Optional[str]:
+def _region_from_filename(path: Path) -> Optional[str]:
     """Return a manually supplied region from a holdings filename.
 
     Some providers (notably Maxis) use filenames such as
     ``221A_JP_Maxis_JpSemi.csv`` where the region cannot be inferred from
     the holding rows themselves. In that convention, the region is the
-    two-letter token immediately after the ETF ticker.
+    second underscore-separated token in the filename stem (immediately
+    after the ETF's own ticker, which is always first).
+
+    NOTE: this positional convention is inferred from the one example
+    documented for this fallback (Maxis). It intentionally does NOT try to
+    locate a "ticker" token within the filename by matching it against
+    anything from the holdings rows -- a per-holding ticker (an underlying
+    stock in the ETF) will essentially never appear in the ETF's own
+    filename, which made the original version of this fallback dead code
+    in practice. If a provider with a different filename convention shows
+    up, this function needs updating.
     """
-    if not ticker:
-        return None
-
     parts = path.stem.split("_")
-    ticker_upper = normalize_ticker(ticker).upper()
-
-    for i, part in enumerate(parts[:-1]):
-        if normalize_ticker(part) == ticker_upper:
-            candidate = normalize_text(parts[i + 1]).upper()
-            if re.fullmatch(r"[A-Z]{2}", candidate):
-                return candidate
-
+    if len(parts) < 2:
+        return None
+    candidate = normalize_text(parts[1]).upper()
+    if re.fullmatch(r"[A-Z]{2}", candidate):
+        return candidate
     return None
 
 
-def get_region(isin: str, location: str, exchange: str, path: Optional[Path] = None, ticker: str = "") -> str:
+def get_region(isin: str, location: str, exchange: str, path: Optional[Path] = None) -> str:
     """Resolve a holding's region in priority order.
 
     Priority:
       1. ISIN country prefix
       2. Location/Country column
       3. Exchange name
-      4. Region manually encoded in the filename immediately after the ETF
-         ticker (e.g. ``221A_JP_Maxis_JpSemi.csv`` -> ``JP``)
+      4. Region manually encoded in the filename (e.g.
+         ``221A_JP_Maxis_JpSemi.csv`` -> ``JP``)
       5. UNKNOWN
     """
     if len(isin) >= 2 and isin[:2].isalpha():
@@ -303,7 +380,7 @@ def get_region(isin: str, location: str, exchange: str, path: Optional[Path] = N
             return region
 
     if path is not None:
-        region = _region_from_filename(path, ticker)
+        region = _region_from_filename(path)
         if region:
             return region
 
@@ -337,25 +414,18 @@ def select_top_indices(weights: List[Optional[float]], limit: int) -> Tuple[List
 # --------------------------------------------------------------------------
 
 
+@dataclass
 class FileResult:
     """Outcome of processing one holdings file, used to build the
     end-of-run summary instead of logging a line per file."""
 
-    def __init__(
-        self,
-        records: List[dict],
-        total_rows: int = 0,
-        skipped_no_id: int = 0,
-        lookup_skipped: int = 0,
-        weight_undetermined: bool = False,
-        problem: Optional[str] = None,
-    ):
-        self.records = records                       # kept, region-tagged, pre-lookup
-        self.total_rows = total_rows                  # data rows found before top-N cut
-        self.skipped_no_id = skipped_no_id             # top-N rows with neither Ticker nor ISIN
-        self.lookup_skipped = lookup_skipped           # filled in later, after cross-referencing
-        self.weight_undetermined = weight_undetermined
-        self.problem = problem
+    records: List[dict]                        # kept, region-tagged, pre-lookup
+    total_rows: int = 0                          # data rows found before top-N cut
+    skipped_no_id: int = 0                       # top-N rows with neither Ticker nor ISIN
+    lookup_skipped: int = 0                      # filled in later, after cross-referencing
+    weight_undetermined: bool = False
+    duplicate_isins: int = 0                     # same ISIN appearing twice within this file
+    problem: Optional[str] = None
 
 
 def extract_holdings(path: Path) -> FileResult:
@@ -373,17 +443,18 @@ def extract_holdings(path: Path) -> FileResult:
         return FileResult([], problem="no recognizable holdings header found")
 
     df = raw.iloc[header_row + 1:].copy()
-    df.columns = raw.iloc[header_row].tolist()
+    header_values = ["" if pd.isna(v) else str(v) for v in raw.iloc[header_row]]
+    df.columns = _dedupe_columns(header_values)
     df = df.reset_index(drop=True).dropna(how="all")
 
     col_for_field = {field: find_column(df.columns, field) for field in OUTPUT_FIELDS}
     if all(col is None for col in col_for_field.values()):
         return FileResult([], problem=f"none of {', '.join(OUTPUT_FIELDS)} found")
 
-    location_col = find_column(df.columns, "Location")
-    weight_col = find_column(df.columns, "Weight")
-    price_col = find_column(df.columns, "Price")
-    shares_col = find_column(df.columns, "Shares")
+    location_col = find_column(df.columns, Fields.LOCATION)
+    weight_col = find_column(df.columns, Fields.WEIGHT)
+    price_col = find_column(df.columns, Fields.PRICE)
+    shares_col = find_column(df.columns, Fields.SHARES)
 
     rows = []
     for _, row in df.iterrows():
@@ -403,9 +474,15 @@ def extract_holdings(path: Path) -> FileResult:
     if not rows:
         return FileResult([], problem="no data rows found")
 
-    # No explicit weight column -- derive weight from price x shares,
-    # normalized against every row in the file.
-    if weight_col is None and price_col is not None and shares_col is not None:
+    # Fall back to deriving weight from price x shares (normalized against
+    # every row in the file) whenever the Weight column didn't give us
+    # anything usable -- either because there was no Weight column at all,
+    # or because one was detected but none of its values parsed (e.g. an
+    # unexpected format). Without this "or" clause, a file with a garbled
+    # Weight column would fall back to "first N rows" even when Price and
+    # Shares were both available and usable.
+    have_weight = any(r["weight"] is not None for r in rows)
+    if not have_weight and price_col is not None and shares_col is not None:
         caps = [
             (r["price"] * r["shares"]) if r["price"] is not None and r["shares"] is not None else None
             for r in rows
@@ -421,17 +498,16 @@ def extract_holdings(path: Path) -> FileResult:
     skipped_no_id = 0
     for i in top_indices:
         record = rows[i]["record"]
-        if not record["Ticker"] and not record["ISIN"]:
+        if not record[Fields.TICKER] and not record[Fields.ISIN]:
             skipped_no_id += 1
             continue
         region = get_region(
-            record["ISIN"],
+            record[Fields.ISIN],
             rows[i]["location"],
-            record["Exchange"],
+            record[Fields.EXCHANGE],
             path=path,
-            ticker=record["Ticker"],
         )
-        kept.append({**record, "Region": region})
+        kept.append({**record, Fields.REGION: region})
 
     return FileResult(
         kept,
@@ -450,7 +526,12 @@ def extract_holdings(path: Path) -> FileResult:
 def load_lookup(region: str) -> Tuple[Dict[str, dict], Dict[str, dict]]:
     """Load data/stocks/{region}_lookup.csv into (by_isin, by_ticker) dicts
     of normalized {Ticker, Name, ISIN, Exchange, Currency} rows. Returns two
-    empty dicts if no lookup file exists for this region."""
+    empty dicts if no lookup file exists for this region.
+
+    Column names are matched with the same find_column() logic used for
+    holdings files (rather than requiring exact "Ticker"/"Name"/... headers)
+    so a lookup CSV with slightly different casing/spacing doesn't
+    silently produce empty records."""
     path = LOOKUP_DIR / f"{region}_lookup.csv"
     if not path.exists():
         return {}, {}
@@ -466,24 +547,20 @@ def load_lookup(region: str) -> Tuple[Dict[str, dict], Dict[str, dict]]:
     if df is None:
         raise last_error  # every configured encoding failed to decode
 
+    col_for_field = {field: find_column(df.columns, field) for field in OUTPUT_FIELDS}
+
     by_isin: Dict[str, dict] = {}
     by_ticker: Dict[str, dict] = {}
     for _, row in df.iterrows():
         rec = {
-            "Ticker": normalize_ticker(row.get("Ticker", "")),
-            "Name": normalize_text(row.get("Name", "")),
-            "ISIN": normalize_isin(row.get("ISIN", "")),
-            "Exchange": normalize_exchange(row.get("Exchange", "")),
-            "Currency": normalize_currency(row.get("Currency", "")),
+            field: NORMALIZERS[field](row[col]) if col is not None else ""
+            for field, col in col_for_field.items()
         }
-        if rec["ISIN"]:
-            by_isin[rec["ISIN"]] = rec
-        if rec["Ticker"] and rec["ISIN"]:
-            by_ticker[rec["Ticker"]] = rec
+        if rec[Fields.ISIN]:
+            by_isin[rec[Fields.ISIN]] = rec
+        if rec[Fields.TICKER] and rec[Fields.ISIN]:
+            by_ticker[rec[Fields.TICKER]] = rec
     return by_isin, by_ticker
-
-
-GLOBAL_REGION = "GLOBAL"
 
 
 def resolve_holding(record: dict) -> Optional[dict]:
@@ -493,46 +570,73 @@ def resolve_holding(record: dict) -> Optional[dict]:
     giving up. GLOBAL_lookup.csv is large, so it's only loaded (once, then
     cached via load_lookup's lru_cache) the first time a fallback is
     actually needed -- files for regions that never miss are never touched.
+
+    Any of Name/Exchange/Currency the holding itself left blank is
+    backfilled from the matched reference row.
+
     Returns the resolved holding, or None if it should be skipped (no
     Ticker/ISIN to key off of, or no match found in either table)."""
-    by_isin, by_ticker = load_lookup(record["Region"])
+    by_isin, by_ticker = load_lookup(record[Fields.REGION])
 
-    if record["ISIN"]:
-        match = by_isin.get(record["ISIN"])
-        if not match and record["Region"] != GLOBAL_REGION:
+    if record[Fields.ISIN]:
+        match = by_isin.get(record[Fields.ISIN])
+        if not match and record[Fields.REGION] != GLOBAL_REGION:
             global_by_isin, _ = load_lookup(GLOBAL_REGION)
-            match = global_by_isin.get(record["ISIN"])
+            match = global_by_isin.get(record[Fields.ISIN])
         if not match:
             return None
         resolved = dict(record)
-        if match["Ticker"]:
-            resolved["Ticker"] = match["Ticker"]
+        if match[Fields.TICKER]:
+            resolved[Fields.TICKER] = match[Fields.TICKER]
+        _backfill_blank_fields(resolved, match)
         return resolved
 
-    if record["Ticker"]:
-        match = by_ticker.get(record["Ticker"])
-        if not match and record["Region"] != GLOBAL_REGION:
+    if record[Fields.TICKER]:
+        match = by_ticker.get(record[Fields.TICKER])
+        used_global = False
+        if not match and record[Fields.REGION] != GLOBAL_REGION:
             _, global_by_ticker = load_lookup(GLOBAL_REGION)
-            match = global_by_ticker.get(record["Ticker"])
+            match = global_by_ticker.get(record[Fields.TICKER])
+            used_global = True
         if not match:
             return None
         resolved = dict(record)
-        resolved["ISIN"] = match["ISIN"]
+        resolved[Fields.ISIN] = match[Fields.ISIN]
+        _backfill_blank_fields(resolved, match)
+        if used_global and resolved[Fields.ISIN]:
+            # The region-specific lookup had nothing for this ticker, so
+            # `record[Fields.REGION]` was set by get_region() without any
+            # ISIN to go on (often UNKNOWN). Now that GLOBAL_lookup.csv has
+            # given us a real ISIN, re-derive the region from its country
+            # prefix -- otherwise the holding lands in output/UNKNOWN.csv
+            # even when its ISIN clearly says e.g. US.
+            new_region = get_region(resolved[Fields.ISIN], "", "")
+            if new_region != UNKNOWN_REGION:
+                resolved[Fields.REGION] = new_region
         return resolved
 
     return None  # no ISIN and no Ticker -- shouldn't reach here, but be safe
+
+
+def _backfill_blank_fields(resolved: dict, match: dict) -> None:
+    """Fill Name/Exchange/Currency on `resolved` from `match` wherever
+    `resolved` itself is blank, in place. Ticker/ISIN are handled by the
+    caller since their overwrite rules differ (Ticker is always taken from
+    the reference on an ISIN match; ISIN is always taken from the
+    reference on a Ticker match)."""
+    for f in (Fields.NAME, Fields.EXCHANGE, Fields.CURRENCY):
+        if not resolved.get(f) and match.get(f):
+            resolved[f] = match[f]
 
 
 # --------------------------------------------------------------------------
 # Run summary
 # --------------------------------------------------------------------------
 
-_LABEL_SUFFIXES = ["_brd_data", "_holdings"]
-
 
 def short_label(path: Path) -> str:
     stem = path.stem
-    for suffix in _LABEL_SUFFIXES:
+    for suffix in LABEL_SUFFIXES:
         if stem.lower().endswith(suffix):
             return stem[: -len(suffix)]
     return stem
@@ -564,6 +668,8 @@ class RunSummary:
             notes.append(f"{result.skipped_no_id} no ticker/ISIN")
         if result.lookup_skipped:
             notes.append(f"{result.lookup_skipped} no lookup match")
+        if result.duplicate_isins:
+            notes.append(f"{result.duplicate_isins} duplicate ISIN(s) collapsed")
 
         if notes:
             self.partial.append(f"{label} ({', '.join(notes)})")
@@ -591,13 +697,15 @@ class RunSummary:
 
 
 def run() -> None:
-    logging.basicConfig(level=logging.WARNING, format="%(levelname)s | %(message)s")
-
+    # Deliberately no logging.basicConfig() here -- this is a subtask
+    # module that may be imported and run by a parent orchestrator, which
+    # should own root-logger configuration. This module only logs through
+    # its own `logger`; the caller decides where that ends up.
     files = sorted(
         p for p in HOLDINGS_DIR.iterdir() if p.is_file() and p.suffix.lower() in (".csv", ".xlsx", ".xls")
     )
     if not files:
-        raise FileNotFoundError(f"no holdings files (.csv/.xlsx) found in {HOLDINGS_DIR.resolve()}")
+        raise FileNotFoundError(f"no holdings files (.csv/.xlsx/.xls) found in {HOLDINGS_DIR.resolve()}")
 
     summary = RunSummary()
     by_region: Dict[str, Dict[str, dict]] = {}  # region -> ISIN -> resolved record
@@ -606,29 +714,51 @@ def run() -> None:
         result = extract_holdings(path)
 
         lookup_skipped = 0
+        duplicate_isins = 0
+        seen_isins_this_file: set = set()
         for record in result.records:
             resolved = resolve_holding(record)
             if resolved is None:
                 lookup_skipped += 1
                 continue
-            by_region.setdefault(resolved["Region"], {})[resolved["ISIN"]] = resolved
+            isin = resolved[Fields.ISIN]
+            if isin in seen_isins_this_file:
+                duplicate_isins += 1
+                logger.warning(
+                    "%s: duplicate ISIN %s within this file; last occurrence wins",
+                    short_label(path), isin,
+                )
+            seen_isins_this_file.add(isin)
+            by_region.setdefault(resolved[Fields.REGION], {})[isin] = resolved
         result.lookup_skipped = lookup_skipped
+        result.duplicate_isins = duplicate_isins
 
         summary.add(path, result)
 
     summary.region_counts = {region: len(rows) for region, rows in by_region.items()}
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    csv_columns = OUTPUT_FIELDS + ["Region"]
+    existing_outputs = set(OUTPUT_DIR.glob("*.csv"))
+
+    csv_columns = OUTPUT_FIELDS + [Fields.REGION]
     total_stocks = 0
+    written_outputs: set = set()
     for region, rows_by_isin in by_region.items():
         rows = list(rows_by_isin.values())
-        rows.sort(key=lambda r: (r["Ticker"], r["ISIN"], r["Name"]))
+        rows.sort(key=lambda r: (r[Fields.TICKER], r[Fields.ISIN], r[Fields.NAME]))
         for r in rows:
-            r["Ticker"] = format_ticker_for_output(r["Ticker"])
+            r[Fields.TICKER] = format_ticker_for_output(r[Fields.TICKER])
         out_path = OUTPUT_DIR / f"{region}.csv"
         pd.DataFrame(rows, columns=csv_columns).to_csv(out_path, index=False)
+        written_outputs.add(out_path)
         total_stocks += len(rows)
+
+    # Remove region files left over from a previous run whose region no
+    # longer has any holdings this run, so stale data doesn't linger
+    # silently alongside the current output.
+    for stale_path in existing_outputs - written_outputs:
+        stale_path.unlink()
+        logger.info("removed stale output file with no holdings this run: %s", stale_path.name)
 
     summary.print()
     print(f"Found {total_stocks} unique stocks across the holdings files in {HOLDINGS_DIR.resolve()}.")

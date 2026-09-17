@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from .fields import Fields as F
+
 # --------------------------------------------------------------------------
 # Input/output locations.
 # --------------------------------------------------------------------------
@@ -17,27 +19,27 @@ TOP_N_HOLDINGS = 100
 # A cell is considered a match for a field if its normalized text contains
 # one of that field's candidate strings.
 # --------------------------------------------------------------------------
-OUTPUT_FIELDS = ["Ticker", "Name", "ISIN", "Exchange", "Currency"]
+OUTPUT_FIELDS = [F.TICKER, F.NAME, F.ISIN, F.EXCHANGE, F.CURRENCY]
 
 FIELD_CANDIDATES: Dict[str, List[str]] = {
-    "Ticker": ["Code", "Ticker", "銘柄コード", "コード"],
-    "Name": ["Name", "銘柄", "銘柄名"],
-    "ISIN": ["ISIN"],
-    "Exchange": ["Exchange", "取引所"],
-    "Currency": ["Currency", "Ccy", "通貨"],
+    F.TICKER: ["Code", "Ticker", "銘柄コード", "コード"],
+    F.NAME: ["Name", "銘柄", "銘柄名"],
+    F.ISIN: ["ISIN"],
+    F.EXCHANGE: ["Exchange", "取引所"],
+    F.CURRENCY: ["Currency", "Ccy", "通貨"],
     # Region-detection signal only, not written out as its own column.
-    "Location": ["Location", "Country", "国", "国名", "所在国", "所在地"],
+    F.LOCATION: ["Location", "Country", "国", "国名", "所在国", "所在地"],
     # Used to pick the top-N holdings, not written out as its own column.
-    "Weight": ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight", "% of net asset"],
-    "Price": ["Stock Price", "Price", "Market Value", "株価"],
-    "Shares": ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares", "Shares Held"],
+    F.WEIGHT: ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight", "% of net asset"],
+    F.PRICE: ["Stock Price", "Price", "Market Value", "株価"],
+    F.SHARES: ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares", "Shares Held"],
 }
 
 # A row is treated as the holdings-table header if it matches one of these
 # keyword sequences. Combinations are tried in order, top to bottom, row by
 # row; the first row where ANY combination matches wins. Within a
-# combination, keywords are matched left to right: once a cell containing
-# keyword N (case-sensitive substring) is found, the search for keyword N+1
+# combination, keywords are matched left to right and case-insensitively:
+# once a cell containing keyword N is found, the search for keyword N+1
 # resumes from the next cell onward -- so the matched cells must appear in
 # order, but don't need to be adjacent.
 HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
@@ -45,7 +47,7 @@ HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
     ("Code", "Name", "ISIN"),
     ("Code", "Name", "Weight"),
     ("Ticker", "Name", "Weight"),
-    ("code", "Name", "Shares Held"), # Maxis
+    ("code", "Name", "Shares Held"),  # Maxis
 ]
 
 
@@ -56,6 +58,11 @@ HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
 # Tokens that source files use to mean "no value" rather than leaving the
 # cell blank. These normalize to "" so downstream logic isn't fooled into
 # treating a placeholder dash as a real value.
+#
+# NOTE: bare "na" is deliberately NOT included here even though "n/a" is --
+# "na" collides with real-world tickers/names (e.g. National Bank of
+# Canada trades as "NA"), so treating it as a placeholder would silently
+# drop legitimate holdings. "n/a" (with the slash) is unambiguous.
 PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "na", "null", "none"}
 
 
@@ -75,9 +82,9 @@ CSV_ENCODINGS: List[str] = ["utf-8-sig", "cp932", "cp1252"]
 HOLDINGS_SHEET_NAMES = ["保有明細"]
 
 
-
 # --------------------------------------------------------------------------
-# Region detection: ISIN country prefix > Location column > Exchange name > UNKNOWN
+# Region detection: ISIN country prefix > Location column > Exchange name >
+# filename convention > UNKNOWN
 # --------------------------------------------------------------------------
 
 LOCATION_TO_REGION: Dict[str, str] = {
@@ -121,5 +128,17 @@ EXCHANGE_TO_REGION: Dict[str, str] = {
 
 UNKNOWN_REGION = "UNKNOWN"
 
+# Sentinel region for the cross-provider fallback lookup file
+# (data/stocks/GLOBAL_lookup.csv), used when a holding's own region's
+# lookup file doesn't have it. Lives next to UNKNOWN_REGION since both are
+# region sentinels, not real region codes.
+GLOBAL_REGION = "GLOBAL"
 
-_LABEL_SUFFIXES = ["_brd_data", "_holdings"]
+
+# --------------------------------------------------------------------------
+# Run-summary labeling
+# --------------------------------------------------------------------------
+
+# Suffixes stripped from a source filename's stem to build the short label
+# used in the end-of-run summary (e.g. "SPY_holdings.csv" -> "SPY").
+LABEL_SUFFIXES = ["_brd_data", "_holdings"]
