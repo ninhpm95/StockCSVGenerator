@@ -5,7 +5,7 @@ from typing import List, Dict
 from tradingview_ta import get_multiple_analysis, Interval
 
 from .helper import format_ticker_for_yfinance, get_tv_screener, map_exchange
-from .constants import ENABLE_1M_RATING
+from .constants import ENABLE_1M_RATING, FINAL_COLUMNS
 from . import fields as F
 from .calculators import safe_div, calculate_price_trends, calculate_volume_surges
 
@@ -45,7 +45,7 @@ def format_financials(ticker_data: Dict) -> Dict:
     trailing_pe = ticker_data.get('trailingPE')
     forward_pe = ticker_data.get('forwardPE')
 
-    return {
+    result = {
         F.NAME: ticker_data.get('longName') or ticker_data.get('shortName'),
         F.MARKET_CAP: ticker_data.get('marketCap'),
         F.PE_RATIO: trailing_pe,
@@ -82,9 +82,29 @@ def format_financials(ticker_data: Dict) -> Dict:
         # practice - no filtering needed here.
         F.AVG_RATING_SCORE: avg_rating_score,
         F.AVG_RATING_LABEL: avg_rating_label,
-        F.GROWTH: safe_div(trailing_pe, forward_pe) if isinstance(trailing_pe, (int, float)) and isinstance(forward_pe, (int, float)) else None,
+        # forward_pe <= 0 makes trailing/forward a meaningless or inverted
+        # ratio (a negative or near-zero forward P/E isn't a "growth" signal
+        # in the way a positive one is), so it's excluded rather than
+        # producing a misleading number.
+        F.GROWTH: safe_div(trailing_pe, forward_pe) if isinstance(trailing_pe, (int, float)) and isinstance(forward_pe, (int, float)) and forward_pe > 0 else None,
         F.SECTOR: ticker_data.get('sector')
     }
+
+    # Fields above that aren't in FINAL_COLUMNS (extra price-trend windows,
+    # secondary valuation/health ratios, raw analyst target prices, etc.)
+    # get filtered out here rather than deleted - stay one FINAL_COLUMNS
+    # edit away from turning back on, without every field needing its own
+    # gate or reindex() in run.py silently dropping them later.
+    #
+    # F.AVG_RATING_1M goes through this same filter, not a different one -
+    # but it *also* has an earlier, separate gate: ENABLE_1M_RATING
+    # (constants.py) skips the TradingView '1m' interval call entirely in
+    # get_tv_scores_batch, before this function ever runs. That's the one
+    # field here where being unused means avoiding a real network call, so
+    # unlike everything else in `result`, it can't just be computed and
+    # filtered after the fact - the two gates share the same FINAL_COLUMNS
+    # source of truth, but they're not redundant with each other.
+    return {k: v for k, v in result.items() if k in FINAL_COLUMNS}
 
 def get_tv_scores_batch(tv_symbols: List[str], region: str) -> Dict[str, Dict]:
     if not tv_symbols:

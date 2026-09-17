@@ -1,16 +1,14 @@
-import math
 from typing import List, Optional, Any
 
 def safe_div(numerator: Optional[float], denominator: Optional[float], default: Any = None) -> Any:
     try:
         if numerator is None or denominator is None or denominator == 0:
             return default
-        # denominator == 0 above doesn't catch NaN (float('nan') == 0 is
-        # False), so without this a NaN denominator would silently produce
-        # a NaN result instead of `default`.
-        if isinstance(numerator, float) and math.isnan(numerator):
-            return default
-        if isinstance(denominator, float) and math.isnan(denominator):
+        # NaN is the only value that's never equal to itself, so `x != x`
+        # catches it regardless of whether x is a Python float or a
+        # numpy.float64 (isinstance(x, float) isn't reliable for the latter
+        # across numpy versions).
+        if numerator != numerator or denominator != denominator:
             return default
         return numerator / denominator
     except (TypeError, ValueError):
@@ -36,11 +34,15 @@ def calculate_price_trends(current: float, history: List[float]):
 def calculate_volume_surges(volume_data: List[int]):
     # NOTE: today's volume (volume_data[-1]) is a partial figure while the
     # market is still open, so it's deliberately excluded from the N-day
-    # "recent" windows below (avg_last_3/5/30 use [-N:-1], not [-N:]) to
-    # avoid a skewed comparison. avg_last_1 is the one exception - it's
+    # "recent" windows below. avg_last_1 is the one exception - it's
     # specifically meant to measure today's (possibly partial) volume
     # against the baseline, so it uses volume_data[-1] on purpose.
-    if not isinstance(volume_data, list) or len(volume_data) <= 30:
+    #
+    # For N in {3, 5, 30}: recent_N is the N most recently *completed* days,
+    # i.e. volume_data[-(N+1):-1] (N elements, today excluded). base_N
+    # excludes that same (N+1)-wide span - today plus the N recent days -
+    # from the overall average, so the two don't overlap.
+    if not isinstance(volume_data, list) or len(volume_data) <= 31:
         return (None,) * 4
     n = len(volume_data)
 
@@ -48,16 +50,16 @@ def calculate_volume_surges(volume_data: List[int]):
     recent1 = volume_data[-1]
     avg_last_1 = safe_div(recent1 - base1, base1, default=0)
 
-    base3 = sum(volume_data[:-3]) / (n - 3)
-    recent3 = sum(volume_data[-3:-1]) / 2
+    base3 = sum(volume_data[:-4]) / (n - 4)
+    recent3 = sum(volume_data[-4:-1]) / 3
     avg_last_3 = safe_div(recent3 - base3, base3, default=0)
 
-    base5 = sum(volume_data[:-5]) / (n - 5)
-    recent5 = sum(volume_data[-5:-1]) / 4
+    base5 = sum(volume_data[:-6]) / (n - 6)
+    recent5 = sum(volume_data[-6:-1]) / 5
     avg_last_5 = safe_div(recent5 - base5, base5, default=0)
 
-    base30 = sum(volume_data[:-30]) / (n - 30)
-    recent30 = sum(volume_data[-30:-1]) / 29
+    base30 = sum(volume_data[:-31]) / (n - 31)
+    recent30 = sum(volume_data[-31:-1]) / 30
     avg_last_30 = safe_div(recent30 - base30, base30, default=0)
 
     return avg_last_1, avg_last_3, avg_last_5, avg_last_30

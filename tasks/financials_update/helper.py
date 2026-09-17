@@ -19,12 +19,13 @@ def get_region(filename: str) -> str:
     # any unrecognized filename, silently screening it as a US file.
     raise ValueError(f"Could not determine region from file name: {filename!r}")
 
-def get_tv_sleep_range(ticker_num: int, speed: str) -> tuple[int, int]:
+def get_tv_sleep_range(ticker_num: int, speed: str) -> Optional[tuple[int, int]]:
     if speed == FAST:
         return (1, 2)
     for limit, sleep_range in TV_SLEEP_LOOKUP:
         if ticker_num < limit:
             return sleep_range
+    return None  # unreachable while TV_SLEEP_LOOKUP ends in a float("inf") sentinel
 
 def prepare_ticker(ticker: str) -> str:
     ticker = str(ticker).strip().lstrip("'")

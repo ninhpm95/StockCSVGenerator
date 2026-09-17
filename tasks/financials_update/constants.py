@@ -4,13 +4,12 @@ from . import fields as F
 OUTPUT_DIR = "output"
 
 # Batch Configurations
-BATCH_SIZE = 39  # yfinance/TradingView batch fetch size - kept below common rate-limit thresholds
-
-# TradingView's 1-month interval score. Off by default - a large batch of
-# lookups against this interval previously got the script's IP rate-limited
-# / blocked by TradingView. Safe to flip on for a small stock list; leave
-# off for full-size runs.
-ENABLE_1M_RATING = False
+# Controls how many tickers are processed together before a cooldown sleep
+# (see processor.py). Also doubles as the TradingView `get_multiple_analysis`
+# batch size (financials.py); yfinance itself is called per-ticker, not
+# batched, so this isn't a "yfinance batch size" - it's the pacing knob for
+# both. Kept below common rate-limit thresholds.
+BATCH_SIZE = 39
 
 TV_SLEEP_LOOKUP = [
     (100, (25, 40)),
@@ -40,3 +39,12 @@ FINAL_COLUMNS = [
     F.SECTOR,
     F.NOTE
 ]
+
+# TradingView's 1-month interval score costs an extra API call per batch
+# (see get_tv_scores_batch in financials.py) and previously got the script's
+# IP rate-limited / blocked by TradingView on large runs. Derived from
+# FINAL_COLUMNS rather than a separate hardcoded flag, so there's only one
+# place to touch to turn it on: uncomment F.AVG_RATING_1M above. A stray
+# `ENABLE_1M_RATING = True` with the column still commented out (or vice
+# versa) is no longer possible.
+ENABLE_1M_RATING = F.AVG_RATING_1M in FINAL_COLUMNS

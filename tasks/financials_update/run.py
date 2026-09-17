@@ -33,6 +33,11 @@ def run(file_name: str, speed: str):
         # the original is only ever swapped out once the new file is fully
         # written and closed.
         tmp_path = file_path + ".tmp"
+        if os.path.exists(tmp_path):
+            # Leftover from a previous run that crashed between writing the
+            # temp file and the os.replace swap. Harmless but stale - clear
+            # it before writing the new one.
+            os.remove(tmp_path)
         final_df.to_csv(tmp_path, index=False)
         os.replace(tmp_path, file_path)
         print(f"\n[+] Update successful! Saved to {file_path}")
