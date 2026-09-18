@@ -38,7 +38,11 @@ def load_stock_files() -> Dict[str, pd.DataFrame]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
-        duplicates = df["_ticker"].duplicated(keep=False) & df["_ticker"].ne("")
+        # keep="first" here (not keep=False) so the count reflects rows
+        # that will actually be dropped by drop_duplicates below -- with
+        # keep=False every member of a duplicate group is flagged, which
+        # roughly doubles the reported count relative to what's removed.
+        duplicates = df["_ticker"].duplicated(keep="first") & df["_ticker"].ne("")
         if duplicates.any():
             logger.warning(
                 "%s contains %d duplicate ticker rows; keeping first occurrence.",
@@ -65,6 +69,9 @@ def find_holdings_file(ticker: str) -> Optional[Path]:
     to matching.
     """
     ticker = normalize_ticker(ticker)
+
+    if not ETF_DIR.is_dir():
+        raise FileNotFoundError(f"Holdings directory not found: {ETF_DIR.resolve()}")
 
     matches = sorted(
         p for p in ETF_DIR.iterdir() if p.is_file() and normalize_ticker(p.stem.split("_")[0]) == ticker

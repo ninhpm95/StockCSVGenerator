@@ -133,8 +133,8 @@ HOLDINGS_SHEET_NAMES = ["保有明細"]
 # these combinations, each in its own cell, appearing left-to-right in the
 # SAME ORDER the keywords are listed here (case-insensitive substring
 # match). Combinations are tried in order: every row in the file is
-# checked against combination 1 first, and if no row matches at all,
-# combination 2 is tried against every row, then combination 3. Within
+# checked against the first combination first, and only if no row matches
+# at all is the next combination tried, and so on down the list. Within
 # whichever combination matches, the first row in file order wins.
 #
 # These are tuples (not sets) specifically because order matters now --

@@ -5,16 +5,21 @@ import re
 import pandas as pd
 
 
+# Generic placeholder tokens that show up across different holdings-file
+# columns when a provider simply has nothing to report for that cell --
+# not specific to Code or ISIN. Shared by _RESERVED_NON_STOCKS (below) and
+# normalize_isin so the two don't drift into separately-maintained lists
+# of the same placeholder vocabulary.
+_GENERIC_PLACEHOLDERS = {"N/A", "NA", "TBD", "UNKNOWN", "NONE", "－", "-", "--", "---"}
+
 # Codes that show up in the "Code" column of holdings files but aren't
 # equities -- cash positions, currency balances, collateral, corporate
 # actions, etc. These are legitimate holdings, just not ones that will
 # ever be found in a stock database, so they're filtered out rather than
 # reported as misses. Add more here as new non-stock codes turn up.
-_RESERVED_NON_STOCKS = {
+_RESERVED_NON_STOCKS = _GENERIC_PLACEHOLDERS | {
     "CASH", "COLLATERAL", "RIGHTS", "MARGIN", "PENDING", "SUSPENSE",
     "OTHER", "FUTURES", "OPTIONS", "SWAP", "FORWARD", "ACCRUED",
-    "N/A", "NA", "TBD", "UNKNOWN",
-    "－", "-",
     # currencies
     "USD", "JPY", "EUR", "GBP", "HKD", "AUD", "CNY", "KRW", "TWD",
     "INR", "CAD", "CHF", "SGD", "NZD",
@@ -102,4 +107,7 @@ def normalize_exchange(value) -> str:
 
 
 def normalize_isin(value) -> str:
-    return normalize_text(value).upper()
+    """Normalize an ISIN cell, treating known placeholder values (see
+    _GENERIC_PLACEHOLDERS) as blank rather than as a malformed real ISIN."""
+    s = normalize_text(value).upper()
+    return "" if s in _GENERIC_PLACEHOLDERS else s

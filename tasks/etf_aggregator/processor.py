@@ -24,22 +24,30 @@ class MatchedHolding(TypedDict):
     stock: pd.Series
 
 
-# Reason codes returned by process_etf whenever it leaves a row unchanged
-# because it ended up with zero holdings (stats.holdings == 0). Only
-# meaningful in that case -- ignored otherwise. Kept as short machine-
-# readable codes here; run.py maps them to human-readable labels for the
-# terminal summary.
+# Reason codes returned by process_etf whenever it leaves a row unchanged.
+# Kept as short machine-readable codes here; run.py maps them to
+# human-readable labels for the terminal summary. The first four below
+# specifically mean stats.holdings == 0 (nothing to report at all);
+# SKIP_PROCESSING_ERROR and SKIP_LOW_COVERAGE, further down, are the two
+# exceptions where stats.holdings > 0 -- see their own comments.
 SKIP_NO_TICKER = "no_ticker"
 SKIP_NO_HOLDINGS_FILE = "no_holdings_file"
 SKIP_PARSE_ERROR = "parse_error"
 SKIP_EMPTY_HOLDINGS = "empty_holdings"
 
-# Not one of the SKIP_* codes above: those all mean stats.holdings == 0
-# (nothing to report at all). This one covers the "matched some holdings,
-# but coverage was too poor to aggregate" case, where stats.holdings > 0
-# and there IS a matched/total/weight figure worth showing -- run.py uses
-# it to route the row into its own "low coverage" summary section instead
-# of either the zero-holdings skip list or the normal match summary.
+# Anything unexpected raised while matching holdings or aggregating
+# metrics (as opposed to SKIP_PARSE_ERROR, which is specifically a
+# parse_holdings failure). By the time this can fire, holdings were
+# already parsed successfully (stats.holdings > 0) -- unlike the four
+# zero-holdings codes above, so it needs the same run.py routing
+# treatment as SKIP_LOW_COVERAGE rather than being lumped in with those.
+SKIP_PROCESSING_ERROR = "processing_error"
+
+# The other stats.holdings > 0 case: this one covers "matched some
+# holdings, but coverage was too poor to aggregate", where there IS a
+# matched/total/weight figure worth showing -- run.py uses it to route
+# the row into its own "low coverage" summary section instead of either
+# the zero-holdings skip list or the normal match summary.
 SKIP_LOW_COVERAGE = "low_coverage"
 
 
@@ -53,9 +61,10 @@ def process_etf(
     zero-holdings SKIP_* codes above when stats.holdings ends up 0 (the
     row was left unchanged for lack of any holdings data), SKIP_LOW_COVERAGE
     when holdings were matched but not enough to clear MIN_WEIGHT_THRESHOLD,
-    and "" otherwise (including "zero matched holdings", which run.py's
-    match_summary already shows as 0/N holdings without needing a separate
-    reason code).
+    SKIP_PROCESSING_ERROR when matching/aggregation raised unexpectedly
+    after holdings were already parsed, and "" otherwise (including "zero
+    matched holdings", which run.py's match_summary already shows as 0/N
+    holdings without needing a separate reason code).
     """
     result = etf_row.astype(object)
     ticker = normalize_ticker(etf_row.get("Ticker", ""))
@@ -89,38 +98,49 @@ def process_etf(
         logger.warning("ETF %s: holdings file parsed to zero usable rows; leaving row unchanged.", ticker)
         return result, stats, SKIP_EMPTY_HOLDINGS
 
-    matched_rows = _match_holdings(ticker, holdings, stock_data, stats)
+    # Matching and aggregation are wrapped separately from parse_holdings
+    # above: an unexpected error here (a stock DataFrame with a weird
+    # dtype in some column, etc.) used to propagate all the way out of
+    # process_etf and abort the entire batch run over one bad ETF. Now it
+    # degrades to "leave this row unchanged" just like the other skip
+    # cases, and the run continues with the rest of the ETFs.
+    try:
+        matched_rows = _match_holdings(ticker, holdings, stock_data, stats)
 
-    if not matched_rows:
-        logger.warning("ETF %s: zero matched stock holdings.", ticker)
-        return result, stats, ""
+        if not matched_rows:
+            logger.warning("ETF %s: zero matched stock holdings.", ticker)
+            return result, stats, ""
 
-    total_weight = sum(item["weight"] for item in matched_rows)
-    stats.matched_weight = total_weight
+        total_weight = sum(item["weight"] for item in matched_rows)
+        stats.matched_weight = total_weight
 
-    # --- COVERAGE GUARD: Skip aggregation if matched weight is below 80% ---
-    # Note: this checks the raw sum of matched holding weights, not a
-    # weight normalized against the holdings file's own total. If a fund's
-    # weight column doesn't sum to exactly 100% (rounding, an included
-    # cash line, ...), total_weight can run slightly over 1.0 and still
-    # clear this threshold on that basis alone. The per-holding
-    # normalization a few lines down (normalized_weight) corrects for this
-    # in the actual aggregated averages either way, so this only affects
-    # whether the 80% gate itself is a little generous in that scenario.
-    if total_weight < MIN_WEIGHT_THRESHOLD:
-        logger.warning(
-            "ETF %s: matched weight (%.1f%%) is below the required %.0f%% threshold; leaving row unchanged.",
-            ticker,
-            total_weight * 100,
-            MIN_WEIGHT_THRESHOLD * 100,
-        )
-        return result, stats, SKIP_LOW_COVERAGE
+        # --- COVERAGE GUARD: Skip aggregation if matched weight is below 80% ---
+        # Note: this checks the raw sum of matched holding weights, not a
+        # weight normalized against the holdings file's own total. If a fund's
+        # weight column doesn't sum to exactly 100% (rounding, an included
+        # cash line, ...), total_weight can run slightly over 1.0 and still
+        # clear this threshold on that basis alone. The per-holding
+        # normalization a few lines down (normalized_weight) corrects for this
+        # in the actual aggregated averages either way, so this only affects
+        # whether the 80% gate itself is a little generous in that scenario.
+        if total_weight < MIN_WEIGHT_THRESHOLD:
+            logger.warning(
+                "ETF %s: matched weight (%.1f%%) is below the required %.0f%% threshold; leaving row unchanged.",
+                ticker,
+                total_weight * 100,
+                MIN_WEIGHT_THRESHOLD * 100,
+            )
+            return result, stats, SKIP_LOW_COVERAGE
 
-    for item in matched_rows:
-        item["normalized_weight"] = item["weight"] / total_weight
+        for item in matched_rows:
+            item["normalized_weight"] = item["weight"] / total_weight
 
-    _apply_aggregates(result, matched_rows)
-    _apply_growth(result)
+        _apply_aggregates(result, matched_rows)
+        _apply_growth(result)
+    except Exception:
+        logger.exception("ETF %s: unexpected error during matching/aggregation.", ticker)
+        return etf_row.astype(object), stats, SKIP_PROCESSING_ERROR
+
     return result, stats, ""
 
 
@@ -153,6 +173,7 @@ def _match_holdings(
         pct = holding.get("pct", float("nan"))
 
         if pd.isna(pct) or pct <= 0:
+            stats.invalid_weight += 1
             logger.warning("ETF %s | %s | %s | matched %s but invalid weight=%s", ticker, code, isin, region, pct)
             continue
 
@@ -213,14 +234,16 @@ def _apply_growth(result: pd.Series) -> None:
     if "Growth" not in result.index or (not OVERWRITE_EXISTING and pd.notna(result["Growth"])):
         return
 
-    trailing_pe = result.get("PE ratio")
-    forward_pe = result.get("Forward PE ratio")
+    # Coerce through pd.to_numeric rather than gating on
+    # isinstance(x, (int, float)): a fully-populated, all-integer PE
+    # column read from the ETF CSV comes through as numpy.int64 (via
+    # run.py's pd.to_numeric), which is a valid number but does NOT
+    # subclass Python's int -- an isinstance gate here would silently
+    # treat those as non-numeric and always write NaN for Growth whenever
+    # OVERWRITE_EXISTING is False and the PE columns happen to be
+    # complete integers.
+    trailing_pe = pd.to_numeric(result.get("PE ratio"), errors="coerce")
+    forward_pe = pd.to_numeric(result.get("Forward PE ratio"), errors="coerce")
 
-    has_numbers = (
-        isinstance(trailing_pe, (int, float))
-        and isinstance(forward_pe, (int, float))
-        and pd.notna(trailing_pe)
-        and pd.notna(forward_pe)
-        and forward_pe != 0
-    )
+    has_numbers = pd.notna(trailing_pe) and pd.notna(forward_pe) and forward_pe != 0
     result["Growth"] = (trailing_pe / forward_pe) if has_numbers else float("nan")

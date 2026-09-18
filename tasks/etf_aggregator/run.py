@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import tempfile
+
 import pandas as pd
 
 import logging
@@ -13,6 +16,7 @@ from .processor import (
     SKIP_NO_HOLDINGS_FILE,
     SKIP_NO_TICKER,
     SKIP_PARSE_ERROR,
+    SKIP_PROCESSING_ERROR,
     process_etf,
 )
 from .stats import ETFStats
@@ -25,6 +29,7 @@ _SKIP_REASON_LABELS = [
     (SKIP_NO_HOLDINGS_FILE, "No holdings file found"),
     (SKIP_EMPTY_HOLDINGS, "Holdings file has no usable holdings"),
     (SKIP_PARSE_ERROR, "Error while parsing holdings file"),
+    (SKIP_PROCESSING_ERROR, "Unexpected error during matching/aggregation"),
     (SKIP_NO_TICKER, "ETF row has no ticker"),
 ]
 
@@ -129,10 +134,15 @@ def run() -> None:
         updated_rows.append(updated)
 
         row_summary = (ticker, row_stats.matched, row_stats.holdings, row_stats.matched_weight)
-        if row_stats.holdings == 0:
-            skipped.append((ticker, skip_reason))
-        elif skip_reason == SKIP_LOW_COVERAGE:
+        if skip_reason == SKIP_LOW_COVERAGE:
             low_coverage.append(row_summary)
+        elif skip_reason:
+            # Covers all zero-holdings skip codes AND SKIP_PROCESSING_ERROR,
+            # which can fire even when holdings > 0 (matching/aggregation
+            # failed after parsing succeeded) -- routing by skip_reason
+            # rather than by row_stats.holdings == 0 keeps that case out
+            # of match_summary, where it doesn't belong.
+            skipped.append((ticker, skip_reason))
         else:
             match_summary.append(row_summary)
 
@@ -141,7 +151,25 @@ def run() -> None:
     # DataFrame with zero columns, which raises KeyError on []. reindex
     # handles both that empty case and any per-row index quirks safely.
     result = pd.DataFrame(updated_rows).reindex(columns=original_columns)
-    result.to_csv(target_path, index=False)
+
+    # Write to a temp file in the same directory and atomically replace the
+    # target with it, rather than writing target_path directly. target_path
+    # is both this run's output and next run's input, so a crash or
+    # interruption mid-write (disk full, killed process, ...) would
+    # otherwise leave a truncated/corrupt file in place with no input left
+    # to recover from.
+    target_dir = target_path.resolve().parent
+    fd, tmp_name = tempfile.mkstemp(prefix=".tmp_" + target_path.name, dir=target_dir)
+    try:
+        os.close(fd)
+        result.to_csv(tmp_name, index=False)
+        os.replace(tmp_name, target_path)
+    except BaseException:
+        try:
+            os.remove(tmp_name)
+        except OSError:
+            pass
+        raise
 
     logger.info("Output saved to: %s", target_path.resolve())
     total_stats.log_summary(logger)

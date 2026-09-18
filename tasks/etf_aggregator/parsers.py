@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import math
 import openpyxl
 from pathlib import Path
 from typing import Callable, Iterable, List, Optional
@@ -101,11 +102,11 @@ def _find_header_row(rows: Iterable[Iterable], limit: Optional[int] = None) -> O
     """Return the index of the row that looks like the holdings table header.
 
     Tries HEADER_KEYWORD_COMBINATIONS in priority order: every row is
-    checked against combination 1 first (across the whole file/preview);
-    only if nothing matches at all is combination 2 tried, then
-    combination 3. Within whichever combination matches, the first row in
-    file order wins. Rows are materialized once so multiple combinations
-    can be scanned without re-reading the source.
+    checked against the first combination first (across the whole
+    file/preview); only if nothing matches at all is the next combination
+    tried, and so on down the list. Within whichever combination matches,
+    the first row in file order wins. Rows are materialized once so
+    multiple combinations can be scanned without re-reading the source.
     """
     materialized = []
     for i, row in enumerate(rows):
@@ -141,9 +142,16 @@ def parse_number(value: str | float | None) -> float:
         return float("nan")
 
     try:
-        return float(cleaned)
+        parsed = float(cleaned)
     except ValueError:
         return float("nan")
+
+    # float() also accepts the literal strings "inf"/"-inf"/"nan" (and
+    # variants), which shouldn't be treated as a real parsed number here --
+    # an "inf" weight or metric value would silently poison any downstream
+    # sum/weighted average it touches. Anything non-finite is normalized to
+    # NaN, same as any other unparseable value.
+    return parsed if math.isfinite(parsed) else float("nan")
 
 def parse_percent(value: str | float | None) -> float:
     """Parse a percentage field into a 0-1 fraction.
@@ -230,20 +238,27 @@ def _read_xlsx_grid(path: Path, sheet_name: str) -> pd.DataFrame:
     inspect each cell's number_format and rescale percent cells by *100
     up front.
     """
+    # Explicitly closed rather than left to garbage collection: on Windows
+    # in particular, an open openpyxl workbook handle can briefly hold a
+    # file lock, which is disruptive if this pipeline runs against files
+    # that are still being synced/edited elsewhere.
     wb = openpyxl.load_workbook(path, data_only=True)
-    ws = wb[sheet_name]
+    try:
+        ws = wb[sheet_name]
 
-    rows = []
-    for row in ws.iter_rows():
-        cells = []
-        for cell in row:
-            value = cell.value
-            if isinstance(value, (int, float)) and cell.number_format and "%" in cell.number_format:
-                value = value * 100
-            cells.append(value)
-        rows.append(cells)
+        rows = []
+        for row in ws.iter_rows():
+            cells = []
+            for cell in row:
+                value = cell.value
+                if isinstance(value, (int, float)) and cell.number_format and "%" in cell.number_format:
+                    value = value * 100
+                cells.append(value)
+            rows.append(cells)
 
-    return pd.DataFrame(rows)
+        return pd.DataFrame(rows)
+    finally:
+        wb.close()
 
 
 def _read_raw_grid(path: Path) -> pd.DataFrame:
@@ -251,8 +266,8 @@ def _read_raw_grid(path: Path) -> pd.DataFrame:
     if suffix == ".csv":
         return _read_csv_grid(path)
     if suffix == ".xlsx":
-        xls = pd.ExcelFile(path)
-        sheet_name = _find_holdings_sheet(xls, path)
+        with pd.ExcelFile(path) as xls:
+            sheet_name = _find_holdings_sheet(xls, path)
         return _read_xlsx_grid(path, sheet_name)
     raise ValueError(f"Unsupported file format: {path}")
 
@@ -262,7 +277,10 @@ def _read_raw_grid(path: Path) -> pd.DataFrame:
 # --------------------------------------------------------------------------
 
 
-_HOLDINGS_COLUMNS = ["Code", "ISIN", "Name", "Shares", "Price", "Valuation", "Exchange", "Region", "pct", "_source"]
+# Matches the column order parse_holdings actually builds below: the
+# core fields, then _source, then pct last (pct is computed and assigned
+# after the initial DataFrame(...) call, not inside it).
+_HOLDINGS_COLUMNS = ["Code", "ISIN", "Name", "Shares", "Price", "Valuation", "Exchange", "Region", "_source", "pct"]
 
 
 def _empty_holdings_frame(path: Path) -> pd.DataFrame:
