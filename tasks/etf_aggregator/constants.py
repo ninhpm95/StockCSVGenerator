@@ -26,7 +26,7 @@ AGGREGATE_COLUMNS = [
     # "Vol 5D",
     # "Vol 30D",
     # "Dividend yield",
-    # "Avg Volume",
+    # "Notional Volume",
     # "Market cap",
     "PE ratio",
     "Forward PE ratio",
