@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -22,7 +23,7 @@ TOP_N_HOLDINGS = 100
 OUTPUT_FIELDS = [F.TICKER, F.NAME, F.ISIN, F.EXCHANGE, F.CURRENCY]
 
 FIELD_CANDIDATES: Dict[str, List[str]] = {
-    F.TICKER: ["Code", "Ticker", "銘柄コード", "コード"],
+    F.TICKER: ["Ticker", "銘柄コード", "コード", "Code"],
     F.NAME: ["Name", "銘柄", "銘柄名"],
     F.ISIN: ["ISIN"],
     F.EXCHANGE: ["Exchange", "取引所"],
@@ -63,7 +64,7 @@ HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
 # "na" collides with real-world tickers/names (e.g. National Bank of
 # Canada trades as "NA"), so treating it as a placeholder would silently
 # drop legitimate holdings. "n/a" (with the slash) is unambiguous.
-PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "na", "null", "none"}
+PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "null", "none"}
 
 
 # --------------------------------------------------------------------------
@@ -133,6 +134,29 @@ UNKNOWN_REGION = "UNKNOWN"
 # lookup file doesn't have it. Lives next to UNKNOWN_REGION since both are
 # region sentinels, not real region codes.
 GLOBAL_REGION = "GLOBAL"
+
+# Every region code we actually know how to handle -- the union of every
+# value LOCATION_TO_REGION/EXCHANGE_TO_REGION can produce. Used to keep the
+# filename-region fallback (_region_from_filename in run.py) from treating
+# an unrelated two-letter token -- e.g. a currency code, as in
+# "IVV_USD_nav.csv" -- as a region just because it happens to be two
+# letters.
+KNOWN_REGIONS = set(LOCATION_TO_REGION.values()) | set(EXCHANGE_TO_REGION.values())
+
+
+# --------------------------------------------------------------------------
+# Output-file safety
+# --------------------------------------------------------------------------
+
+# Matches the filenames run() itself writes to OUTPUT_DIR (a known region
+# code, GLOBAL_REGION, or UNKNOWN_REGION, each with a .csv suffix). Built
+# from the region tables above, but this isn't about detecting regions --
+# it's what lets stale-output cleanup in run() safely remove only files
+# this script produced, never an unrelated file a user happens to have
+# dropped in OUTPUT_DIR.
+OUTPUT_FILENAME_PATTERN = re.compile(
+    r"^(" + "|".join(sorted(KNOWN_REGIONS | {UNKNOWN_REGION, GLOBAL_REGION})) + r")\.csv$"
+)
 
 
 # --------------------------------------------------------------------------
