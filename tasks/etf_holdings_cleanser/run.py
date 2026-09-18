@@ -6,12 +6,15 @@ and emits records.
 
 Reads and overwrites files in INPUT_FOLDER in place (or reports only, when
 dry_run=True). No xlsx->csv conversion; each file keeps its original
-format. Only files that actually get trimmed are logged in detail;
-everything else is folded into a single "kept as is" count, except
-near-misses and missing-sheet cases, which get their own report sections.
+format. Only files that actually get trimmed are logged in detail; everything
+else is folded into a single "kept as is" count. Missing-sheet cases are
+excluded from that count and reported separately. Near-misses are
+diagnostic only: a file with a near-miss is untouched, so it IS still
+counted in "kept as is", but is additionally called out in its own
+report section so hidden-character/casing mismatches don't go unnoticed.
 
 For .csv files:
-    - Scan column MARKER_COLUMN for any rule in SEARCH_STRS. On the row
+    - Scan column MARKER_COLUMN for any rule in CUTOFF_RULES. On the row
       where a rule's search string hits its configured occurrence count,
       delete that row and everything after it.
 
@@ -37,9 +40,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
-    from .constants import INPUT_FOLDER, SHEET_NAMES, SEARCH_STRS, MARKER_COLUMN, CutoffRule
+    from .constants import INPUT_FOLDER, SHEET_NAMES, CUTOFF_RULES, MARKER_COLUMN, CutoffRule, PACKAGE_DIR
 except ImportError:  # running as a plain script, not part of a package
-    from constants import INPUT_FOLDER, SHEET_NAMES, SEARCH_STRS, MARKER_COLUMN, CutoffRule
+    from constants import INPUT_FOLDER, SHEET_NAMES, CUTOFF_RULES, MARKER_COLUMN, CutoffRule, PACKAGE_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +67,16 @@ class RunSummary:
     failures: list[tuple[str, str]] = field(default_factory=list)
     sheet_missing: list[str] = field(default_factory=list)
     near_misses: list[tuple[str, list[tuple[int, str]]]] = field(default_factory=list)
+    # Files in INPUT_FOLDER with an extension other than .csv/.xlsx; not
+    # included in `scanned`, tracked separately so directory-listing counts
+    # reconcile with what the run actually touched.
+    skipped: list[str] = field(default_factory=list)
 
     @property
     def kept_as_is(self) -> int:
+        # near_misses files ARE counted as kept_as_is: near-miss reporting
+        # is diagnostic only (a file with a near-miss but no exact match
+        # is left untouched, same as any other unmatched file).
         return self.scanned - len(self.changed) - len(self.failures) - len(self.sheet_missing)
 
 
@@ -75,13 +85,27 @@ class RunSummary:
 # --------------------------------------------------------------------------
 
 def _normalize(s: str) -> str:
-    """Strip leading/trailing whitespace, including non-breaking (\\xa0)
-    and full-width (\\u3000) spaces that Excel/CSV exports sometimes embed
-    but that look identical to a normal space or nothing at all."""
-    return s.replace("\xa0", " ").replace("\u3000", " ").strip()
+    """Strip leading/trailing whitespace, including non-breaking (\\xa0),
+    full-width (\\u3000), and zero-width (\\u200b) spaces that Excel/CSV
+    exports sometimes embed but that look identical to a normal space or
+    nothing at all."""
+    return (
+        s.replace("\xa0", " ")
+        .replace("\u3000", " ")
+        .replace("\u200b", "")
+        .strip()
+    )
 
 
-def find_cutoff(rows, rules: list[CutoffRule] = SEARCH_STRS):
+def _marker_cell(row) -> str:
+    """Safely pull and normalize the MARKER_COLUMN cell from a row, which
+    may be shorter than MARKER_COLUMN + 1 (ragged CSV rows) or empty."""
+    if not row or len(row) <= MARKER_COLUMN or row[MARKER_COLUMN] is None:
+        return ""
+    return _normalize(str(row[MARKER_COLUMN]))
+
+
+def find_cutoff(rows, rules: list[CutoffRule] | None = None):
     """Scan rows top-down, tracking how many times each rule's search
     string has matched MARKER_COLUMN (after whitespace normalization).
     Return (row_index, search_str, target_count) for the first rule to
@@ -91,10 +115,12 @@ def find_cutoff(rows, rules: list[CutoffRule] = SEARCH_STRS):
     rules sharing the same search string but different target counts
     are counted independently rather than colliding.
     """
+    if rules is None:
+        rules = CUTOFF_RULES
     counts = [0] * len(rules)
     normalized_targets = [_normalize(rule.search) for rule in rules]
     for i, row in enumerate(rows):
-        first_col = _normalize(str(row[MARKER_COLUMN])) if row and row[MARKER_COLUMN] is not None else ""
+        first_col = _marker_cell(row)
         for idx, rule in enumerate(rules):
             if first_col == normalized_targets[idx]:
                 counts[idx] += 1
@@ -112,7 +138,7 @@ def _near_misses(rows, search_strs: list[str]):
     normalized_targets = set(normalized_search_strs)
     found = []
     for i, row in enumerate(rows):
-        raw = str(row[MARKER_COLUMN]) if row and row[MARKER_COLUMN] is not None else ""
+        raw = "" if not row or len(row) <= MARKER_COLUMN or row[MARKER_COLUMN] is None else str(row[MARKER_COLUMN])
         normalized = _normalize(raw)
         if normalized in normalized_targets or not normalized:
             continue
@@ -145,9 +171,7 @@ def _read_csv_rows(csv_path: Path):
         return list(csv.reader(io.StringIO(text, newline=""))), "cp932"
     except UnicodeDecodeError:
         pass
-    raise UnicodeDecodeError(
-        "unknown", b"", 0, 1, f"Could not decode {csv_path.name} as utf-8(-sig) or cp932"
-    )
+    raise ValueError(f"Could not decode {csv_path.name} as utf-8(-sig) or cp932")
 
 
 def _atomic_write_csv(path: Path, rows, encoding: str) -> None:
@@ -170,7 +194,7 @@ def process_csv(csv_path: Path, dry_run: bool = False):
 
     match = find_cutoff(rows)
     if match is None:
-        return None, _near_misses(rows, [rule.search for rule in SEARCH_STRS])
+        return None, _near_misses(rows, [rule.search for rule in CUTOFF_RULES])
     cutoff, search_str, target_count = match
 
     trimmed_rows = rows[:cutoff]
@@ -208,12 +232,19 @@ def _unmerge_from_row(ws, start_row: int) -> None:
 def _atomic_save_xlsx(wb, path: Path) -> None:
     """Save to a temp file in the same directory, then atomically
     replace the original."""
-    fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".tmp.xlsx", prefix=path.stem)
+    # NOTE: suffix must NOT end in ".xlsx" -- Path.suffix on
+    # "name.tmp.xlsx" is still ".xlsx", so a crash between mkstemp() and
+    # os.replace() would leave a file that run()'s directory scan (which
+    # filters on suffix == ".xlsx") would pick back up next run. ".xlsx.tmp"
+    # has suffix ".tmp" and is correctly ignored by that scan.
+    fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix=".xlsx.tmp", prefix=path.stem)
     os.close(fd)
     try:
         wb.save(tmp_path)
         os.replace(tmp_path, path)
     finally:
+        # unlink is a no-op after a successful replace (tmp_path no longer
+        # exists); missing_ok=True covers that case.
         Path(tmp_path).unlink(missing_ok=True)
 
 
@@ -232,7 +263,7 @@ def process_xlsx(xlsx_path: Path, dry_run: bool = False):
         match = find_cutoff(rows)
 
         if match is None:
-            return None, _near_misses(rows, [rule.search for rule in SEARCH_STRS]), True
+            return None, _near_misses(rows, [rule.search for rule in CUTOFF_RULES]), True
         cutoff, search_str, target_count = match
 
         if not dry_run:
@@ -260,9 +291,26 @@ def process_xlsx(xlsx_path: Path, dry_run: bool = False):
 # --------------------------------------------------------------------------
 
 def run(dry_run: bool = False) -> RunSummary:
-    paths = [p for p in sorted(INPUT_FOLDER.iterdir()) if p.suffix.lower() in (".csv", ".xlsx")]
+    try:
+        all_entries = [p for p in sorted(INPUT_FOLDER.iterdir()) if p.is_file()]
+    except FileNotFoundError:
+        logger.error(
+            "INPUT_FOLDER does not exist: %s (resolved from PACKAGE_DIR=%s; "
+            "if this package's location in the repo changed, check the "
+            "REPO_ROOT/INPUT_FOLDER computation in constants.py)",
+            INPUT_FOLDER, PACKAGE_DIR,
+        )
+        return RunSummary()
+    except NotADirectoryError:
+        logger.error("INPUT_FOLDER is not a directory: %s", INPUT_FOLDER)
+        return RunSummary()
+
+    paths = [p for p in all_entries if p.suffix.lower() in (".csv", ".xlsx")]
     summary = RunSummary(scanned=len(paths))
+    summary.skipped = [p.name for p in all_entries if p.suffix.lower() not in (".csv", ".xlsx")]
     logger.info("Scanning %d file(s) in %s%s", len(paths), INPUT_FOLDER, " (dry run)" if dry_run else "")
+    if summary.skipped:
+        logger.info("Ignored %d file(s) with unsupported extension: %s", len(summary.skipped), ", ".join(summary.skipped))
 
     for path in paths:
         try:
@@ -278,9 +326,9 @@ def run(dry_run: bool = False) -> RunSummary:
                 summary.sheet_missing.append(path.name)
             elif misses:
                 summary.near_misses.append((path.name, misses))
-        except Exception:
+        except Exception as exc:
             logger.exception("Failed to process %s", path.name)
-            summary.failures.append((path.name, "see log for traceback"))
+            summary.failures.append((path.name, f"{type(exc).__name__}: {exc}"))
 
     logger.info("Num of files kept as is: %d", summary.kept_as_is)
 

@@ -48,7 +48,11 @@ COL_ISIN = "ISIN"
 # reported as a warning rather than failing the run). A blank value in the
 # lookup file will NOT clear an existing value in the stocks file -- only
 # non-blank lookup values overwrite.
-ENRICH_COLUMNS = [COL_ISIN]
+#
+# Deduped here (rather than in run.py) so a rebound name doesn't surprise
+# readers of the importing module -- accidental duplicates in this list
+# just silently collapse to one.
+ENRICH_COLUMNS = list(dict.fromkeys([COL_ISIN]))
 
 # ----------------------------------------------------------------------------
 # Region mapping
@@ -88,6 +92,13 @@ COUNTRY_ALIASES = {
     "u.s.a.": "United States",
     "s. korea": "South Korea",
 }
+
+# Self-defending: normalize both sides to lowercase at import time so
+# normalize_country() doesn't depend on callers having pre-lowercased the
+# keys above, and so alias values can't silently drift out of sync with
+# the casing used elsewhere (e.g. REGION_COUNTRY_MAP's values, which are
+# compared case-insensitively via normalize_country too).
+COUNTRY_ALIASES = {k.lower(): v.lower() for k, v in COUNTRY_ALIASES.items()}
 
 # ----------------------------------------------------------------------------
 # Filename patterns

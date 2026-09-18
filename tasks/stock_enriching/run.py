@@ -19,10 +19,12 @@ module:
      which covers both "no candidate matched the preferred country" and
      "more than one candidate matched the preferred country".
   4. Fills in / updates the ENRICH_COLUMNS (currently just ISIN) in the
-     *_stocks.csv file, and overwrites the file in place -- atomically,
-     via a temp file + os.replace, so a failure mid-write can't leave a
-     truncated file behind. Lookup files are only ever read, never
-     modified.
+     *_stocks.csv file. If anything actually changed (a value was written,
+     or an enrich column had to be added to the header), overwrites the
+     file in place -- atomically, via a temp file + os.replace, so a
+     failure mid-write can't leave a truncated file behind. A file that
+     matched nothing new is left untouched (reported as such). Lookup
+     files are only ever read, never modified.
   5. Returns a structured summary (and prints progress/results as it
      goes): rows matched, rows actually enriched (a match can have no
      non-blank values to write), unmatched tickers, and ambiguous
@@ -40,7 +42,6 @@ constants.py.
 """
 
 import csv
-import glob
 import os
 import tempfile
 from collections import defaultdict, Counter
@@ -58,17 +59,14 @@ from .constants import (
     GLOBAL_LOOKUP_FILENAME,
 )
 
-# Dedupe while preserving order, in case ENRICH_COLUMNS ever picks up a
-# duplicate entry by accident.
-ENRICH_COLUMNS = list(dict.fromkeys(ENRICH_COLUMNS))
-
 
 def normalize_country(name):
     """Lowercase a Country value and resolve known aliases (e.g. "UK" ->
     "united kingdom") so lookup-file spelling variants still match
-    REGION_COUNTRY_MAP."""
+    REGION_COUNTRY_MAP. COUNTRY_ALIASES values are already lowercased at
+    import time (see constants.py), so no second .lower() is needed here."""
     name = (name or "").strip().lower()
-    return COUNTRY_ALIASES.get(name, name).lower()
+    return COUNTRY_ALIASES.get(name, name)
 
 
 def build_header_map(fieldnames):
@@ -85,12 +83,20 @@ def build_header_map(fieldnames):
 def load_region_lookup(path):
     """Load a <REGION>_lookup.csv into a dict: ticker -> list of row dicts.
 
-    Returns (lookup, ticker_col, country_col, missing_enrich_columns):
+    Returns (lookup, ticker_col, country_col, enrich_col_map, missing_enrich):
       - ticker_col / country_col are the actual header names found for
         COL_TICKER / COL_COUNTRY (case-insensitive match), or None if the
         file doesn't have that column.
-      - missing_enrich_columns lists any ENRICH_COLUMNS not found in this
-        file's header (case-insensitive), so the caller can warn.
+      - enrich_col_map maps each ENRICH_COLUMNS entry -> the actual header
+        name found for it in this file (case-insensitive), or None if the
+        file doesn't have that column. Rows from `reader` are plain dicts
+        keyed by the file's literal header spelling, so callers must look
+        values up via this map rather than the ENRICH_COLUMNS name itself
+        -- otherwise a lookup file spelled "isin" instead of "ISIN" would
+        silently fail to match (row.get("ISIN") -> None) even though the
+        column is present.
+      - missing_enrich lists the same ENRICH_COLUMNS not found in this
+        file's header, so the caller can warn.
     """
     with open(path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
@@ -98,7 +104,8 @@ def load_region_lookup(path):
         header_map = build_header_map(fieldnames)
         ticker_col = header_map.get(COL_TICKER.lower())
         country_col = header_map.get(COL_COUNTRY.lower())
-        missing_enrich = [col for col in ENRICH_COLUMNS if col.lower() not in header_map]
+        enrich_col_map = {col: header_map.get(col.lower()) for col in ENRICH_COLUMNS}
+        missing_enrich = [col for col, actual in enrich_col_map.items() if actual is None]
 
         lookup = defaultdict(list)
         if ticker_col is not None:
@@ -108,7 +115,7 @@ def load_region_lookup(path):
                     continue
                 lookup[ticker].append(row)
 
-    return lookup, ticker_col, country_col, missing_enrich
+    return lookup, ticker_col, country_col, enrich_col_map, missing_enrich
 
 
 class LazyGlobalLookup:
@@ -127,26 +134,27 @@ class LazyGlobalLookup:
         self._path = path
         self._lookup = None  # populated lazily; stays None until first use
         self._country_col = None
+        self._enrich_col_map = None
 
     def _load(self):
         if not os.path.isfile(self._path):
             print(f"Global fallback lookup file not found at "
                   f"{self._path}; unmatched tickers will not be "
                   f"retried against it.\n")
-            return {}, None
+            return {}, None, {}
 
         print(f"Loading {self._path} (global fallback) ...")
         try:
-            lookup, ticker_col, country_col, missing_enrich = load_region_lookup(self._path)
+            lookup, ticker_col, country_col, enrich_col_map, missing_enrich = load_region_lookup(self._path)
         except Exception as exc:
             print(f"  ERROR loading global fallback lookup ({exc}); "
                   f"continuing without global fallback for the rest of this run.\n")
-            return {}, None
+            return {}, None, {}
 
         if ticker_col is None:
             print(f"  WARNING: no '{COL_TICKER}' column found in "
                   f"{os.path.basename(self._path)}; global fallback disabled.\n")
-            return {}, None
+            return {}, None, {}
 
         if missing_enrich:
             print(f"  WARNING: {os.path.basename(self._path)} is missing "
@@ -155,18 +163,24 @@ class LazyGlobalLookup:
 
         print(f"  {sum(len(v) for v in lookup.values())} rows "
               f"across {len(lookup)} unique tickers.\n")
-        return lookup, country_col
+        return lookup, country_col, enrich_col_map
 
     def get(self, ticker):
         if self._lookup is None:
-            self._lookup, self._country_col = self._load()
+            self._lookup, self._country_col, self._enrich_col_map = self._load()
         return self._lookup.get(ticker)
 
     @property
     def country_col(self):
         if self._lookup is None:
-            self._lookup, self._country_col = self._load()
+            self._lookup, self._country_col, self._enrich_col_map = self._load()
         return self._country_col
+
+    @property
+    def enrich_col_map(self):
+        if self._lookup is None:
+            self._lookup, self._country_col, self._enrich_col_map = self._load()
+        return self._enrich_col_map
 
 
 def pick_best_match(candidates, preferred_country, country_col):
@@ -204,12 +218,21 @@ def pick_best_match(candidates, preferred_country, country_col):
 
 def write_csv_atomic(path, fieldnames, rows):
     """Write rows to path via a temp file + os.replace, so a failure or
-    interruption mid-write can't leave a truncated/partial file behind."""
+    interruption mid-write can't leave a truncated/partial file behind.
+
+    extrasaction="ignore" guards against a malformed row (more fields than
+    the header, which csv.DictReader stashes under a None key) reaching
+    DictWriter and raising a confusing "fields not in fieldnames: None"
+    error. In practice enrich_file (this function's only current caller)
+    already checks for and rejects malformed rows before calling this, so
+    that path shouldn't be reachable today -- this is a cheap backstop for
+    any future caller that writes rows without that same upfront check.
+    """
     directory = os.path.dirname(path) or "."
     fd, tmp_path = tempfile.mkstemp(prefix=".tmp_", suffix=".csv", dir=directory)
     try:
         with os.fdopen(fd, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(rows)
         os.replace(tmp_path, path)
@@ -219,7 +242,16 @@ def write_csv_atomic(path, fieldnames, rows):
         raise
 
 
-def enrich_file(stocks_path, region_lookup, country_col, region, global_lookup=None):
+def enrich_file(stocks_path, region_lookup, country_col, region, enrich_col_map,
+                 global_lookup=None):
+    """
+    enrich_col_map: {ENRICH_COLUMNS name -> actual header name in the
+    *region* lookup file (or None if absent)}, as returned by
+    load_region_lookup. Values looked up on a matched row must go through
+    this map (not the ENRICH_COLUMNS name itself), since the lookup file
+    may spell the column differently (e.g. "isin" vs "ISIN") -- see
+    load_region_lookup's docstring.
+    """
     preferred_country = REGION_COUNTRY_MAP.get(region.upper())
 
     with open(stocks_path, newline="", encoding="utf-8-sig") as f:
@@ -227,16 +259,35 @@ def enrich_file(stocks_path, region_lookup, country_col, region, global_lookup=N
         fieldnames = list(reader.fieldnames or [])
         rows = list(reader)
 
+    # A row with more fields than the header lands its extras under a
+    # None key courtesy of csv.DictReader. Fail this region clearly up
+    # front rather than letting DictWriter choke on it later.
+    malformed = sum(1 for row in rows if None in row)
+    if malformed:
+        raise ValueError(
+            f"{malformed} row(s) in {os.path.basename(stocks_path)} have more "
+            f"fields than the header row (malformed CSV); refusing to write"
+        )
+
     header_map = build_header_map(fieldnames)
     stocks_ticker_col = header_map.get(COL_TICKER.lower())
     if stocks_ticker_col is None:
         raise ValueError(f"no '{COL_TICKER}' column found in {os.path.basename(stocks_path)}")
 
     # Make sure all enrich columns exist in the output header, preserving
-    # original column order and appending any new ones at the end.
+    # original column order and appending any new ones at the end. Also
+    # resolve each ENRICH_COLUMNS name to the actual header spelling
+    # already present in *this* file (case-insensitive), so we don't
+    # append a second "ISIN" column alongside an existing "isin" one.
+    out_col = {}
+    file_changed = False
     for col in ENRICH_COLUMNS:
-        if col not in fieldnames:
+        actual = header_map.get(col.lower())
+        if actual is None:
             fieldnames.append(col)
+            actual = col
+            file_changed = True  # header itself changed even if no rows get a value
+        out_col[col] = actual
 
     matched = 0
     enriched = 0  # subset of matched where a non-blank value was actually written
@@ -255,11 +306,13 @@ def enrich_file(stocks_path, region_lookup, country_col, region, global_lookup=N
         candidates = region_lookup.get(ticker)
         used_global = False
         active_country_col = country_col
+        active_enrich_col_map = enrich_col_map
         if not candidates and global_lookup is not None:
             candidates = global_lookup.get(ticker)
             used_global = candidates is not None
             if used_global:
                 active_country_col = global_lookup.country_col
+                active_enrich_col_map = global_lookup.enrich_col_map
 
         if not candidates:
             unmatched[ticker] += 1
@@ -274,14 +327,22 @@ def enrich_file(stocks_path, region_lookup, country_col, region, global_lookup=N
         matched += 1
         row_enriched = False
         for col in ENRICH_COLUMNS:
-            value = (best.get(col) or "").strip()
-            if value:
-                row[col] = value
+            src = active_enrich_col_map.get(col)
+            if src is None:
+                continue  # this lookup source doesn't have the column at all
+            value = (best.get(src) or "").strip()
+            if value and row.get(out_col[col]) != value:
+                row[out_col[col]] = value
                 row_enriched = True
+                file_changed = True
         if row_enriched:
             enriched += 1
 
-    write_csv_atomic(stocks_path, fieldnames, rows)
+    # Skip the rewrite entirely if nothing actually changed -- avoids mtime
+    # churn and a needless line-ending/BOM normalization round-trip on
+    # files where every row was already up to date or nothing matched.
+    if file_changed:
+        write_csv_atomic(stocks_path, fieldnames, rows)
 
     return {
         "total": len(rows),
@@ -291,6 +352,7 @@ def enrich_file(stocks_path, region_lookup, country_col, region, global_lookup=N
         "unmatched": unmatched,
         "ambiguous": ambiguous,
         "global_fallback": global_fallback,
+        "written": file_changed,
     }
 
 
@@ -312,8 +374,11 @@ def run():
         "stocks_dir": str,
         "skipped_filenames": [str, ...],
         "regions": [ {region, total, matched, enriched, blank_ticker_rows,
-                       unmatched, ambiguous, global_fallback}, ... ],
+                       unmatched, ambiguous, global_fallback, written}, ... ],
         "skipped_regions": [ (region, reason), ... ],
+        "error": str,  # only present if STOCKS_DIR itself doesn't exist;
+                        # value is "stocks_dir_not_found" and the other
+                        # keys above are left at their empty defaults
       }
     """
     summary = {
@@ -328,14 +393,22 @@ def run():
         summary["error"] = "stocks_dir_not_found"
         return summary
 
+    # os.scandir + regex, not glob: glob's own pattern matching is
+    # case-sensitive on Linux, so glob.glob(".../*_stocks.csv") would never
+    # return e.g. "JP_stocks.CSV" at all -- not even into skipped_filenames
+    # -- even though STOCKS_FILE_PATTERN is explicitly case-insensitive and
+    # documented (constants.py) to accept it. Matching filenames ourselves
+    # against the case-insensitive regex means the pattern is the single
+    # source of truth for what counts as a stocks file.
     stocks_files = []
-    for path in glob.glob(os.path.join(STOCKS_DIR, "*_stocks.csv")):
-        fname = os.path.basename(path)
-        m = STOCKS_FILE_PATTERN.match(fname)
+    for entry in os.scandir(STOCKS_DIR):
+        if not entry.is_file():
+            continue
+        m = STOCKS_FILE_PATTERN.match(entry.name)
         if m:
-            stocks_files.append((path, m.group(1)))
-        else:
-            summary["skipped_filenames"].append(fname)
+            stocks_files.append((entry.path, m.group(1)))
+        elif entry.name.lower().endswith("_stocks.csv"):
+            summary["skipped_filenames"].append(entry.name)
 
     # Report unrecognized filenames regardless of whether any recognized
     # *_stocks.csv files were found, so a directory of only-misnamed files
@@ -357,9 +430,22 @@ def run():
     global_lookup_path = os.path.join(STOCK_LOOKUP_DIR, GLOBAL_LOOKUP_FILENAME)
     global_lookup = LazyGlobalLookup(global_lookup_path)
 
+    # Sweep any orphaned temp files left behind by a hard-killed prior run
+    # (write_csv_atomic cleans up its own on a normal exception, but a
+    # SIGKILL mid-write can't run that cleanup). Harmless if any of this
+    # fails -- it's just tidying, not correctness -- so don't let it abort
+    # the run.
+    try:
+        for entry in os.scandir(STOCKS_DIR):
+            if entry.is_file() and entry.name.startswith(".tmp_") and entry.name.endswith(".csv"):
+                os.remove(entry.path)
+    except OSError:
+        pass
+
     for path, region in sorted(stocks_files):
+        region = region.upper()  # normalize casing once; used consistently below
         lookup_path = os.path.join(
-            STOCK_LOOKUP_DIR, LOOKUP_FILENAME_TEMPLATE.format(region=region.upper())
+            STOCK_LOOKUP_DIR, LOOKUP_FILENAME_TEMPLATE.format(region=region)
         )
 
         if not os.path.isfile(lookup_path):
@@ -368,9 +454,14 @@ def run():
             summary["skipped_regions"].append((region, "no_lookup_file"))
             continue
 
+        if region not in REGION_COUNTRY_MAP:
+            print(f"  NOTE: no country mapping for region={region} in REGION_COUNTRY_MAP; "
+                  f"any ticker with multiple candidates in its lookup file will be "
+                  f"reported as ambiguous (no preferred country to disambiguate against).")
+
         try:
             print(f"Loading {lookup_path} ...")
-            region_lookup, ticker_col, country_col, missing_enrich = load_region_lookup(lookup_path)
+            region_lookup, ticker_col, country_col, enrich_col_map, missing_enrich = load_region_lookup(lookup_path)
 
             if ticker_col is None:
                 raise ValueError(f"no '{COL_TICKER}' column found in {os.path.basename(lookup_path)}")
@@ -382,7 +473,7 @@ def run():
                   f"{len(region_lookup)} unique tickers.")
 
             print(f"Enriching {os.path.basename(path)} (region={region}) ...")
-            result = enrich_file(path, region_lookup, country_col, region, global_lookup)
+            result = enrich_file(path, region_lookup, country_col, region, enrich_col_map, global_lookup)
         except Exception as exc:
             print(f"  ERROR processing region={region} ({os.path.basename(path)}): {exc}")
             print("  Skipping this region; other regions are unaffected.\n")
@@ -394,10 +485,12 @@ def run():
 
         print(f"  {result['matched']}/{result['total']} rows matched "
               f"({result['enriched']} row(s) had a non-blank value written).")
+        if not result["written"]:
+            print(f"  No changes vs. the existing file -- left {os.path.basename(path)} untouched.")
         if result["global_fallback"]:
             total_global = sum(result["global_fallback"].values())
             print(f"  {total_global} row(s) matched only via GLOBAL fallback "
-                  f"(not found in {region.upper()}_lookup.csv) across "
+                  f"(not found in {region}_lookup.csv) across "
                   f"{len(result['global_fallback'])} ticker(s): "
                   f"{format_counter(result['global_fallback'])}")
         if result["blank_ticker_rows"]:
