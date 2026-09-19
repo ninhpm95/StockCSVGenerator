@@ -4,10 +4,10 @@ FILE_NAME = "JP_ETFs.csv"
 # FILE_NAME = "JP_ETFs_full.csv"
 # FILE_NAME = "JP_stocks.csv"
 # FILE_NAME = "US_stocks.csv"
-# FILE_NAME = "HK_stocks.csv"
+FILE_NAME = "HK_stocks.csv"
 
 SPEED = NORMAL
-# SPEED = FAST
+SPEED = FAST
 
 MODE = UPDATE_FINANCIALS
 # MODE = AGGREGATE_ETFS

@@ -174,4 +174,4 @@ WEIGHT_COLUMN_CANDIDATES = ["純資産比率 % of NAV", "純資産比率", "% of
 EXCHANGE_COLUMN_CANDIDATES = ["Exchange", "取引所"]
 REGION_COLUMN_CANDIDATES = ["Country", "Region", "Location", "国", "地域"]
 
-MIN_WEIGHT_THRESHOLD = 0.80
+MIN_WEIGHT_THRESHOLD = 0.75
