@@ -95,8 +95,11 @@ def load_lookup_fees(lookup_path, encoding="utf-8") -> dict:
     return dict(zip(lookup[F.TICKER], lookup[F.FEE]))
 
 
-def dedup_groups(df, normalized_groups, fee_lookup, cascade, logger=None):
+def dedup_groups(df, normalized_groups, fee_lookup, cascade, log=print):
     """Split `df` into ungrouped rows + one winner per ticker group.
+
+    `log` defaults to print (terminal output); pass `lambda *_: None` in
+    tests to silence it.
 
     `normalized_groups` is {group_name: [normalized_ticker, ...]} (already
     run through normalize_ticker -- see TICKER_GROUPS in constants.py).
@@ -132,8 +135,7 @@ def dedup_groups(df, normalized_groups, fee_lookup, cascade, logger=None):
     for group_name, norm_tickers in normalized_groups.items():
         members = df_grouped[df_grouped[F.TICKER].isin(norm_tickers)]
         if members.empty:
-            if logger:
-                logger.info("[%s] has no members, skipped", group_name)
+            log(f"[{group_name}] has no members, skipped")
             continue
 
         candidates = pd.DataFrame()
@@ -151,12 +153,11 @@ def dedup_groups(df, normalized_groups, fee_lookup, cascade, logger=None):
                 break
 
         if candidates.empty:
-            if logger:
-                logger.info(
-                    "[%s] members survived: %s | NONE found in the lookup CSV "
-                    "at any volume threshold, group skipped entirely",
-                    group_name, list(members[F.TICKER]),
-                )
+            log(
+                f"[{group_name}] members survived: {list(members[F.TICKER])} | "
+                "NONE found in the lookup CSV at any volume threshold, "
+                "group skipped entirely"
+            )
             continue
 
         # Explicit F.TICKER tiebreak makes the winner deterministic even
@@ -170,18 +171,17 @@ def dedup_groups(df, normalized_groups, fee_lookup, cascade, logger=None):
         winner = candidates.iloc[[0]]
         keep_rows.append(winner.drop(columns=["_fee"]))
 
-        if logger:
-            logger.info(
-                "[%s] members survived: %s | Threshold used: %s | "
-                "Candidates found in lookup CSV: %s | Winner: %s (fee=%s)",
-                group_name, list(members[F.TICKER]), used_threshold,
-                list(candidates[F.TICKER]), winner[F.TICKER].iloc[0], winner["_fee"].iloc[0],
-            )
+        log(
+            f"[{group_name}] members survived: {list(members[F.TICKER])} | "
+            f"Threshold used: {used_threshold} | "
+            f"Candidates found in lookup CSV: {list(candidates[F.TICKER])} | "
+            f"Winner: {winner[F.TICKER].iloc[0]} (fee={winner['_fee'].iloc[0]})"
+        )
 
     return pd.concat(keep_rows, ignore_index=False)
 
 
-def force_preserve_bought(result, full_df, current_df, logger=None):
+def force_preserve_bought(result, full_df, current_df, log=print):
     """Ensure every ticker with a non-empty Bought in `current_df` survives.
 
     Pulls missing rows back in from `full_df` (a pre-filter snapshot).
@@ -200,18 +200,16 @@ def force_preserve_bought(result, full_df, current_df, logger=None):
         recovered = full_df[full_df[F.TICKER].isin(missing_bought_tickers)]
         if not recovered.empty:
             result = pd.concat([result, recovered], ignore_index=False)
-            if logger:
-                logger.info(
-                    "Force-preserved %d row(s) with non-empty Bought that would "
-                    "otherwise have been filtered out: %s",
-                    len(recovered), list(recovered[F.TICKER]),
-                )
+            log(
+                f"Force-preserved {len(recovered)} row(s) with non-empty Bought "
+                f"that would otherwise have been filtered out: {list(recovered[F.TICKER])}"
+            )
         still_missing = missing_bought_tickers - set(full_df[F.TICKER])
-        if still_missing and logger:
-            logger.warning(
-                "%d ticker(s) with non-empty Bought are not present in DATA_CSV "
-                "at all, could not be preserved: %s",
-                len(still_missing), sorted(still_missing),
+        if still_missing:
+            log(
+                f"WARNING: {len(still_missing)} ticker(s) with non-empty Bought "
+                f"are not present in DATA_CSV at all, could not be preserved: "
+                f"{sorted(still_missing)}"
             )
 
     return result, still_missing

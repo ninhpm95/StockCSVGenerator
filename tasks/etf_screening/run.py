@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 
-from .filter_helper import (
+from .helper import (
     normalize_ticker,
     load_lookup_fees,
     dedup_groups,
@@ -75,7 +75,7 @@ def run():
     # Int64 (nullable) rather than float64 so whole-number volumes don't
     # come out as "35000000.0" in the final CSV.
     raw_volume = df[F.NOTIONAL_VOLUME].astype(str).str.replace(",", "", regex=False)
-    df[F.NOTIONAL_VOLUME] = pd.to_numeric(raw_volume, errors="coerce").astype("Int64")
+    df[F.NOTIONAL_VOLUME] = pd.to_numeric(raw_volume, errors="coerce").round().astype("Int64")
 
     # Snapshot before any filtering, so rows with a non-empty "Bought" in
     # CURRENT_CSV can be recovered later even if a filter step below would
@@ -102,10 +102,8 @@ def run():
     # CSV" actually means today. Warn at runtime too, so it can't be missed
     # just because nobody happened to read that comment.
     if LOOKUP_CSV.resolve() == DATA_CSV.resolve():
-        logger.warning(
-            "LOOKUP_CSV points at the same file as DATA_CSV; Step 5's "
-            "'found in lookup CSV' only means 'has a parseable Fee in the "
-            "source data', not membership in a separately curated fee list."
+        print(
+            "WARNING: LOOKUP_CSV points at the same file as DATA_CSV"
         )
     fee_lookup = load_lookup_fees(LOOKUP_CSV, encoding=CSV_ENCODING)
 
@@ -118,7 +116,7 @@ def run():
         group_name: [normalize_ticker(t) for t in tickers]
         for group_name, tickers in TICKER_GROUPS.items()
     }
-    result = dedup_groups(df, normalized_groups, fee_lookup, VOLUME_CASCADE, logger=logger)
+    result = dedup_groups(df, normalized_groups, fee_lookup, VOLUME_CASCADE)
 
     # ---- Force-preserve rows with a non-empty "Bought" ----
     # These must always survive, regardless of any filter above (volume, name,
@@ -126,7 +124,7 @@ def run():
     # priority over EXCLUDED_TICKERS too: an owned position stays visible even
     # if it's on the exclusion list. Pull the full row back in from full_df
     # (the pre-filter snapshot) if it's missing from result.
-    result, _still_missing_bought = force_preserve_bought(result, full_df, current_df, logger=logger)
+    result, _still_missing_bought = force_preserve_bought(result, full_df, current_df)
 
     # A ticker listed in more than one TICKER_GROUPS entry can independently
     # win its dedup round in each group, so guard against emitting it twice.
@@ -139,7 +137,7 @@ def run():
     # values), so sorting on that index restores the source file's order.
     # NOTE: this guarantee depends on the index never being reset before
     # this point, in this file OR inside dedup_groups()/force_preserve_bought()
-    # in filter_helper.py -- if any of those add a .reset_index(), this
+    # in helper.py -- if any of those add a .reset_index(), this
     # breaks silently.
     result = result.sort_index().reset_index(drop=True)
 
@@ -159,31 +157,12 @@ def run():
 
     result.to_csv(OUTPUT_CSV, index=False, encoding=CSV_ENCODING)
 
-    logger.info("=== ETF filter summary ===")
-    logger.info("Start:                     %d rows", start_n)
-    logger.info(
-        "After volume filter:       %d rows (removed %d)",
-        after_volume_n, start_n - after_volume_n,
-    )
-    logger.info(
-        "After empty-Name drop:     %d rows (removed %d)",
-        after_name_n, after_volume_n - after_name_n,
-    )
-    logger.info(
-        "After excluding tickers:   %d rows (removed %d)",
-        after_exclude_n, after_name_n - after_exclude_n,
-    )
-    logger.info("Final output rows:         %d rows", len(result))
-    logger.info("Output written to %s", OUTPUT_CSV.resolve())
+    print("=== ETF filter summary ===")
+    print(f"Start:                     {start_n} rows")
+    print(f"After volume filter:       {after_volume_n} rows (removed {start_n - after_volume_n})")
+    print(f"After empty-Name drop:     {after_name_n} rows (removed {after_volume_n - after_name_n})")
+    print(f"After excluding tickers:   {after_exclude_n} rows (removed {after_name_n - after_exclude_n})")
+    print(f"Final output rows:         {len(result)} rows")
+    print(f"Output written to {OUTPUT_CSV.resolve()}")
 
     return result
-
-
-if __name__ == "__main__":
-    # Ensures logger.info/.warning calls above actually go somewhere when
-    # this module is run directly, rather than silently doing nothing
-    # because no handler is configured. If this module is imported as part
-    # of a larger app, that app's own logging.basicConfig (or dictConfig)
-    # takes precedence instead.
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-    run()
