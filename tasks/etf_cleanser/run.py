@@ -74,10 +74,11 @@ def reset_output_folder(cfg: Config) -> None:
     print(f"output folder reset: {cfg.output_dir}")
 
 
-def run_step(step_fn, jobs: list[Job], cfg: Config) -> None:
+def run_step(step_fn, jobs: list[Job], cfg: Config, header: bool = True) -> None:
     """Run one step over every job that hasn't already failed. A failing
     step marks that job errored; later steps skip it, other files continue."""
-    print(f"=== {step_fn.__name__} ===")
+    if header:
+        print(f"=== {step_fn.__name__} ===")
     for job in jobs:
         if job.error:
             continue
@@ -91,15 +92,25 @@ def run_step(step_fn, jobs: list[Job], cfg: Config) -> None:
 
 
 def print_summary(jobs: list[Job]) -> int:
-    """Print one line per file; return the process exit code (1 if any failed)."""
+    """One closing section: counts, then failed files, then files whose checks
+    found something to review. Returns the exit code (1 if any file failed)."""
+    failed = [j for j in jobs if j.error]
+    review = [j for j in jobs if not j.error and j.findings]
+    passed = len(jobs) - len(failed) - len(review)
+
     print("---- summary ----")
-    for job in jobs:
-        if job.error:
-            print(f"{job.path.name}: FAILED ({job.error})")
-        else:
-            n = len(job.table.rows) if job.table else 0
-            print(f"{job.path.name}: OK, {n} holding row(s)")
-    return 1 if any(job.error for job in jobs) else 0
+    print(f"{passed} checks passed, {len(review)} to review, {len(failed)} failed")
+    if failed:
+        print(f"\n{len(failed)} failed:")
+        for job in failed:
+            print(f"-- {job.path.name}: {job.error}")
+    if review:
+        print(f"\n{len(review)} to review:")
+        for job in review:
+            print(f"-- {job.path.name}")
+            for line in job.findings:
+                print(f"   {line}")
+    return 1 if failed else 0
 
 
 # ------------------------------------------------------------------- flow --
@@ -127,11 +138,14 @@ def run(argv=None) -> None:
     run_step(steps.step020_last_marker, jobs, cfg)
     run_step(steps.step030_header, jobs, cfg)
     run_step(steps.step040_columns, jobs, cfg)
-    run_step(steps.step050_weights, jobs, cfg)
     run_step(steps.step060_isin_backfill, jobs, cfg)
     run_step(steps.step070_refresh_from_isin, jobs, cfg)
     run_step(steps.step080_exchange, jobs, cfg)
-    run_step(steps.step090_write, jobs, cfg)
+    run_step(steps.step082_drop_incomplete, jobs, cfg)
+    run_step(steps.step085_weights, jobs, cfg)
+    run_step(steps.step090_write, jobs, cfg, header=False)
+    written = sum(1 for j in jobs if not j.error)
+    print(f"Written {written}/{len(jobs)} files to {cfg.output_dir}")
     run_step(steps.step100_check, jobs, cfg)
 
     sys.exit(print_summary(jobs))

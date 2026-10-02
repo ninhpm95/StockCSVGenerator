@@ -4,8 +4,8 @@ and column resolution (040). Inputs are opened read-only; nothing is ever
 written back to them."""
 from __future__ import annotations
 
-import csv
 import re
+import csv
 from datetime import date, datetime
 from io import StringIO
 from pathlib import Path
@@ -50,7 +50,7 @@ def read_xlsx(path: Path) -> Grid:
             raise ValueError(f"no holdings sheet found (looked for {wanted}; "
                              f"found: {', '.join(workbook.sheetnames)})")
         ws = workbook[sheet_name]
-        rows = [[cell_to_str(v) for v in row] for row in ws.iter_rows(values_only=True)]
+        rows = [[cell_to_str(getattr(c, "value", None), getattr(c, "number_format", None)) for c in row] for row in ws.iter_rows()]
     finally:
         workbook.close()
     rows = drop_empty_rows([[c.strip() for c in r] for r in rows])
@@ -99,30 +99,32 @@ def pad(rows: list[list[str]]) -> list[list[str]]:
     return [r + [""] * (width - len(r)) for r in rows]
 
 
-def cell_to_str(value) -> str:
+_QUOTED = re.compile(r'"[^"]*"|\\.')
+
+
+def _is_percent_format(number_format) -> bool:
+    """True for Excel formats like 0%, 0.00%. A '%' inside quotes or escaped
+    (0.0"%") is just a label and does not scale the value."""
+    return bool(number_format) and "%" in _QUOTED.sub("", str(number_format))
+
+
+def cell_to_str(value, number_format=None) -> str:
     if value is None:
         return ""
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, (datetime, date)):
         return value.strftime("%Y-%m-%d")
+    if isinstance(value, (int, float)) and not isinstance(value, bool) \
+            and _is_percent_format(number_format):
+        # Excel stores 80% as 0.8; give back the number the cell displays.
+        pct = f"{round(float(value) * 100, 10):.10f}".rstrip("0").rstrip(".")
+        return pct + "%"
     if isinstance(value, float):
         if value.is_integer():
             return str(int(value))
         return repr(value)
     return str(value)
-
-
-# --------------------------------------------------------------- matching --
-_BRACKETS = str.maketrans({"（": "(", "）": ")", "［": "[", "］": "]",
-                           "％": "%", "　": " "})
-
-
-def norm_header(text: str) -> str:
-    """Unify full-width brackets/% to half-width and drop all whitespace.
-    Case is kept (matching is case sensitive).
-    '純資産比率\\n% of NAV' and '純資産比率 % of NAV' both -> '純資産比率%ofNAV'."""
-    return re.sub(r"\s+", "", str(text).translate(_BRACKETS))
 
 
 def row_matches(row: list[str], keywords: tuple[str, ...]) -> bool:
@@ -168,17 +170,29 @@ _COLUMN_GROUPS = tuple((f, _CANDIDATES[f]) for f in COLUMN_RESOLUTION_ORDER)
 
 
 def resolve_columns(header: list[str]) -> ColumnMap:
-    """Exact, case-sensitive match (after norm_header) of candidates against header cells."""
-    normalised = [norm_header(cell) for cell in header]
+    """Case-sensitive match of candidates against the raw header cells (no
+    normalisation). Fields claim columns in COLUMN_RESOLUTION_ORDER. Within a
+    field:
+      1. an EXACT match (cell == candidate) wins; candidates are tried in list
+         order and the leftmost untaken cell is used;
+      2. only if no candidate matches exactly, the first candidate (list order)
+         that is a SUBSTRING of an untaken cell wins, leftmost cell first."""
     taken: set[int] = set()
     found: dict[str, int] = {}
     for field_name, candidates in _COLUMN_GROUPS:
-        for candidate in candidates:
-            want = norm_header(candidate)
-            idx = next((i for i, cell in enumerate(normalised)
-                        if i not in taken and cell == want), None)
+        idx = None
+        for candidate in candidates:                      # pass 1: exact
+            idx = next((i for i, cell in enumerate(header)
+                        if i not in taken and cell == candidate), None)
             if idx is not None:
-                found[field_name] = idx
-                taken.add(idx)
                 break
+        if idx is None:
+            for candidate in candidates:                  # pass 2: substring
+                idx = next((i for i, cell in enumerate(header)
+                            if i not in taken and candidate in cell), None)
+                if idx is not None:
+                    break
+        if idx is not None:
+            found[field_name] = idx
+            taken.add(idx)
     return ColumnMap(**found)

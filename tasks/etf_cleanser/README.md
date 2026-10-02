@@ -45,10 +45,11 @@ Exit code is 1 if any file failed, 0 otherwise.
 020 last_marker     keep only rows from the last 'Fund Holdings as of' down
 030 header          find header row, drop metadata above it
 040 columns         resolve candidate columns -> Table
-050 weights         compute weight when missing
 060 isin_backfill   fill missing ISIN from GLOBAL_lookup (ticker+exchange); not for <Ticker>.csv files
 070 refresh_from_isin <Ticker>.csv files only: fix Ticker via ISIN -> GLOBAL_lookup
 080 exchange        fill Exchange from GLOBAL_lookup by ISIN where the row has none
+082 drop_incomplete remove rows with empty Code and Name, or a Name containing a SKIP_NAME_TEXTS entry
+085 weights         compute weight when missing
 090 write           Ticker/Name/ISIN/Weight(%)/Exchange csv into the output folder (tickers starting with 0 get a leading ')
 100 check           log-only sanity checks on tickers / ISINs / exchanges / weights (nothing changed)
 ```
@@ -76,8 +77,7 @@ but the other files carry on.
   appending to the list, e.g. `["保有明細", "Holding sheet"]`.
 - `HOLDINGS_MARK`: the "Fund Holdings as of" marker text (case-sensitive,
   matched anywhere in a cell).
-- `*_COLUMN_CANDIDATES`: matching is case-sensitive, whitespace-insensitive
-  and bracket-style-insensitive (full/half width).
+- `*_COLUMN_CANDIDATES`: matching is case-sensitive, anywhere in a cell, but full matching is prioritized.
 - `HEADER_KEYWORD_COMBINATIONS`: matched against the raw cells as
   case-sensitive substrings, so no whitespace/bracket normalisation here
   (a header cell with a double space won't match a single-space keyword).
@@ -104,11 +104,8 @@ but the other files carry on.
 - **Nothing is deleted.** Total/NAV/footnote rows (合計, Total Net Assets,
   ※ footnotes) and placeholder cell text (`-`, `nan`, `null`) are not stripped:
   whatever is below the header flows straight to the output. Worth checking a
-  few output files for stray Total/footnote rows. Two guards limit the damage:
-  numbers that are placeholders (`nan`, `inf`, `-`) parse as "no value", and
-  when step 050 computes missing weights only rows with a ticker or ISIN take
-  part, so a Total row can't dominate the denominator (rows left out are
-  counted in the log; they get no computed weight).
+  few output files for stray Total/footnote rows. One guard limit the damage:
+  numbers that are placeholders (`nan`, `inf`, `-`) parse as "no value".
 - **Fail-fast inputs.** The lookup file must exist (checked before anything
   runs) and have `ticker` and `isin` columns (header spaces/case ignored).
   A header that resolves neither a ticker nor an ISIN column fails the file,
@@ -152,7 +149,7 @@ but the other files carry on.
   `WEIGHT_SUM_MAX` (100) or less than `WEIGHT_SUM_MIN` (60), every holding with a negative weight is listed,
   and rows with no usable weight are listed separately (so a gap isn't mistaken for a low total).
   All non-alphanumeric characters (`.`, `-`, spaces...) are ignored when measuring tickers.
-  Rows are reported as output-file line numbers (header = line 1); at most 20
+  Rows are reported as output-file line numbers (header = line 1); at most 3
   are listed per finding, then "... and N more".
 - **GlobalLookup** keeps its internal dicts as `_by_isin` / `_by_ticker` /
   `_by_ticker_loose` so they don't shadow the `by_isin()` / `by_ticker()`

@@ -72,6 +72,7 @@ class Job:
     grid: Grid | None = None       # raw cells: set by step 010, trimmed by 020 and 030
     table: Table | None = None     # parsed rows: set by step 040, used by 050 onward
     error: str | None = None
+    findings: list[str] = field(default_factory=list)   # step 100 output, shown in the summary
 
 
 # ----------------------------------------------------------------- values --
@@ -113,29 +114,22 @@ def format_weight(pct: float) -> str:
     return f"{pct:.6f}".rstrip("0").rstrip(".")
 
 
-def has_identity(row: Row) -> bool:
-    """A real holding has a ticker or an ISIN; Total / NAV / footnote rows don't."""
-    return bool(row.code or row.isin)
-
-
-def fill_missing_weights(table: Table) -> tuple[int, int]:
-    """weight = value / sum(values) * 100 for rows without a usable weight.
-    Only rows with a ticker or ISIN take part (in the denominator and in the
-    fill), so a Total row can't dominate the sum. Returns (filled, skipped),
-    where skipped = weightless rows left alone because they have no ticker/ISIN."""
-    holdings = [r for r in table.rows if has_identity(r)]
-    skipped = sum(1 for r in table.rows
-                  if not has_identity(r) and parse_float(r.weight) is None)
-    if not any(parse_float(r.weight) is None for r in holdings):
-        return 0, skipped
-    values = [compute_row_value(r) for r in holdings]
+def fill_missing_weights(table: Table) -> int:
+    """weight = value / sum(values) * 100 for every row without a usable
+    weight. All rows take part (in the denominator and in the fill); there is
+    no ticker/ISIN filter. Rows with no computable value stay empty.
+    Returns the number of rows filled."""
+    rows = table.rows
+    if not any(parse_float(r.weight) is None for r in rows):
+        return 0
+    values = [compute_row_value(r) for r in rows]
     total = sum(v for v in values if v is not None)
     if not total:
-        return 0, skipped
+        return 0
     filled = 0
-    for row, value in zip(holdings, values):
+    for row, value in zip(rows, values):
         if value is None or parse_float(row.weight) is not None:
             continue
         row.weight = format_weight(value / total * 100.0)
         filled += 1
-    return filled, skipped
+    return filled

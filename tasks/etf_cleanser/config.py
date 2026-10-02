@@ -37,42 +37,44 @@ OUTPUT_COLUMNS = ["Ticker", "Name", "ISIN", "Weight(%)", "Exchange"]
 # ------------------------------------------------------ header detection ---
 # First row matching any tuple (cells left-to-right, tuples in list order).
 HEADER_KEYWORD_COMBINATIONS = [
-    ("銘柄コード", "ISINコード", "Name"),
-    ("Code", "Name", "ISIN"),
-    ("Code", "Name", "Weight"),
-    ("Ticker", "Name", "Weight"),
-    ("code", "Name", "Shares Held"),      # Maxis
+    ("銘柄コード", "ISINコード", "Name", "純資産比率"), # Next Funds
+    ("Code", "Name", "ISIN", "Exchange", "Shares Amount", "Stock Price"), # Global X
+    ("Code",   "Name", "Weight (%)", "Shares", "Price", "Exchange"), # iShares
+    ("Ticker", "Name", "Weight (%)", "Shares", "Price", "Exchange"), # iShares
+    ("code", "Name", "Shares Held", "of net asset"), # Maxis
 ]
 
 # ------------------------------------------------------- column candidates -
-# Tried top to bottom; first candidate equal (after normalisation) to a
-# header cell wins. Order = priority. Matching is CASE SENSITIVE, so list
-# each spelling you need ("Code" and "code" are different candidates).
-# Normalisation only unifies full/half-width brackets, % and spaces, and
-# removes whitespace - it does not change case.
-CODE_COLUMN_CANDIDATES = ["銘柄コード（Code）", "銘柄コード", "Code", "code", "Ticker", "コード"]   # "code" = Maxis
-ISIN_COLUMN_CANDIDATES = ["ISINコード", "ISIN"]
-NAME_COLUMN_CANDIDATES = ["銘柄（Name）", "銘柄名", "銘柄", "Name"]
-SHARES_COLUMN_CANDIDATES = ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares", "Shares Held"]
-PRICE_COLUMN_CANDIDATES = ["Stock Price", "Price", "Market Value", "株価"]
-VALUATION_COLUMN_CANDIDATES = ["評価金額(円）Valuation (yen)", "Valuation (yen)", "評価金額", "Valuation"]
-WEIGHT_COLUMN_CANDIDATES = ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight", "% of net asset"]
-EXCHANGE_COLUMN_CANDIDATES = ["Exchange", "取引所"]
+# An exact match to a header cell always beats a substring match;
+# Otherwise the first candidate that is a substring of a header cell wins
+CODE_COLUMN_CANDIDATES = ["Code", "銘柄コード", "Ticker", "code"]
+NAME_COLUMN_CANDIDATES = ["Name", "Name(En)"]
+ISIN_COLUMN_CANDIDATES = ["ISIN", "ISINコード"]
+WEIGHT_COLUMN_CANDIDATES = ["純資産比率", "Weight (%)", "(% of net asset)"]
+SHARES_COLUMN_CANDIDATES = ["Shares Amount", "No. of Shares", "Shares", "Shares Held"]
+PRICE_COLUMN_CANDIDATES = ["Stock Price", "Price"]
+VALUATION_COLUMN_CANDIDATES = ["評価金額", "Notional Value", "Market Value/Jpy"]
+EXCHANGE_COLUMN_CANDIDATES = ["Exchange"]
 
 # Order in which fields claim header columns. A header cell can belong to only
 # one field, so an earlier field wins if two fields' candidates both match the
 # same cell. Fields left out of this list are never resolved.
-COLUMN_RESOLUTION_ORDER = ["code", "name", "isin", "shares", "price",
-                           "valuation", "weight", "exchange"]
+COLUMN_RESOLUTION_ORDER = ["code", "name", "isin", "shares", "price", "valuation", "weight", "exchange"]
+
+# Step 082 removes a row if its Name contains any of these texts (case
+# sensitive substring), treating it as if both Code and Name were empty.
+# Use it for Total / footnote lines. Append more as you find them,
+# e.g. ["Total Net Assets", "合計"].
+SKIP_NAME_TEXTS = ["Total Net Assets", "合計"]
 
 # ------------------------------------------------- output checks (step 100) --
 # Log only - the checks never change anything.
 CHECK_DOMINANT_SHARE = 0.90        # "most" = at least this share of the rows
-HOLDINGS_MIN_COUNT = 10              # ticker and ISIN checks only run with at least this many values
+HOLDINGS_MIN_COUNT = 10            # ticker and ISIN checks only run with at least this many values
 EXCHANGE_SHORT_MAX_LEN = 10        # longer than this = not a short form (TSE, NYSE, Nasdaq)
 WEIGHT_SUM_MAX = 100.0             # weights are in percent; a total above this is flagged
 WEIGHT_SUM_MIN = 60.0              # a total below this is flagged (holdings probably incomplete)
-CHECK_MAX_LISTED = 20              # rows printed per finding; the rest are counted
+CHECK_MAX_LISTED = 3               # rows printed per finding; the rest are counted
 
 
 @dataclass

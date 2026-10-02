@@ -9,7 +9,7 @@ import csv
 import re
 
 from .checks import check_exchanges, check_isins, check_tickers, check_weights
-from .config import OUTPUT_COLUMNS, TICKER_FILENAME_PATTERN
+from .config import OUTPUT_COLUMNS, SKIP_NAME_TEXTS, TICKER_FILENAME_PATTERN
 from .lookup import get_lookup
 from .models import (Job, Row, Table, fill_missing_weights, format_weight,
                     parse_float, row_from_cells)
@@ -62,13 +62,10 @@ def step040_columns(job: Job, cfg) -> None:
     print(f"{job.path.name}: resolved columns [{', '.join(resolved)}], {len(rows)} data row(s)")
 
 
-def step050_weights(job: Job, cfg) -> None:
-    filled, skipped = fill_missing_weights(job.table)
+def step085_weights(job: Job, cfg) -> None:
+    filled = fill_missing_weights(job.table)
     if filled:
         print(f"{job.path.name}: computed weights for {filled} row(s)")
-    if skipped:
-        print(f"{job.path.name}: {skipped} weightless row(s) have no ticker/ISIN "
-              f"(Total/footnote?) -> excluded from weight computation")
 
 
 def step060_isin_backfill(job: Job, cfg) -> None:
@@ -153,6 +150,28 @@ def step080_exchange(job: Job, cfg) -> None:
           f"(no ISIN / not in lookup), {no_exchange} lookup entry without exchange")
 
 
+def step082_drop_incomplete(job: Job, cfg) -> None:
+    """Remove rows that aren't real holdings: both Code and Name empty, or a
+    Name containing any SKIP_NAME_TEXTS entry (case sensitive substring; the
+    Code is ignored in that case). Runs before the weight calculation so these
+    rows can't enter its denominator."""
+    rows = job.table.rows
+    kept, empty, skipped = [], 0, 0
+    for r in rows:
+        if r.name and any(text in r.name for text in SKIP_NAME_TEXTS):
+            skipped += 1
+        elif not (r.code or r.name):
+            empty += 1
+        else:
+            kept.append(r)
+    if empty or skipped:
+        print(f"{job.path.name}: removed {empty} row(s) with empty Code and Name, "
+              f"{skipped} row(s) with a skippable Name")
+        if not kept:
+            print(f"{job.path.name}: WARNING all rows were removed")
+    job.table.rows = kept
+
+
 def step090_write(job: Job, cfg) -> None:
     """Write the five-column CSV. Tickers starting with 0 are written with a
     leading single quote (see _ticker_cell)."""
@@ -166,21 +185,14 @@ def step090_write(job: Job, cfg) -> None:
         for row in job.table.rows:
             writer.writerow([_ticker_cell(row.code), row.name or "", row.isin or "",
                              _weight_cell(row.weight), row.exchange or ""])
-    print(f"{job.path.name}: wrote {len(job.table.rows)} row(s) -> {out_path}")
 
 
 def step100_check(job: Job, cfg) -> None:
-    """Log-only sanity checks on what was written. Rows that look unlike the
-    rest are printed for manual review; nothing is changed."""
+    """Log-only sanity checks on the finished table. Findings are stored on
+    the job and printed in the final summary; nothing is changed."""
     rows = job.table.rows
-    findings = (check_tickers(rows) + check_isins(rows) + check_exchanges(rows)
-                + check_weights(rows))
-    if not findings:
-        print(f"{job.path.name}: CHECK ok, nothing unusual")
-        return
-    print(f"{job.path.name}: CHECK found things to review manually")
-    for line in findings:
-        print(f"  {line}")
+    job.findings = (check_tickers(rows) + check_isins(rows) + check_exchanges(rows)
+                    + check_weights(rows))
 
 
 # ---------------------------------------------------------------- helpers --
