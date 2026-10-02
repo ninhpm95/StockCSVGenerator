@@ -29,7 +29,7 @@ def _run_screen_etfs():
 
 
 def _run_cleanse_etfs():
-    from tasks.etf_holdings_cleanser.run import run
+    from tasks.etf_cleanser.run import run
     run()
 
 
