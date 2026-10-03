@@ -11,6 +11,8 @@ DATA_DIR = PROJECT_DIR / "data" / "ETFs"
 OUTPUT_DIR = PROJECT_DIR / "data" / "cleansed_ETFs"
 LOOKUP_PATH = PROJECT_DIR / "data" / "stocks" / "GLOBAL_lookup.csv"
 
+EXCHANGES_PATH = PROJECT_DIR / "data" / "exchanges.csv"
+
 # ---------------------------------------------------------- input reading --
 # Excel workbooks: only one sheet holds data; every other sheet is ignored.
 # Names are tried left to right and the first one found wins (the rest are
@@ -55,24 +57,33 @@ SHARES_COLUMN_CANDIDATES = ["Shares Amount", "No. of Shares", "Shares", "Shares 
 PRICE_COLUMN_CANDIDATES = ["Stock Price", "Price"]
 VALUATION_COLUMN_CANDIDATES = ["評価金額", "Notional Value", "Market Value/Jpy"]
 EXCHANGE_COLUMN_CANDIDATES = ["Exchange"]
+CURRENCY_COLUMN_CANDIDATES = ["Currency"]
 
 # Order in which fields claim header columns. A header cell can belong to only
 # one field, so an earlier field wins if two fields' candidates both match the
 # same cell. Fields left out of this list are never resolved.
-COLUMN_RESOLUTION_ORDER = ["code", "name", "isin", "shares", "price", "valuation", "weight", "exchange"]
+COLUMN_RESOLUTION_ORDER = ["code", "name", "isin", "shares", "price", "valuation", "weight", "exchange", "currency"]
+
+# Step 070 (<Ticker>.csv files only): a row matching ANY rule keeps its Ticker.
+# Keys are Row field names, values are compared case-insensitively.
+EXCLUDE_RULES = {"exchange": "TSE", "currency": "JPY"}
+WEIGHT_TOTAL_EXCLUDE_NAMES = ["FWRDUSDJPY01", "FWRDEURJPY01"]
 
 # Step 082 removes a row if its Name contains any of these texts (case
 # sensitive substring), treating it as if both Code and Name were empty.
 # Use it for Total / footnote lines. Append more as you find them,
 # e.g. ["Total Net Assets", "合計"].
-SKIP_NAME_TEXTS = ["Total Net Assets", "合計"]
+SKIP_NAME_TEXTS = ["Total", "合計", "計"]
+CODE_TO_CHECK_NAME_TO_SKIP = [""]
+
+ISIN_SKIP_COUNTRIES = {"US"}       # ISIN check is skipped when the dominant prefix is one of these
 
 # ------------------------------------------------- output checks (step 100) --
 # Log only - the checks never change anything.
 CHECK_DOMINANT_SHARE = 0.90        # "most" = at least this share of the rows
 HOLDINGS_MIN_COUNT = 10            # ticker and ISIN checks only run with at least this many values
 EXCHANGE_SHORT_MAX_LEN = 10        # longer than this = not a short form (TSE, NYSE, Nasdaq)
-WEIGHT_SUM_MAX = 100.0             # weights are in percent; a total above this is flagged
+WEIGHT_SUM_MAX = 101               # weights are in percent; a total above this is flagged
 WEIGHT_SUM_MIN = 60.0              # a total below this is flagged (holdings probably incomplete)
 CHECK_MAX_LISTED = 3               # rows printed per finding; the rest are counted
 
@@ -82,4 +93,5 @@ class Config:
     input_dir: Path = DATA_DIR
     output_dir: Path = OUTPUT_DIR
     lookup_path: Path = LOOKUP_PATH
+    exchanges_path: Path = EXCHANGES_PATH
     verbose: bool = False          # print a traceback when a step fails

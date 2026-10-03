@@ -27,6 +27,7 @@ class ColumnMap:
     valuation: int | None = None
     weight: int | None = None
     exchange: int | None = None
+    currency: int | None = None
 
     def resolved(self) -> list[str]:
         return [f.name for f in fields(self) if getattr(self, f.name) is not None]
@@ -47,6 +48,7 @@ class Row:
     valuation: str | None = None
     weight: str | None = None
     exchange: str | None = None
+    currency: str | None = None
 
 
 def row_from_cells(cells: list[str], colmap: ColumnMap) -> Row:
@@ -73,6 +75,7 @@ class Job:
     table: Table | None = None     # parsed rows: set by step 040, used by 050 onward
     error: str | None = None
     findings: list[str] = field(default_factory=list)   # step 100 output, shown in the summary
+    dropped_rows: int = 0                               # step 082: rows removed (empty or skippable)
 
 
 # ----------------------------------------------------------------- values --

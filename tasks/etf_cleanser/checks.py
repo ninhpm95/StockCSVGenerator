@@ -7,8 +7,8 @@ from __future__ import annotations
 import re
 from collections import Counter
 
-from .config import (CHECK_DOMINANT_SHARE, CHECK_MAX_LISTED,
-                    EXCHANGE_SHORT_MAX_LEN, HOLDINGS_MIN_COUNT,
+from .config import (CHECK_DOMINANT_SHARE, CHECK_MAX_LISTED, WEIGHT_TOTAL_EXCLUDE_NAMES,
+                    EXCHANGE_SHORT_MAX_LEN, HOLDINGS_MIN_COUNT, ISIN_SKIP_COUNTRIES,
                     WEIGHT_SUM_MAX, WEIGHT_SUM_MIN)
 from .models import Row, format_weight, parse_float
 
@@ -20,9 +20,9 @@ def check_tickers(rows: list[Row]) -> list[str]:
     are ignored when measuring). Two checks:
     (a) length: find the most common ticker length; if it covers most tickers,
         list the tickers with any other length.
-    (b) kind: if most tickers are text only (US style: AAPL, BRK.B, BRK-B),
-        list the ones containing digits; if most are digits-only or digits plus
-        a single letter (JP style: 7021, 586A), list the ones that aren't."""
+    (b) kind: if most tickers are text (US style: AAPL, BRK.B, JPWU6, 0HQN; at most one digit),
+        list the ones that aren't; if most are digits-only or digits plus a single
+        letter (JP style: 7021, 586A), list the ones that aren't."""
     coded = [(i, r.code, _SEPARATORS.sub("", r.code)) for i, r in enumerate(rows) if r.code]
     coded = [(i, raw, core) for i, raw, core in coded if core]
     if len(coded) < HOLDINGS_MIN_COUNT:
@@ -40,8 +40,8 @@ def check_tickers(rows: list[Row]) -> list[str]:
     n_jp = sum(_is_jp_style(core) for _, _, core in coded)
     if _mostly(n_text, len(coded)):
         odd = [f"line {_line_no(i)}: {raw}" for i, raw, core in coded if not _is_text(core)]
-        out += _report(f"ticker kind: {_pct(n_text, len(coded))} of tickers are text only, "
-                       f"these contain numbers", odd)
+        out += _report(f"ticker kind: {_pct(n_text, len(coded))} of tickers are text "
+                       f"(at most one digit), these are not", odd)
     elif _mostly(n_jp, len(coded)):
         odd = [f"line {_line_no(i)}: {raw}" for i, raw, core in coded if not _is_jp_style(core)]
         out += _report(f"ticker kind: {_pct(n_jp, len(coded))} of tickers are digits with "
@@ -50,14 +50,15 @@ def check_tickers(rows: list[Row]) -> list[str]:
 
 
 def check_isins(rows: list[Row]) -> list[str]:
-    """Most ISINs share a country prefix (e.g. US), a few have another.
+    """Most ISINs share a country prefix (e.g. JP), a few have another.
+    Skipped when the dominant prefix is in ISIN_SKIP_COUNTRIES (US ETFs hold many foreign ISINs).
     Only runs with at least HOLDINGS_MIN_COUNT ISINs."""
     isins = [(i, r.isin.strip()) for i, r in enumerate(rows) if r.isin and len(r.isin.strip()) >= 2]
     if len(isins) < HOLDINGS_MIN_COUNT:
         return []
     prefixes = Counter(v[:2].upper() for _, v in isins)
     top, top_n = prefixes.most_common(1)[0]
-    if not _mostly(top_n, len(isins)):
+    if top in ISIN_SKIP_COUNTRIES or not _mostly(top_n, len(isins)):
         return []
     odd = [f"line {_line_no(i)}: {v} ({v[:2].upper()})" for i, v in isins if v[:2].upper() != top]
     return _report(f"ISIN country: {_pct(top_n, len(isins))} of ISINs start with '{top}', "
@@ -74,24 +75,21 @@ def check_exchanges(rows: list[Row]) -> list[str]:
 def check_weights(rows: list[Row]) -> list[str]:
     """Weights are already percentages (20 means 20%). Flags the file if they
     add up to more than WEIGHT_SUM_MAX or to less than WEIGHT_SUM_MIN (holdings
-    probably incomplete), every holding with a negative weight, and every row
-    with no usable weight (reported separately so a gap isn't mistaken for a
-    low total)."""
+    probably incomplete), and every row with no usable weight (reported
+    separately so a gap isn't mistaken for a low total).
+    The total leaves out rows whose Name is in WEIGHT_TOTAL_EXCLUDE_NAMES (currency hedges)."""
     parsed = [(i, parse_float(r.weight)) for i, r in enumerate(rows)]
     missing = [f"line {_line_no(i)}: {_label(rows[i])}" for i, w in parsed if w is None]
     weights = [(i, w) for i, w in parsed if w is not None]
     out: list[str] = _report("no usable weight", missing)
     if not weights:
         return out
-    total = sum(w for _, w in weights)
+    total = sum(w for i, w in weights if rows[i].name not in WEIGHT_TOTAL_EXCLUDE_NAMES)
     if total > WEIGHT_SUM_MAX:
         out.append(f"weight total: {format_weight(total)}% is over {WEIGHT_SUM_MAX:g}%")
     elif total < WEIGHT_SUM_MIN:
         suffix = f" (over {len(weights)} of {len(rows)} rows)" if missing else ""
         out.append(f"weight total: {format_weight(total)}% is below {WEIGHT_SUM_MIN:g}%{suffix}")
-    odd = [f"line {_line_no(i)}: {_label(rows[i])} ({format_weight(w)})"
-           for i, w in weights if w < 0]
-    out += _report("negative weight", odd)
     return out
 
 
@@ -107,8 +105,11 @@ def _line_no(i: int) -> int:
 
 
 def _is_text(core: str) -> bool:
-    """Letters only (separators already removed): AAPL, BRKB."""
-    return core.isalpha()
+    """Mostly letters: at most one digit (AAPL, BRKB, JPWU6, 0HQN). A 1-letter + 1-digit
+    ticker like 5A counts as number style instead, so the two styles never overlap."""
+    letters = sum(ch.isalpha() for ch in core)
+    digits = len(core) - letters
+    return letters >= 1 and digits <= 1 and (letters >= 2 or digits == 0)
 
 
 def _is_jp_style(core: str) -> bool:

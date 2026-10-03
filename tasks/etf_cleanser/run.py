@@ -34,7 +34,7 @@ import traceback
 from pathlib import Path
 
 from . import steps
-from .config import Config, DATA_DIR, LOOKUP_PATH, OUTPUT_DIR
+from .config import EXCHANGES_PATH, Config, DATA_DIR, LOOKUP_PATH, OUTPUT_DIR
 from .models import Job
 from .parsing import SUPPORTED_SUFFIXES
 
@@ -74,9 +74,7 @@ def reset_output_folder(cfg: Config) -> None:
     print(f"output folder reset: {cfg.output_dir}")
 
 
-def run_step(step_fn, jobs: list[Job], cfg: Config, header: bool = True) -> None:
-    """Run one step over every job that hasn't already failed. A failing
-    step marks that job errored; later steps skip it, other files continue."""
+def run_step(step_fn, jobs: list[Job], cfg: Config, header: bool = True, quiet: bool = False) -> None:
     if header:
         print(f"=== {step_fn.__name__} ===")
     for job in jobs:
@@ -86,7 +84,8 @@ def run_step(step_fn, jobs: list[Job], cfg: Config, header: bool = True) -> None
             step_fn(job, cfg)
         except Exception as exc:
             job.error = f"{type(exc).__name__}: {exc}"
-            print(f"ERROR {job.path.name}: step failed, file will be skipped ({job.error})")
+            if not quiet:
+                print(f"ERROR {job.path.name}: step failed, file will be skipped ({job.error})")
             if cfg.verbose:
                 traceback.print_exc()
 
@@ -98,7 +97,6 @@ def print_summary(jobs: list[Job]) -> int:
     review = [j for j in jobs if not j.error and j.findings]
     passed = len(jobs) - len(failed) - len(review)
 
-    print("---- summary ----")
     print(f"{passed} checks passed, {len(review)} to review, {len(failed)} failed")
     if failed:
         print(f"\n{len(failed)} failed:")
@@ -119,12 +117,13 @@ def run(argv=None) -> None:
     parser.add_argument("--input", type=Path, default=DATA_DIR)
     parser.add_argument("--output", type=Path, default=OUTPUT_DIR)
     parser.add_argument("--lookup", type=Path, default=LOOKUP_PATH)
+    parser.add_argument("--exchanges", type=Path, default=EXCHANGES_PATH)
     parser.add_argument("--verbose", action="store_true",
                         help="print a traceback when a step fails")
     args = parser.parse_args(argv)
 
     cfg = Config(input_dir=args.input, output_dir=args.output, lookup_path=args.lookup,
-                 verbose=args.verbose)
+                 exchanges_path=args.exchanges, verbose=args.verbose)
     check_folders(cfg)
 
     files = find_input_files(cfg.input_dir)
@@ -134,7 +133,12 @@ def run(argv=None) -> None:
 
     reset_output_folder(cfg)
 
-    run_step(steps.step010_load, jobs, cfg)
+    run_step(steps.step010_load, jobs, cfg, quiet=True)
+    failed = [j for j in jobs if j.error]
+    print(f"Loaded {len(jobs) - len(failed)} files, {len(failed)} failed to load"
+        + (":" if failed else ""))
+    for job in failed:
+        print(f"- {job.path.name}: {job.error}")
     run_step(steps.step020_last_marker, jobs, cfg)
     run_step(steps.step030_header, jobs, cfg)
     run_step(steps.step040_columns, jobs, cfg)
@@ -142,6 +146,9 @@ def run(argv=None) -> None:
     run_step(steps.step070_refresh_from_isin, jobs, cfg)
     run_step(steps.step080_exchange, jobs, cfg)
     run_step(steps.step082_drop_incomplete, jobs, cfg)
+    changed = [j for j in jobs if not j.error and j.dropped_rows]
+    total = len([j for j in jobs if not j.error])
+    print(f"{len(changed)}/{total} were changed" + (": " + ", ".join(j.path.name for j in changed) if changed else ""))
     run_step(steps.step085_weights, jobs, cfg)
     run_step(steps.step090_write, jobs, cfg, header=False)
     written = sum(1 for j in jobs if not j.error)

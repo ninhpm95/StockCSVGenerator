@@ -9,8 +9,8 @@ import csv
 import re
 
 from .checks import check_exchanges, check_isins, check_tickers, check_weights
-from .config import OUTPUT_COLUMNS, SKIP_NAME_TEXTS, TICKER_FILENAME_PATTERN
-from .lookup import get_lookup
+from .config import OUTPUT_COLUMNS, SKIP_NAME_TEXTS, TICKER_FILENAME_PATTERN, EXCLUDE_RULES, CODE_TO_CHECK_NAME_TO_SKIP
+from .lookup import get_lookup, get_exchange_names
 from .models import (Job, Row, Table, fill_missing_weights, format_weight,
                     parse_float, row_from_cells)
 from .parsing import (find_header_row, find_last_marker_row, load_file,
@@ -19,7 +19,6 @@ from .parsing import (find_header_row, find_last_marker_row, load_file,
 
 def step010_load(job: Job, cfg) -> None:
     job.grid = load_file(job.path)
-    print(f"{job.path.name}: loaded {len(job.grid.rows)} row(s)")
 
 
 def step020_last_marker(job: Job, cfg) -> None:
@@ -65,7 +64,8 @@ def step040_columns(job: Job, cfg) -> None:
 def step085_weights(job: Job, cfg) -> None:
     filled = fill_missing_weights(job.table)
     if filled:
-        print(f"{job.path.name}: computed weights for {filled} row(s)")
+        total = len(job.table.rows)
+        print(f"{job.path.name}: computed weights for {filled}/{total} row(s)")
 
 
 def step060_isin_backfill(job: Job, cfg) -> None:
@@ -105,8 +105,11 @@ def step070_refresh_from_isin(job: Job, cfg) -> None:
         return
     lookup = get_lookup(str(cfg.lookup_path))
     log = _RowLog(name)
-    refreshed = unchanged = not_found = no_ticker = 0
+    refreshed = unchanged = not_found = no_ticker = excluded = 0
     for row in job.table.rows:
+        if _is_excluded(row):
+            excluded += 1
+            continue
         hit = _lookup_by_isin(log, row, lookup, narrow_by="exchange",
                               skipped="not refreshed")
         if hit is None:
@@ -121,7 +124,8 @@ def step070_refresh_from_isin(job: Job, cfg) -> None:
             unchanged += 1
     log.flush()
     print(f"{name}: tickers refreshed on {refreshed} row(s), {unchanged} already correct, "
-          f"{not_found} not found (no ISIN / not in lookup), {no_ticker} lookup entry without ticker")
+          f"{not_found} not found (no ISIN / not in lookup), {no_ticker} lookup entry without ticker, "
+          f"{excluded} excluded")
 
 
 def step080_exchange(job: Job, cfg) -> None:
@@ -146,29 +150,38 @@ def step080_exchange(job: Job, cfg) -> None:
             row.exchange = hit.exchange
             filled += 1
     log.flush()
+
+    short_names = get_exchange_names(str(cfg.exchanges_path))
+    converted = 0
+    for row in job.table.rows:
+        if not row.exchange:
+            continue
+        short = short_names.get(row.exchange.strip().casefold())
+        if short and short != row.exchange:
+            row.exchange = short
+            converted += 1
+
     print(f"{name}: Exchange filled on {filled} row(s), {not_found} not found "
-          f"(no ISIN / not in lookup), {no_exchange} lookup entry without exchange")
+          f"(no ISIN / not in lookup), {no_exchange} lookup entry without exchange, "
+          f"{converted} converted to short name")
 
 
 def step082_drop_incomplete(job: Job, cfg) -> None:
-    """Remove rows that aren't real holdings: both Code and Name empty, or a
-    Name containing any SKIP_NAME_TEXTS entry (case sensitive substring; the
-    Code is ignored in that case). Runs before the weight calculation so these
-    rows can't enter its denominator."""
+    """Remove rows that aren't real holdings:
+    both Code and Name empty,
+    or a Name containing any SKIP_NAME_TEXTS entry when the Code is empty or one of CODE_TO_CHECK_NAME_TO_SKIP (case sensitive substring)."""
     rows = job.table.rows
     kept, empty, skipped = [], 0, 0
     for r in rows:
-        if r.name and any(text in r.name for text in SKIP_NAME_TEXTS):
+        code = (r.code or "").strip()
+        if (code in CODE_TO_CHECK_NAME_TO_SKIP and r.name
+                and any(text in r.name for text in SKIP_NAME_TEXTS)):
             skipped += 1
         elif not (r.code or r.name):
             empty += 1
         else:
             kept.append(r)
-    if empty or skipped:
-        print(f"{job.path.name}: removed {empty} row(s) with empty Code and Name, "
-              f"{skipped} row(s) with a skippable Name")
-        if not kept:
-            print(f"{job.path.name}: WARNING all rows were removed")
+    job.dropped_rows = empty + skipped
     job.table.rows = kept
 
 
@@ -259,3 +272,9 @@ def _lookup_by_isin(log: _RowLog, row: Row, lookup, narrow_by: str, skipped: str
                   f"candidate(s) after {narrow_by} -> using the first")
         hits = narrowed or hits
     return hits[0]
+
+
+def _is_excluded(row: Row) -> bool:
+    """True if the row matches any EXCLUDE_RULES entry (case-insensitive)."""
+    return any((getattr(row, field) or "").strip().upper() == value.strip().upper()
+               for field, value in EXCLUDE_RULES.items())

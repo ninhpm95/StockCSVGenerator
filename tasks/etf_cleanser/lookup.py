@@ -118,3 +118,22 @@ def _norm_exchange(exchange: str) -> str:
 @lru_cache(maxsize=None)
 def get_lookup(path: str) -> GlobalLookup:
     return GlobalLookup(Path(path))
+
+
+@lru_cache(maxsize=None)
+def get_exchange_names(path: str) -> dict[str, str]:
+    """exchanges.csv -> {long_name (stripped, case-folded): short_name}."""
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        reader = csv.DictReader(fh)
+        names = {fn.strip().lower(): fn for fn in (reader.fieldnames or [])}
+        for required in ("long_name", "short_name"):
+            if required not in names:
+                raise ValueError(f"exchanges file {path} has no '{required}' column "
+                                 f"(found: {', '.join(names) or 'none'})")
+        mapping = {}
+        for raw in reader:
+            long_name = (raw.get(names["long_name"]) or "").strip()
+            short_name = (raw.get(names["short_name"]) or "").strip()
+            if long_name and short_name:
+                mapping[long_name.casefold()] = short_name
+    return mapping
