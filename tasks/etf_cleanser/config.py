@@ -76,8 +76,6 @@ WEIGHT_TOTAL_EXCLUDE_NAMES = ["FWRDUSDJPY01", "FWRDEURJPY01"]
 SKIP_NAME_TEXTS = ["Total", "合計", "計"]
 CODE_TO_CHECK_NAME_TO_SKIP = [""]
 
-ISIN_SKIP_COUNTRIES = {"US"}       # ISIN check is skipped when the dominant prefix is one of these
-
 # ------------------------------------------------- output checks (step 100) --
 # Log only - the checks never change anything.
 CHECK_DOMINANT_SHARE = 0.90        # "most" = at least this share of the rows
@@ -86,6 +84,23 @@ EXCHANGE_SHORT_MAX_LEN = 10        # longer than this = not a short form (TSE, N
 WEIGHT_SUM_MAX = 101               # weights are in percent; a total above this is flagged
 WEIGHT_SUM_MIN = 60.0              # a total below this is flagged (holdings probably incomplete)
 CHECK_MAX_LISTED = 3               # rows printed per finding; the rest are counted
+
+ISIN_SKIP_COUNTRIES = {"US"}       # ISIN check is skipped when the dominant prefix is one of these
+
+# Codes (cash, margin lines) left out of the ticker checks. Compared upper-case.
+CHECK_IGNORE_CODES = {"JPY", "USD", "EUR", "MSJP", "MARGIN_JPY"}
+
+# Files whose weights legitimately don't add up to ~100% (e.g. 2x leveraged
+# funds that include futures/swap notional). Key = file stem (no extension),
+# value = expected total in percent. A total within +/- the tolerance is fine.
+# Verify each fund's structure before listing it.
+WEIGHT_SUM_EXPECTED = {
+    # "1357_brd_data": 200,
+    # "1472_brd_data": 200,
+    # "1570_brd_data": 200,
+    # "2251_brd_data": 200,
+}
+WEIGHT_SUM_EXPECTED_TOLERANCE = 5
 
 
 @dataclass

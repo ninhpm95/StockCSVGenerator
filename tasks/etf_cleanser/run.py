@@ -148,7 +148,8 @@ def run(argv=None) -> None:
     run_step(steps.step082_drop_incomplete, jobs, cfg)
     changed = [j for j in jobs if not j.error and j.dropped_rows]
     total = len([j for j in jobs if not j.error])
-    print(f"{len(changed)}/{total} were changed" + (": " + ", ".join(j.path.name for j in changed) if changed else ""))
+    print(f"{len(changed)}/{total} files had rows dropped, "
+          f"{sum(j.dropped_rows for j in changed)} row(s) in total")
     run_step(steps.step085_weights, jobs, cfg)
     run_step(steps.step090_write, jobs, cfg, header=False)
     written = sum(1 for j in jobs if not j.error)

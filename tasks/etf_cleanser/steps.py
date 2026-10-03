@@ -170,19 +170,24 @@ def step082_drop_incomplete(job: Job, cfg) -> None:
     """Remove rows that aren't real holdings:
     both Code and Name empty,
     or a Name containing any SKIP_NAME_TEXTS entry when the Code is empty or one of CODE_TO_CHECK_NAME_TO_SKIP (case sensitive substring)."""
-    rows = job.table.rows
+    log = _RowLog(job.path.name)
     kept, empty, skipped = [], 0, 0
-    for r in rows:
+    for r in job.table.rows:
         code = (r.code or "").strip()
-        if (code in CODE_TO_CHECK_NAME_TO_SKIP and r.name
-                and any(text in r.name for text in SKIP_NAME_TEXTS)):
+        matched = next((t for t in SKIP_NAME_TEXTS if r.name and t in r.name), None)
+        if code in CODE_TO_CHECK_NAME_TO_SKIP and matched:
             skipped += 1
+            log.say(f"dropped by name: '{r.name}' (matched '{matched}')")
         elif not (r.code or r.name):
             empty += 1
         else:
             kept.append(r)
+    log.flush()
     job.dropped_rows = empty + skipped
     job.table.rows = kept
+    if job.dropped_rows:
+        print(f"{job.path.name}: dropped {job.dropped_rows} row(s) "
+              f"({empty} empty, {skipped} by name)")
 
 
 def step090_write(job: Job, cfg) -> None:
@@ -205,7 +210,7 @@ def step100_check(job: Job, cfg) -> None:
     the job and printed in the final summary; nothing is changed."""
     rows = job.table.rows
     job.findings = (check_tickers(rows) + check_isins(rows) + check_exchanges(rows)
-                    + check_weights(rows))
+                    + check_weights(rows, job.path.stem))
 
 
 # ---------------------------------------------------------------- helpers --
