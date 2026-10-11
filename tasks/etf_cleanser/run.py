@@ -1,44 +1,26 @@
-"""ETF holdings cleanser - entry point.
+"""ETF cleanser entry point: preflight, explicit step flow, and publication.
 
-    python main.py                       # paths from config.py
-    python main.py --input root/data/ETFs --output root/data/cleansed_ETFs
-
-Reads raw ETF holdings files (CSV + XLSX) from the input folder and writes
-one tidy CSV per file into the output folder, with columns
-Ticker, Name, ISIN, Weight(%), Exchange.
-Inputs are opened read-only and never modified; the output folder is wiped
-and rebuilt on every run.
-
-main() at the bottom is the flow. Every step's real logic lives in steps.py
-(and the modules it calls); the plumbing (folder checks, file discovery,
-run_step, summary) sits above it in this file. Add, remove or reorder a step
-by editing the run_step(...) calls in main().
-
-    010 load            read csv, or the 保有明細 sheet of an xlsx, into one raw grid
-    020 last_marker     keep only rows from the last 'Fund Holdings as of' down
-    030 header          find header row, drop metadata above it
-    040 columns         resolve candidate columns -> Table
-    041 manual_updates  apply configured manual corrections
-    050 exchange        fill missing Exchange from GLOBAL_lookup using Ticker + ISIN
-    060 unify_exchange_names unify Exchange values to lookup names
-    070 refresh_from_isin correct Ticker via existing ISIN + Exchange -> GLOBAL_lookup (file scope configurable)
-    080 isin_backfill   fill missing ISIN from GLOBAL_lookup (ticker+exchange; all files)
-    090 drop_incomplete remove rows with empty Code and Name, or a Name containing a SKIP_NAME_TEXTS entry
-    100 weights         compute weight when missing
-    110 sort_by_weight  sort holdings by descending weight (missing/invalid last)
-    120 write           Ticker/Name/ISIN/Weight(%)/Exchange csv into the output folder (tickers starting with 0 get a leading ')
-    130 check           log-only sanity checks on tickers / ISINs / exchanges / weights (nothing changed)
+Invoked by the project main.py when cleanser mode is selected. Build all
+outputs in a private staging directory, validate them, and publish only if
+no input failed. Inputs and the previous successful output remain available
+when processing fails. Business logic lives in the sibling modules.
 """
 from __future__ import annotations
 
 import argparse
 import shutil
+import tempfile
 import sys
 import traceback
+import uuid
+from dataclasses import replace
 from pathlib import Path
 
 from . import steps
 from .config import EXCHANGES_PATH, Config, DATA_DIR, LOOKUP_PATH, OUTPUT_DIR
+from .reporting import emit
+from .reporting import write_diagnostics
+from .lookup import get_lookup, get_exchange_names
 from .models import Job
 from .parsing import SUPPORTED_SUFFIXES
 
@@ -52,8 +34,23 @@ def check_folders(cfg: Config) -> None:
     needs_lookup = cfg.enable_refresh_exchanges or cfg.enable_refresh_tickers or cfg.enable_refresh_isin
     if needs_lookup and not cfg.lookup_path.is_file():
         sys.exit(f"ERROR: lookup file not found: {cfg.lookup_path}")
-    if cfg.output_dir.resolve() == cfg.input_dir.resolve():
-        sys.exit("ERROR: output folder must differ from the input folder")
+    output = cfg.output_dir.resolve()
+    source = cfg.input_dir.resolve()
+    if output == source or output in source.parents or source in output.parents:
+        sys.exit("ERROR: input and output folders must not contain one another")
+    for protected in (cfg.lookup_path, cfg.exchanges_path):
+        if output == protected.resolve() or output in protected.resolve().parents:
+            sys.exit(f"ERROR: output folder contains a reference file: {protected}")
+    if cfg.output_dir.is_symlink():
+        sys.exit("ERROR: output folder must not be a symbolic link")
+    if cfg.output_dir.exists() and not cfg.output_dir.is_dir():
+        sys.exit("ERROR: output path is not a directory")
+    get_lookup.cache_clear()
+    get_exchange_names.cache_clear()
+    if needs_lookup:
+        get_lookup(str(cfg.lookup_path), str(cfg.exchanges_path))
+    elif cfg.enable_unify_exchange_names or cfg.enable_check:
+        get_exchange_names(str(cfg.exchanges_path))
 
 
 def find_input_files(input_dir: Path) -> list[Path]:
@@ -64,28 +61,41 @@ def find_input_files(input_dir: Path) -> list[Path]:
         if path.suffix.lower() in SUPPORTED_SUFFIXES:
             files.append(path)
         else:
-            print(f"ignoring unsupported file: {path.name}")
+            emit(f"ignoring unsupported file: {path.name}")
     if not files:
-        print(f"WARNING: no csv/xlsx files in {input_dir}")
+        emit(f"WARNING: no csv/xlsx files in {input_dir}")
     return files
 
 
-def reset_output_folder(cfg: Config) -> None:
-    """Wipe and recreate the output folder, so a run where every file fails
-    never leaves stale output from a previous run behind."""
-    if cfg.output_dir.exists():
-        shutil.rmtree(cfg.output_dir)    # inputs stay untouched
-    cfg.output_dir.mkdir(parents=True, exist_ok=True)
-    print(f"output folder reset: {cfg.output_dir}")
+def publish_output(staged: Path, destination: Path, backup: Path) -> None:
+    """Replace a completed run, restoring the previous directory on failure."""
+    if backup.resolve().parent != destination.resolve().parent or not backup.name.startswith(".cleanser-previous-"):
+        raise ValueError("unsafe backup path")
+    if backup.exists():
+        raise FileExistsError(f"backup already exists: {backup}")
+    if destination.exists():
+        destination.rename(backup)
+    try:
+        staged.rename(destination)
+    except Exception:
+        if backup.exists():
+            backup.rename(destination)
+        raise
+    if backup.exists():
+        # Only remove our unique sibling backup, after publication succeeded.
+        try:
+            shutil.rmtree(backup)
+        except OSError:
+            emit(f"Previous output retained for recovery at {backup}")
 
 
 def run_step(step_fn, jobs: list[Job], cfg: Config, header: bool = True, quiet: bool = False,
              enabled: bool = True) -> None:
     if not enabled:
-        print(f"=== {step_fn.__name__} skipped (disabled) ===")
+        emit(f"=== {step_fn.__name__} skipped (disabled) ===")
         return
     if header:
-        print(f"=== {step_fn.__name__} ===")
+        emit(f"=== {step_fn.__name__} ===")
     for job in jobs:
         if job.error:
             continue
@@ -94,7 +104,7 @@ def run_step(step_fn, jobs: list[Job], cfg: Config, header: bool = True, quiet: 
         except Exception as exc:
             job.error = f"{type(exc).__name__}: {exc}"
             if not quiet:
-                print(f"ERROR {job.path.name}: step failed, file will be skipped ({job.error})")
+                emit(f"ERROR {job.path.name}: step failed, file will be skipped ({job.error})")
             if cfg.verbose:
                 traceback.print_exc()
 
@@ -107,19 +117,19 @@ def print_summary(jobs: list[Job], check_enabled: bool = True) -> int:
     passed = len(jobs) - len(failed) - len(review)
 
     if check_enabled:
-        print(f"{passed} checks passed, {len(review)} to review, {len(failed)} failed")
+        emit(f"{passed} files without validation findings, {len(review)} to review, {len(failed)} failed")
     else:
-        print(f"{len(jobs) - len(failed)} files processed, {len(failed)} failed (checks disabled)")
+        emit(f"{len(jobs) - len(failed)} files processed, {len(failed)} failed (checks disabled)")
     if failed:
-        print(f"\n{len(failed)} failed:")
+        emit(f"\n{len(failed)} failed:")
         for job in failed:
-            print(f"-- {job.path.name}: {job.error}")
+            emit(f"-- {job.path.name}: {job.error}")
     if review:
-        print(f"\n{len(review)} to review:")
+        emit(f"\n{len(review)} to review:")
         for job in review:
-            print(f"-- {job.path.name}")
+            emit(f"-- {job.path.name}")
             for line in job.findings:
-                print(f"   {line}")
+                emit(f"   {line}")
     return 1 if failed else 0
 
 
@@ -142,33 +152,54 @@ def run(argv=None) -> None:
     if not files:
         return
     jobs = [Job(path=path) for path in files]
+    stems = [p.stem.casefold() for p in files]
+    if len(set(stems)) != len(stems):
+        sys.exit("ERROR: input files have duplicate output stems")
+    cfg.output_dir.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".cleanser-", dir=cfg.output_dir.parent) as work:
+        work_dir = Path(work).resolve()
+        # TemporaryDirectory owns only this newly created sibling directory.
+        if work_dir.parent != cfg.output_dir.parent.resolve():
+            raise ValueError("staging directory escaped the output parent")
+        staged = work_dir / "output"
+        staged.mkdir()
+        exit_code = process_jobs(jobs, replace(cfg, output_dir=staged))
+        if exit_code == 0:
+            backup = cfg.output_dir.parent / f".cleanser-previous-{uuid.uuid4().hex}"
+            publish_output(staged, cfg.output_dir, backup)
+            emit(f"Published {len(jobs)} files to {cfg.output_dir}")
+            emit(f"Diagnostics: {cfg.output_dir / 'diagnostics'}")
+        else:
+            emit("Run failed; the previous output was retained and this run was not published")
+    sys.exit(exit_code)
 
-    reset_output_folder(cfg)
 
+def process_jobs(jobs: list[Job], cfg: Config) -> int:
+    """Build and validate one complete run in its private staging directory."""
     run_step(steps.step010_load, jobs, cfg, quiet=True)
     failed = [j for j in jobs if j.error]
-    print(f"Loaded {len(jobs) - len(failed)} files, {len(failed)} failed to load"
+    emit(f"Loaded {len(jobs) - len(failed)} files, {len(failed)} failed to load"
         + (":" if failed else ""))
     for job in failed:
-        print(f"- {job.path.name}: {job.error}")
+        emit(f"- {job.path.name}: {job.error}")
     run_step(steps.step020_last_marker, jobs, cfg)
     run_step(steps.step030_header, jobs, cfg)
     run_step(steps.step040_columns, jobs, cfg)
     run_step(steps.step041_manual_updates, jobs, cfg, enabled=cfg.enable_manual_updates)
+    run_step(steps.step090_drop_incomplete, jobs, cfg)
     run_step(steps.step050_exchange, jobs, cfg, enabled=cfg.enable_refresh_exchanges)
     run_step(steps.step060_unify_exchange_names, jobs, cfg, enabled=cfg.enable_unify_exchange_names)
     run_step(steps.step070_refresh_from_isin, jobs, cfg, enabled=cfg.enable_refresh_tickers)
     run_step(steps.step080_isin_backfill, jobs, cfg, enabled=cfg.enable_refresh_isin)
-    run_step(steps.step090_drop_incomplete, jobs, cfg)
     changed = [j for j in jobs if not j.error and j.dropped_rows]
     total = len([j for j in jobs if not j.error])
-    print(f"{len(changed)}/{total} files had rows dropped, "
+    emit(f"{len(changed)}/{total} files had rows dropped, "
           f"{sum(j.dropped_rows for j in changed)} row(s) in total")
     run_step(steps.step100_weights, jobs, cfg, enabled=cfg.enable_calc_weights)
     run_step(steps.step110_sort_by_weight, jobs, cfg, enabled=cfg.enable_sort_by_weight)
+    run_step(steps.step130_check, jobs, cfg, enabled=cfg.enable_check)
     run_step(steps.step120_write, jobs, cfg, header=False)
     written = sum(1 for j in jobs if not j.error)
-    print(f"Written {written}/{len(jobs)} files to {cfg.output_dir}")
-    run_step(steps.step130_check, jobs, cfg, enabled=cfg.enable_check)
-
-    sys.exit(print_summary(jobs, check_enabled=cfg.enable_check))
+    emit(f"Prepared {written}/{len(jobs)} output files")
+    write_diagnostics(jobs, cfg.output_dir)
+    return print_summary(jobs, check_enabled=cfg.enable_check)

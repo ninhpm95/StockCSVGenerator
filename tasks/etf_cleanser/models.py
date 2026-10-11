@@ -56,6 +56,8 @@ def row_from_cells(cells: list[str], colmap: ColumnMap) -> Row:
     for field_name, idx in colmap.items():
         if idx < len(cells):
             value = cells[idx].strip()
+            if field_name != "name" and value.casefold() in {"-", "nan", "null", "none", "n/a"}:
+                value = ""
             if value:
                 setattr(row, field_name, value)
     return row
@@ -65,6 +67,7 @@ def row_from_cells(cells: list[str], colmap: ColumnMap) -> Row:
 class Table:
     """The parsed holdings of one file."""
     rows: list[Row] = field(default_factory=list)
+    valuation_currency: str | None = None
 
 
 @dataclass
@@ -76,6 +79,8 @@ class Job:
     error: str | None = None
     findings: list[str] = field(default_factory=list)   # step 130 output, shown in the summary
     dropped_rows: int = 0                               # step 090: rows removed (empty or skippable)
+    lookup_issues: list[tuple[str, str, Row, str]] = field(default_factory=list)
+    weight_warning: str | None = None
 
 
 # ----------------------------------------------------------------- values --
@@ -108,7 +113,8 @@ def compute_row_value(row: Row) -> float | None:
     """Best guess of a row's value: shares * price, falling back to valuation."""
     shares, price = parse_float(row.shares), parse_float(row.price)
     if shares is not None and price is not None:
-        return shares * price
+        value = shares * price
+        return value if math.isfinite(value) else None
     return parse_float(row.valuation)
 
 
@@ -118,17 +124,20 @@ def format_weight(pct: float) -> str:
 
 
 def fill_missing_weights(table: Table) -> int:
-    """weight = value / sum(values) * 100 for every row without a usable
-    weight. All rows take part (in the denominator and in the fill); there is
-    no ticker/ISIN filter. Rows with no computable value stay empty.
-    Returns the number of rows filled."""
+    """Fill missing weights using the existing provider-value calculation.
+
+    Retain supplied weights and leave rows without a computable value empty.
+    Currency labels alone do not determine the basis of provider prices.
+    Explicit common-currency valuations take priority when available.
+    """
     rows = table.rows
     if not any(parse_float(r.weight) is None for r in rows):
         return 0
-    values = [compute_row_value(r) for r in rows]
+    values = ([parse_float(r.valuation) for r in rows] if table.valuation_currency
+              else [compute_row_value(r) for r in rows])
     total = sum(v for v in values if v is not None)
-    if not total:
-        return 0
+    if not math.isfinite(total) or total <= 0:
+        raise ValueError("non-positive or non-finite total valuation")
     filled = 0
     for row, value in zip(rows, values):
         if value is None or parse_float(row.weight) is not None:

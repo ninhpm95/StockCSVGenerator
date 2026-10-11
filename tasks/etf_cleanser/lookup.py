@@ -19,6 +19,7 @@ class LookupEntry:
     exchange: str
     isin: str
     asset_type: str
+    currency: str = ""
 
 
 class AmbiguousLookupError(ValueError):
@@ -26,18 +27,21 @@ class AmbiguousLookupError(ValueError):
 
 
 class GlobalLookup:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, exchanges_path: Path | None = None):
         # Indexes restrict candidates for the shared multi-column search.
         self._by_isin: dict[str, list[LookupEntry]] = {}
         self._by_ticker_loose: dict[str, list[LookupEntry]] = {}
         self._entries: list[LookupEntry] = []
+        self._seen: set[tuple[str, str, str]] = set()
+        self._exchanges = get_exchange_names(str(exchanges_path)) if exchanges_path else {}
         self._load(path)
 
     def _load(self, path: Path) -> None:
-        seen = set()
         with open(path, newline="", encoding="utf-8-sig") as fh:
             reader = csv.DictReader(fh)
             names = {fn.strip().lower(): fn for fn in (reader.fieldnames or [])}
+            if "ticker" not in names and "code" in names:
+                names["ticker"] = names["code"]
             for required in ("ticker", "isin"):
                 if required not in names:
                     raise ValueError(f"lookup file {path} has no '{required}' column "
@@ -50,11 +54,13 @@ class GlobalLookup:
             for raw in reader:
                 entry = LookupEntry(col(raw, "ticker"), col(raw, "name"),
                                     col(raw, "exchange"), col(raw, "isin"),
-                                    col(raw, "asset_type"))
-                identity = tuple(vars(entry).values())
-                if identity in seen:
+                                    col(raw, "asset_type"), col(raw, "currency"))
+                entry.exchange = self._exchanges.get(entry.exchange.casefold(), entry.exchange)
+                identity = (normalise_ticker(entry.ticker, entry.exchange),
+                            entry.exchange.upper(), entry.isin.upper())
+                if identity in self._seen:
                     continue
-                seen.add(identity)
+                self._seen.add(identity)
                 self._entries.append(entry)
                 # Identical duplicate rows have already been removed.
                 if entry.isin:
@@ -64,6 +70,9 @@ class GlobalLookup:
                     loose = _NON_ALNUM.sub("", key)
                     if loose:
                         self._add(self._by_ticker_loose, loose, entry)
+                    canonical = normalise_ticker(entry.ticker, entry.exchange)
+                    if canonical and canonical != loose:
+                        self._add(self._by_ticker_loose, canonical, entry)
 
     @staticmethod
     def _add(index: dict[str, list[LookupEntry]], key: str, entry: LookupEntry) -> None:
@@ -71,7 +80,7 @@ class GlobalLookup:
         if entry not in bucket:
             bucket.append(entry)
 
-    def find(self, **criteria: str | None) -> LookupEntry | None:
+    def find(self, *, preferred_ticker: str | None = None, **criteria: str | None) -> LookupEntry | None:
         """Match ALL supplied fields (one or more LookupEntry column names).
         Missing search values or no match return None. Multiple matches raise
         AmbiguousLookupError. Identical source records count as one entry.
@@ -88,7 +97,8 @@ class GlobalLookup:
         if "isin" in wanted:
             candidates = self._by_isin.get(wanted["isin"], [])
         elif "ticker" in wanted:
-            candidates = self._by_ticker_loose.get(wanted["ticker"], [])
+            key = normalise_ticker(criteria["ticker"], criteria.get("exchange", ""))
+            candidates = self._by_ticker_loose.get(key, [])
         else:
             candidates = self._entries
         matches = [entry for entry in candidates
@@ -96,19 +106,28 @@ class GlobalLookup:
                            if field == "ticker" else
                            _normalise(field, getattr(entry, field)) == value)
                           for field, value in wanted.items())]
+        if len(matches) > 1 and preferred_ticker:
+            preferred = [entry for entry in matches if _tickers_match(preferred_ticker, entry)]
+            if len(preferred) == 1:
+                return preferred[0]
         if len(matches) > 1:
             raise AmbiguousLookupError(f"{len(matches)} lookup entries match {criteria}")
         return matches[0] if matches else None
 
 
 def _tickers_match(value: str | None, entry: LookupEntry) -> bool:
-    if entry.exchange.strip().upper() == "SET":
-        # Thai instrument suffixes are significant: AMATA.R is an NVDR,
-        # whereas AMATAR is a separate REIT. Keep punctuation on SET;
-        # only ignore the leading apostrophe used to protect CSV tickers.
-        ticker = (value or "").strip().lstrip("'").upper()
-        return ticker == entry.ticker.strip().lstrip("'").upper()
-    return _normalise("ticker", value) == _normalise("ticker", entry.ticker)
+    return normalise_ticker(value, entry.exchange) == normalise_ticker(entry.ticker, entry.exchange)
+
+
+def normalise_ticker(value: str | None, exchange: str = "") -> str:
+    ticker = (value or "").strip().lstrip("'").upper()
+    exchange = (exchange or "").strip().upper()
+    if exchange == "SET":
+        return ticker  # NVDR punctuation distinguishes separate instruments.
+    ticker = _NON_ALNUM.sub("", ticker)
+    if exchange == "HKEX" and ticker.isdigit():
+        return ticker.lstrip("0") or "0"
+    return ticker
 
 
 def _normalise(field: str, value: str | None) -> str:
@@ -119,8 +138,9 @@ def _normalise(field: str, value: str | None) -> str:
 
 
 @lru_cache(maxsize=None)
-def get_lookup(path: str) -> GlobalLookup:
-    return GlobalLookup(Path(path))
+def get_lookup(path: str, exchanges_path: str | None = None) -> GlobalLookup:
+    """Load only the configured lookup; never discover sibling lookup files."""
+    return GlobalLookup(Path(path), Path(exchanges_path) if exchanges_path else None)
 
 
 @lru_cache(maxsize=None)
