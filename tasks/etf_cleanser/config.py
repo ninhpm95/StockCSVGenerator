@@ -26,8 +26,8 @@ REFRESH_TICKERS_ALL_FILES = False
 # ISIN refresh only fills missing values; existing values are retained.
 ENABLE_REFRESH_ISIN = True
 ENABLE_CALC_WEIGHTS = True
-ENABLE_SORT_BY_WEIGHT = False
-ENABLE_CHECK = False
+ENABLE_SORT_BY_WEIGHT = True
+ENABLE_CHECK = True
 
 # ---------------------------------------------------------- input reading --
 # Excel workbooks: only one sheet holds data; every other sheet is ignored.
