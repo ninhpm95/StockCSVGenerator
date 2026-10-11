@@ -1,6 +1,6 @@
 """Central configuration: paths, optional step settings, file-name rules, keyword tuples, column
 candidates, check thresholds."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 # ------------------------------------------------------------------ paths --
@@ -15,11 +15,17 @@ EXCHANGES_PATH = PROJECT_DIR / "data" / "exchanges.csv"
 
 # -------------------------------------------------------- optional steps --
 # Set a switch to False to skip that step for every input file.
-ENABLE_REFRESH_FROM_ISIN = True
-ENABLE_ISIN_BACKFILL = False
-ENABLE_EXCHANGE = False
-ENABLE_EXCHANGE_SHORT_FORM = False
-ENABLE_WEIGHTS = True
+ENABLE_MANUAL_UPDATES = True
+# Exchange refresh only fills missing values; existing values are retained.
+ENABLE_REFRESH_EXCHANGES = True
+ENABLE_UNIFY_EXCHANGE_NAMES = True
+ENABLE_REFRESH_TICKERS = True
+# True applies ticker refresh to all supported holdings files, regardless of name/type.
+# ENABLE_REFRESH_TICKERS remains the master switch for the step.
+REFRESH_TICKERS_ALL_FILES = False
+# ISIN refresh only fills missing values; existing values are retained.
+ENABLE_REFRESH_ISIN = True
+ENABLE_CALC_WEIGHTS = True
 ENABLE_SORT_BY_WEIGHT = False
 ENABLE_CHECK = False
 
@@ -38,12 +44,25 @@ HOLDINGS_MARK = "Fund Holdings as of"        # case sensitive, matched anywhere 
 # What an ETF ticker looks like in a file name, e.g. "159A", "1306", "SPY".
 _TICKER = r"[0-9A-Z]{3,5}"
 
-# Step 050 only corrects <Ticker>.csv files. Matched against the whole file stem.
+# Default step 070 scope: <Ticker>.csv files, unless REFRESH_TICKERS_ALL_FILES is True.
+# Matched against the whole file stem.
 TICKER_FILENAME_PATTERN = _TICKER
 
 # ------------------------------------------------------------------ output --
 # Same columns for every file (order = order written by step 120).
 OUTPUT_COLUMNS = ["Ticker", "Name", "ISIN", "Weight(%)", "Exchange"]
+
+# --------------------------------------------------------- manual updates --
+# All conditions must match. A string is shorthand for {"value": string};
+# caseSensitive and fullMatch both default to True. Rules run in list order.
+MANUAL_UPDATE_RULES = [
+    {
+        "code": "700",
+        # "isin": "KYG875721634",
+        "name": {"value": "TENCENT HOLDINGS", "caseSensitive": True, "fullMatch": False},
+        "TO_BE_CHANGED": {"code": "80700"},
+    },
+]
 
 # ------------------------------------------------------ header detection ---
 # First row matching any tuple (cells left-to-right, tuples in list order).
@@ -73,7 +92,7 @@ CURRENCY_COLUMN_CANDIDATES = ["Currency"]
 # same cell. Fields left out of this list are never resolved.
 COLUMN_RESOLUTION_ORDER = ["code", "name", "isin", "shares", "price", "valuation", "weight", "exchange", "currency"]
 
-# Step 050 (<Ticker>.csv files only): a row matching ANY rule keeps its Ticker.
+# Step 070 (either file scope): a row matching ANY rule keeps its Ticker.
 # Keys are Row field names, values are compared case-insensitively.
 EXCLUDE_RULES = {"exchange": "TSE", "currency": "JPY"}
 WEIGHT_TOTAL_EXCLUDE_NAMES = ["FWRDUSDJPY01", "FWRDEURJPY01"]
@@ -89,7 +108,7 @@ CODE_TO_CHECK_NAME_TO_SKIP = [""]
 # Log only - the checks never change anything.
 CHECK_DOMINANT_SHARE = 0.90        # "most" = at least this share of the rows
 HOLDINGS_MIN_COUNT = 10            # ticker and ISIN checks only run with at least this many values
-EXCHANGE_SHORT_MAX_LEN = 10        # longer than this = not a short form (TSE, NYSE, Nasdaq)
+EXCHANGE_UNKNOWN_MAX_LEN = 10      # flag longer names only when not a canonical exchanges.csv target
 WEIGHT_SUM_MAX = 101               # weights are in percent; a total above this is flagged
 WEIGHT_SUM_MIN = 60.0              # a total below this is flagged (holdings probably incomplete)
 CHECK_MAX_LISTED = 3               # rows printed per finding; the rest are counted
@@ -119,10 +138,13 @@ class Config:
     lookup_path: Path = LOOKUP_PATH
     exchanges_path: Path = EXCHANGES_PATH
     verbose: bool = False          # print a traceback when a step fails
-    enable_refresh_from_isin: bool = ENABLE_REFRESH_FROM_ISIN
-    enable_isin_backfill: bool = ENABLE_ISIN_BACKFILL
-    enable_exchange: bool = ENABLE_EXCHANGE
-    enable_exchange_short_form: bool = ENABLE_EXCHANGE_SHORT_FORM
-    enable_weights: bool = ENABLE_WEIGHTS
+    enable_manual_updates: bool = ENABLE_MANUAL_UPDATES
+    manual_update_rules: list[dict] = field(default_factory=lambda: list(MANUAL_UPDATE_RULES))
+    enable_refresh_exchanges: bool = ENABLE_REFRESH_EXCHANGES
+    enable_unify_exchange_names: bool = ENABLE_UNIFY_EXCHANGE_NAMES
+    enable_refresh_tickers: bool = ENABLE_REFRESH_TICKERS
+    refresh_tickers_all_files: bool = REFRESH_TICKERS_ALL_FILES
+    enable_refresh_isin: bool = ENABLE_REFRESH_ISIN
+    enable_calc_weights: bool = ENABLE_CALC_WEIGHTS
     enable_sort_by_weight: bool = ENABLE_SORT_BY_WEIGHT
     enable_check: bool = ENABLE_CHECK

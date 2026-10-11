@@ -6,12 +6,14 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from pathlib import Path
 
 from .config import (CHECK_DOMINANT_SHARE, CHECK_IGNORE_CODES, CHECK_MAX_LISTED,
-                    EXCHANGE_SHORT_MAX_LEN, HOLDINGS_MIN_COUNT, ISIN_SKIP_COUNTRIES,
+                    EXCHANGES_PATH, EXCHANGE_UNKNOWN_MAX_LEN, HOLDINGS_MIN_COUNT, ISIN_SKIP_COUNTRIES,
                     WEIGHT_SUM_EXPECTED, WEIGHT_SUM_EXPECTED_TOLERANCE,
                     WEIGHT_SUM_MAX, WEIGHT_SUM_MIN, WEIGHT_TOTAL_EXCLUDE_NAMES)
 from .models import Row, format_weight, parse_float
+from .lookup import get_exchange_names
 
 _SEPARATORS = re.compile(r"[^A-Za-z0-9]")
 
@@ -68,11 +70,13 @@ def check_isins(rows: list[Row]) -> list[str]:
                    f"these don't", odd)
 
 
-def check_exchanges(rows: list[Row]) -> list[str]:
-    """Exchange should be a short form (TSE, NYSE, Nasdaq), not a full name."""
+def check_exchanges(rows: list[Row], exchanges_path: Path = EXCHANGES_PATH) -> list[str]:
+    """Accept canonical names of any length; flag long unrecognized values."""
+    canonical = {name.casefold() for name in get_exchange_names(str(exchanges_path)).values()}
     odd = [f"line {_line_no(i)}: {r.exchange}" for i, r in enumerate(rows)
-           if r.exchange and len(r.exchange) > EXCHANGE_SHORT_MAX_LEN]
-    return _report(f"exchange not in short form (over {EXCHANGE_SHORT_MAX_LEN} chars)", odd)
+           if r.exchange and len(r.exchange.strip()) > EXCHANGE_UNKNOWN_MAX_LEN
+           and r.exchange.strip().casefold() not in canonical]
+    return _report(f"exchange name not unified (unrecognized, over {EXCHANGE_UNKNOWN_MAX_LEN} chars)", odd)
 
 
 def check_weights(rows: list[Row], stem: str | None = None) -> list[str]:

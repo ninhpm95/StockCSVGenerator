@@ -2,40 +2,40 @@ long_name,short_name
 New York Stock Exchange Inc.,NYSE
 Taiwan Stock Exchange,TWSE
 Chicago Mercantile Exchange,CME
-Borsa Italiana,BIT
+Borsa Italiana,Borsa Italiana
 Tokyo Stock Exchange,TSE
-Korea Exchange (Stock Market),KOSPI
+Korea Exchange (Stock Market),KRX
 Osaka Securities Exchange,OSE
 NO MARKET (E.G. UNLISTED),UNLISTED
 Index And Options Market,IOM
 SIX Swiss Exchange,SIX
 Toronto Stock Exchange,TSX
-Nasdaq Omx Nordic,OMX
+Nasdaq Omx Nordic,STO
 Chicago Board Of Trade,CBOT
 Hong Kong Exchanges And Clearing Ltd,HKEX
-Euronext Amsterdam,AEX
+Euronext Amsterdam,AMS
 London Stock Exchange,LSE
-Nyse Euronext - Euronext Paris,PAR
-Nasdaq Omx Helsinki Ltd.,OMXH
+Nyse Euronext - Euronext Paris,Euronext
+Nasdaq Omx Helsinki Ltd.,HEL
 Tel Aviv Stock Exchange,TASE
-National Stock Exchange Of India,NSE
+National Stock Exchange Of India,NSE_IN
 Asx - All Markets,ASX
 Asx - Trade24,ASX
 Bolsa De Madrid,BME
 Korea Exchange (Kosdaq),KOSDAQ
-Oslo Bors Asa,OSE
+Oslo Bors Asa,OSL
 Johannesburg Stock Exchange,JSE
 Saudi Stock Exchange,TADAWUL
-Omx Nordic Exchange Copenhagen A/S,OMXC
+Omx Nordic Exchange Copenhagen A/S,CPH
 Singapore Exchange,SGX
 Singapore Exchange Derivatives Clearing Limited,SGX
 Shanghai Stock Exchange,SSE
-Bursa Malaysia,MYX
+Bursa Malaysia,Bursa
 Eurex Deutschland,EUREX
 Bolsa Mexicana de Valores,BMV
-Budapest Stock Exchange,BSE
-Kuwait Stock Exchange,KSE
-Nyse Euronext - Euronext Brussels,BRU
+Budapest Stock Exchange,BSE_HU
+Kuwait Stock Exchange,BK
+Nyse Euronext - Euronext Brussels,Euronext
 Wiener Boerse Ag,VSE
 Irish Stock Exchange - All Market,ISE
 Warsaw Stock Exchange/Equities/Main Market,WSE
@@ -45,18 +45,51 @@ Qatar Exchange,QSE
 Dubai Financial Market,DFM
 Indonesia Stock Exchange,IDX
 Athens Exchange S.A. Cash Market,ATHEX
-Gretai Securities Market,TPEx
+Gretai Securities Market,TPEX
 Shenzhen Stock Exchange,SZSE
 Philippine Stock Exchange Inc.,PSE
 Bolsa De Valores De Colombia,BVC
-Santiago Stock Exchange,BCS
+Santiago Stock Exchange,SSE_CL
 Istanbul Stock Exchange,BIST
-Prague Stock Exchange,PSE
+Prague Stock Exchange,PSE_CZ
 New Zealand Exchange Ltd,NZX
 Deutsche Boerse Xetra,XETRA
 The Montreal Exchange / Bourse De Montreal,MX
 Egyptian Exchange,EGX
 Standard-Classica-Forts,SCF
 Ice Futures U.S.,ICE
-Euronext Lisbon,LIS
-Nyse Euronext - Euronext Lisbon,LIS
+Euronext Lisbon,Euronext
+Nyse Euronext - Euronext Lisbon,Euronext
+New York Stock Exchange,NYSE
+XNYS,NYSE
+NASDAQ,NASDAQ
+XNAS,NASDAQ
+NASDAQ Stock Market,NASDAQ
+NYSE ARCA,NYSE ARCA
+ARCA,NYSE ARCA
+ARCX,NYSE ARCA
+NYSE,NYSE
+XHKG,HKEX
+XNSE,NSE_IN
+XASX,ASX
+XTSE,TSX
+XLON,LSE
+XJPX,TSE
+XSWX,SIX
+XSES,SGX
+XPAR,Euronext
+XBRU,Euronext
+XETR,XETRA
+Xetra,XETRA
+XKRX,KRX
+XSHE,SZSE
+XSHG,SSE
+XMIL,Borsa Italiana
+XCSE,CPH
+XAMS,AMS
+XMAD,BME
+XOSL,OSL
+XSTO,STO
+XBSP,B3
+Bse Ltd,BSE_IN
+Cboe BZX,BATS

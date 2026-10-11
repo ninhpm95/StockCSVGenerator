@@ -12,6 +12,7 @@ from .checks import check_exchanges, check_isins, check_tickers, check_weights
 from .config import (OUTPUT_COLUMNS, SKIP_NAME_TEXTS, CODE_TO_CHECK_NAME_TO_SKIP,
                      TICKER_FILENAME_PATTERN, EXCLUDE_RULES)
 from .lookup import AmbiguousLookupError, get_lookup, get_exchange_names
+from .manual_updates import apply_manual_updates
 from .models import (Job, Row, Table, fill_missing_weights, format_weight,
                     parse_float, row_from_cells)
 from .parsing import (find_header_row, find_last_marker_row, load_file,
@@ -62,65 +63,13 @@ def step040_columns(job: Job, cfg) -> None:
     print(f"{job.path.name}: resolved columns [{', '.join(resolved)}], {len(rows)} data row(s)")
 
 
-def step050_refresh_from_isin(job: Job, cfg) -> None:
-    """Ticker-named CSV files only: correct tickers before ISIN backfill.
-    Require existing ISIN + Exchange to match uniquely; leave unresolved
-    rows untouched. Names, ISINs and exchanges are retained."""
-    name = job.path.name
-    if (job.path.suffix.lower() != ".csv"
-            or not re.fullmatch(TICKER_FILENAME_PATTERN, job.path.stem)):
-        print(f"{name}: not a <Ticker>.csv file -> Ticker left as-is")
-        return
-    lookup = get_lookup(str(cfg.lookup_path))
-    log = _RowLog(name)
-    refreshed = unchanged = not_found = no_ticker = excluded = 0
-    for row in job.table.rows:
-        if _is_excluded(row):
-            excluded += 1
-            continue
-        hit = _lookup_row(log, row, lookup, "not refreshed",
-                          isin=row.isin, exchange=row.exchange)
-        if hit is None:
-            not_found += 1
-        elif not hit.ticker:
-            log.say(f"row {_who(row)}: lookup entry has no ticker -> not refreshed")
-            no_ticker += 1
-        elif hit.ticker != (row.code or ""):
-            row.code = hit.ticker
-            refreshed += 1
-        else:
-            unchanged += 1
-    log.flush()
-    print(f"{name}: tickers refreshed on {refreshed} row(s), {unchanged} already correct, "
-          f"{not_found} unresolved (missing search fields / no match / ambiguous), "
-          f"{no_ticker} lookup entry without ticker, {excluded} excluded")
+def step041_manual_updates(job: Job, cfg) -> None:
+    """Apply explicit manual corrections immediately after columns are resolved."""
+    changed = apply_manual_updates(job.table.rows, cfg.manual_update_rules)
+    print(f"{job.path.name}: manual updates changed {changed} row(s)")
 
 
-def step060_isin_backfill(job: Job, cfg) -> None:
-    """Every file: fill missing ISINs from ticker + exchange after correction.
-    Existing ISINs are retained."""
-    lookup = get_lookup(str(cfg.lookup_path))
-    log = _RowLog(job.path.name)
-    filled = unmatched = no_code = 0
-    for row in job.table.rows:
-        if row.isin:
-            continue
-        if not row.code:
-            no_code += 1
-            continue
-        hit = _lookup_row(log, row, lookup, "ISIN not filled",
-                          ticker=row.code, exchange=row.exchange)
-        if hit and hit.isin:
-            row.isin = hit.isin
-            filled += 1
-        else:
-            unmatched += 1
-    log.flush()
-    print(f"{job.path.name}: ISIN backfilled for {filled} row(s), "
-          f"{unmatched} row(s) without lookup hit, {no_code} row(s) without ticker")
-
-
-def step070_exchange(job: Job, cfg) -> None:
+def step050_exchange(job: Job, cfg) -> None:
     """Every file: fill the Exchange of rows that have none from the lookup
     by Ticker + ISIN. Rows that
     already have an Exchange are left as they are."""
@@ -147,19 +96,83 @@ def step070_exchange(job: Job, cfg) -> None:
           f"(missing search fields / no match / ambiguous), {no_exchange} lookup entry without exchange")
 
 
-def step080_exchange_short_form(job: Job, cfg) -> None:
-    """Convert existing and filled Exchange values to configured short names."""
-    short_names = get_exchange_names(str(cfg.exchanges_path))
+def step060_unify_exchange_names(job: Job, cfg) -> None:
+    """Unify existing and filled Exchange values to lookup names via exchanges.csv."""
+    exchange_names = get_exchange_names(str(cfg.exchanges_path))
     converted = 0
     for row in job.table.rows:
         if not row.exchange:
             continue
-        short = short_names.get(row.exchange.strip().casefold())
-        if short and short != row.exchange:
-            row.exchange = short
+        unified = exchange_names.get(row.exchange.strip().casefold())
+        if unified and unified != row.exchange:
+            row.exchange = unified
             converted += 1
 
-    print(f"{job.path.name}: {converted} Exchange value(s) converted to short name")
+    print(f"{job.path.name}: {converted} Exchange value(s) unified to lookup name")
+
+
+def step070_refresh_from_isin(job: Job, cfg) -> None:
+    """Correct tickers before ISIN backfill; default scope is ticker-named CSVs.
+    cfg.refresh_tickers_all_files expands the scope to all supported files.
+    Require existing ISIN + Exchange to match uniquely; leave unresolved
+    rows untouched. Names, ISINs and exchanges are retained."""
+    name = job.path.name
+    if (not cfg.refresh_tickers_all_files
+            and (job.path.suffix.lower() != ".csv"
+                 or not re.fullmatch(TICKER_FILENAME_PATTERN, job.path.stem))):
+        print(f"{name}: not a <Ticker>.csv file -> Ticker left as-is")
+        return
+    lookup = get_lookup(str(cfg.lookup_path))
+    log = _RowLog(name)
+    refreshed = unchanged = not_found = no_ticker = excluded = 0
+    for row in job.table.rows:
+        if _is_excluded(row):
+            excluded += 1
+            continue
+        # ISIN + Exchange may share multiple currency counters. An incomplete
+        # lookup can return a unique but different counter (e.g. Tencent 80700
+        # RMB for an HKD holding normally traded as 700). Currency is not
+        # matched here; this limitation is accepted for this research workflow.
+        hit = _lookup_row(log, row, lookup, "not refreshed",
+                          isin=row.isin, exchange=row.exchange)
+        if hit is None:
+            not_found += 1
+        elif not hit.ticker:
+            log.say(f"row {_who(row)}: lookup entry has no ticker -> not refreshed")
+            no_ticker += 1
+        elif hit.ticker != (row.code or ""):
+            row.code = hit.ticker
+            refreshed += 1
+        else:
+            unchanged += 1
+    log.flush()
+    print(f"{name}: tickers refreshed on {refreshed} row(s), {unchanged} already correct, "
+          f"{not_found} unresolved (missing search fields / no match / ambiguous), "
+          f"{no_ticker} lookup entry without ticker, {excluded} excluded")
+
+
+def step080_isin_backfill(job: Job, cfg) -> None:
+    """Every file: fill missing ISINs from ticker + exchange after correction.
+    Existing ISINs are retained."""
+    lookup = get_lookup(str(cfg.lookup_path))
+    log = _RowLog(job.path.name)
+    filled = unmatched = no_code = 0
+    for row in job.table.rows:
+        if row.isin:
+            continue
+        if not row.code:
+            no_code += 1
+            continue
+        hit = _lookup_row(log, row, lookup, "ISIN not filled",
+                          ticker=row.code, exchange=row.exchange)
+        if hit and hit.isin:
+            row.isin = hit.isin
+            filled += 1
+        else:
+            unmatched += 1
+    log.flush()
+    print(f"{job.path.name}: ISIN backfilled for {filled} row(s), "
+          f"{unmatched} row(s) without lookup hit, {no_code} row(s) without ticker")
 
 
 def step090_drop_incomplete(job: Job, cfg) -> None:
@@ -222,7 +235,7 @@ def step130_check(job: Job, cfg) -> None:
     """Log-only sanity checks on the finished table. Findings are stored on
     the job and printed in the final summary; nothing is changed."""
     rows = job.table.rows
-    job.findings = (check_tickers(rows) + check_isins(rows) + check_exchanges(rows)
+    job.findings = (check_tickers(rows) + check_isins(rows) + check_exchanges(rows, cfg.exchanges_path)
                     + check_weights(rows, job.path.stem))
 
 

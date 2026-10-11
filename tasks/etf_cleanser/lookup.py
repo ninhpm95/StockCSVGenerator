@@ -1,6 +1,6 @@
 """Access to GLOBAL_lookup.csv (loaded once per run, cached), used by
-step 050 (Ticker refresh), step 060 (ISIN backfill) and
-step 070 (Exchange, rows without one)."""
+step 050 (Exchange, rows without one), step 070 (Ticker refresh) and
+step 080 (ISIN backfill)."""
 from __future__ import annotations
 
 import csv
@@ -10,12 +10,6 @@ from functools import lru_cache
 from pathlib import Path
 
 _NON_ALNUM = re.compile(r"[^A-Z0-9]")
-
-_EXCHANGE_ALIASES = {
-    "NYSE": "NYSE", "XNYS": "NYSE", "NEW YORK STOCK EXCHANGE": "NYSE",
-    "NEW YORK STOCK EXCHANGE INC.": "NYSE", "NYSE ARCA": "NYSE ARCA", "ARCA": "NYSE ARCA",
-    "NASDAQ": "NASDAQ", "XNAS": "NASDAQ", "NASDAQ STOCK MARKET": "NASDAQ",
-}
 
 
 @dataclass
@@ -98,24 +92,29 @@ class GlobalLookup:
         else:
             candidates = self._entries
         matches = [entry for entry in candidates
-                   if all(_normalise(field, getattr(entry, field)) == value
+                   if all((_tickers_match(criteria[field], entry)
+                           if field == "ticker" else
+                           _normalise(field, getattr(entry, field)) == value)
                           for field, value in wanted.items())]
         if len(matches) > 1:
             raise AmbiguousLookupError(f"{len(matches)} lookup entries match {criteria}")
         return matches[0] if matches else None
 
 
-def _norm_exchange(exchange: str) -> str:
-    e = exchange.strip().upper()
-    return _EXCHANGE_ALIASES.get(e, e)
+def _tickers_match(value: str | None, entry: LookupEntry) -> bool:
+    if entry.exchange.strip().upper() == "SET":
+        # Thai instrument suffixes are significant: AMATA.R is an NVDR,
+        # whereas AMATAR is a separate REIT. Keep punctuation on SET;
+        # only ignore the leading apostrophe used to protect CSV tickers.
+        ticker = (value or "").strip().lstrip("'").upper()
+        return ticker == entry.ticker.strip().lstrip("'").upper()
+    return _normalise("ticker", value) == _normalise("ticker", entry.ticker)
 
 
 def _normalise(field: str, value: str | None) -> str:
     value = (value or "").strip().upper()
     if field == "ticker":
         return _NON_ALNUM.sub("", value)
-    if field == "exchange":
-        return _norm_exchange(value)
     return value
 
 
@@ -126,7 +125,7 @@ def get_lookup(path: str) -> GlobalLookup:
 
 @lru_cache(maxsize=None)
 def get_exchange_names(path: str) -> dict[str, str]:
-    """exchanges.csv -> {long_name (stripped, case-folded): short_name}."""
+    """exchanges.csv -> {alias (stripped, case-folded): canonical lookup name}."""
     with open(path, newline="", encoding="utf-8-sig") as fh:
         reader = csv.DictReader(fh)
         names = {fn.strip().lower(): fn for fn in (reader.fieldnames or [])}
@@ -140,4 +139,5 @@ def get_exchange_names(path: str) -> dict[str, str]:
             short_name = (raw.get(names["short_name"]) or "").strip()
             if long_name and short_name:
                 mapping[long_name.casefold()] = short_name
+                mapping.setdefault(short_name.casefold(), short_name)
     return mapping

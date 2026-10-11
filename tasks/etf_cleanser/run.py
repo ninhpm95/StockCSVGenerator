@@ -18,10 +18,11 @@ by editing the run_step(...) calls in main().
     020 last_marker     keep only rows from the last 'Fund Holdings as of' down
     030 header          find header row, drop metadata above it
     040 columns         resolve candidate columns -> Table
-    050 refresh_from_isin correct Ticker via existing ISIN + Exchange -> GLOBAL_lookup (<Ticker>.csv only)
-    060 isin_backfill   fill missing ISIN from GLOBAL_lookup (ticker+exchange; all files)
-    070 exchange        fill missing Exchange from GLOBAL_lookup using Ticker + ISIN
-    080 exchange_short_form convert Exchange values to configured short names
+    041 manual_updates  apply configured manual corrections
+    050 exchange        fill missing Exchange from GLOBAL_lookup using Ticker + ISIN
+    060 unify_exchange_names unify Exchange values to lookup names
+    070 refresh_from_isin correct Ticker via existing ISIN + Exchange -> GLOBAL_lookup (file scope configurable)
+    080 isin_backfill   fill missing ISIN from GLOBAL_lookup (ticker+exchange; all files)
     090 drop_incomplete remove rows with empty Code and Name, or a Name containing a SKIP_NAME_TEXTS entry
     100 weights         compute weight when missing
     110 sort_by_weight  sort holdings by descending weight (missing/invalid last)
@@ -48,7 +49,7 @@ def check_folders(cfg: Config) -> None:
     input folder is also the output folder."""
     if not cfg.input_dir.is_dir():
         sys.exit(f"ERROR: input folder not found: {cfg.input_dir}")
-    needs_lookup = cfg.enable_isin_backfill or cfg.enable_refresh_from_isin or cfg.enable_exchange
+    needs_lookup = cfg.enable_refresh_exchanges or cfg.enable_refresh_tickers or cfg.enable_refresh_isin
     if needs_lookup and not cfg.lookup_path.is_file():
         sys.exit(f"ERROR: lookup file not found: {cfg.lookup_path}")
     if cfg.output_dir.resolve() == cfg.input_dir.resolve():
@@ -153,16 +154,17 @@ def run(argv=None) -> None:
     run_step(steps.step020_last_marker, jobs, cfg)
     run_step(steps.step030_header, jobs, cfg)
     run_step(steps.step040_columns, jobs, cfg)
-    run_step(steps.step050_refresh_from_isin, jobs, cfg, enabled=cfg.enable_refresh_from_isin)
-    run_step(steps.step060_isin_backfill, jobs, cfg, enabled=cfg.enable_isin_backfill)
-    run_step(steps.step070_exchange, jobs, cfg, enabled=cfg.enable_exchange)
-    run_step(steps.step080_exchange_short_form, jobs, cfg, enabled=cfg.enable_exchange_short_form)
+    run_step(steps.step041_manual_updates, jobs, cfg, enabled=cfg.enable_manual_updates)
+    run_step(steps.step050_exchange, jobs, cfg, enabled=cfg.enable_refresh_exchanges)
+    run_step(steps.step060_unify_exchange_names, jobs, cfg, enabled=cfg.enable_unify_exchange_names)
+    run_step(steps.step070_refresh_from_isin, jobs, cfg, enabled=cfg.enable_refresh_tickers)
+    run_step(steps.step080_isin_backfill, jobs, cfg, enabled=cfg.enable_refresh_isin)
     run_step(steps.step090_drop_incomplete, jobs, cfg)
     changed = [j for j in jobs if not j.error and j.dropped_rows]
     total = len([j for j in jobs if not j.error])
     print(f"{len(changed)}/{total} files had rows dropped, "
           f"{sum(j.dropped_rows for j in changed)} row(s) in total")
-    run_step(steps.step100_weights, jobs, cfg, enabled=cfg.enable_weights)
+    run_step(steps.step100_weights, jobs, cfg, enabled=cfg.enable_calc_weights)
     run_step(steps.step110_sort_by_weight, jobs, cfg, enabled=cfg.enable_sort_by_weight)
     run_step(steps.step120_write, jobs, cfg, header=False)
     written = sum(1 for j in jobs if not j.error)
