@@ -9,8 +9,9 @@ import csv
 import re
 
 from .checks import check_exchanges, check_isins, check_tickers, check_weights
-from .config import OUTPUT_COLUMNS, SKIP_NAME_TEXTS, TICKER_FILENAME_PATTERN, EXCLUDE_RULES, CODE_TO_CHECK_NAME_TO_SKIP
-from .lookup import get_lookup, get_exchange_names
+from .config import (OUTPUT_COLUMNS, SKIP_NAME_TEXTS, CODE_TO_CHECK_NAME_TO_SKIP,
+                     TICKER_FILENAME_PATTERN, EXCLUDE_RULES)
+from .lookup import AmbiguousLookupError, get_lookup, get_exchange_names
 from .models import (Job, Row, Table, fill_missing_weights, format_weight,
                     parse_float, row_from_cells)
 from .parsing import (find_header_row, find_last_marker_row, load_file,
@@ -61,47 +62,14 @@ def step040_columns(job: Job, cfg) -> None:
     print(f"{job.path.name}: resolved columns [{', '.join(resolved)}], {len(rows)} data row(s)")
 
 
-def step085_weights(job: Job, cfg) -> None:
-    filled = fill_missing_weights(job.table)
-    if filled:
-        total = len(job.table.rows)
-        print(f"{job.path.name}: computed weights for {filled}/{total} row(s)")
-
-
-def step060_isin_backfill(job: Job, cfg) -> None:
-    """Fill a missing ISIN from the ticker. Skipped for ticker-named files:
-    their tickers are the unreliable part (step 070 repairs them from the
-    ISIN), so an ISIN derived from one would be wrong."""
-    if re.fullmatch(TICKER_FILENAME_PATTERN, job.path.stem):
-        print(f"{job.path.name}: ticker-named file -> ISIN backfill skipped "
-              f"(its tickers aren't trusted)")
-        return
-    lookup = get_lookup(str(cfg.lookup_path))
-    filled = unmatched = no_code = 0
-    for row in job.table.rows:
-        if row.isin:
-            continue
-        if not row.code:
-            no_code += 1
-            continue
-        hit = lookup.by_ticker(row.code, row.exchange)
-        if hit and hit.isin:
-            row.isin = hit.isin
-            filled += 1
-        else:
-            unmatched += 1
-    print(f"{job.path.name}: ISIN backfilled for {filled} row(s), "
-          f"{unmatched} row(s) without lookup hit, {no_code} row(s) without ticker")
-
-
-def step070_refresh_from_isin(job: Job, cfg) -> None:
-    """Only for files named like a ticker (<Ticker>.csv): those are the ones
-    with wrong Tickers. Each row is looked up by ISIN (narrowing by
-    exchange if several entries share it) and its Ticker overwritten.
-    Names are left as they are."""
+def step050_refresh_from_isin(job: Job, cfg) -> None:
+    """Ticker-named CSV files only: correct tickers before ISIN backfill.
+    Require existing ISIN + Exchange to match uniquely; leave unresolved
+    rows untouched. Names, ISINs and exchanges are retained."""
     name = job.path.name
-    if not re.fullmatch(TICKER_FILENAME_PATTERN, job.path.stem):
-        print(f"{name}: file name isn't a ticker -> Ticker left as-is")
+    if (job.path.suffix.lower() != ".csv"
+            or not re.fullmatch(TICKER_FILENAME_PATTERN, job.path.stem)):
+        print(f"{name}: not a <Ticker>.csv file -> Ticker left as-is")
         return
     lookup = get_lookup(str(cfg.lookup_path))
     log = _RowLog(name)
@@ -110,8 +78,8 @@ def step070_refresh_from_isin(job: Job, cfg) -> None:
         if _is_excluded(row):
             excluded += 1
             continue
-        hit = _lookup_by_isin(log, row, lookup, narrow_by="exchange",
-                              skipped="not refreshed")
+        hit = _lookup_row(log, row, lookup, "not refreshed",
+                          isin=row.isin, exchange=row.exchange)
         if hit is None:
             not_found += 1
         elif not hit.ticker:
@@ -124,13 +92,37 @@ def step070_refresh_from_isin(job: Job, cfg) -> None:
             unchanged += 1
     log.flush()
     print(f"{name}: tickers refreshed on {refreshed} row(s), {unchanged} already correct, "
-          f"{not_found} not found (no ISIN / not in lookup), {no_ticker} lookup entry without ticker, "
-          f"{excluded} excluded")
+          f"{not_found} unresolved (missing search fields / no match / ambiguous), "
+          f"{no_ticker} lookup entry without ticker, {excluded} excluded")
 
 
-def step080_exchange(job: Job, cfg) -> None:
+def step060_isin_backfill(job: Job, cfg) -> None:
+    """Every file: fill missing ISINs from ticker + exchange after correction.
+    Existing ISINs are retained."""
+    lookup = get_lookup(str(cfg.lookup_path))
+    log = _RowLog(job.path.name)
+    filled = unmatched = no_code = 0
+    for row in job.table.rows:
+        if row.isin:
+            continue
+        if not row.code:
+            no_code += 1
+            continue
+        hit = _lookup_row(log, row, lookup, "ISIN not filled",
+                          ticker=row.code, exchange=row.exchange)
+        if hit and hit.isin:
+            row.isin = hit.isin
+            filled += 1
+        else:
+            unmatched += 1
+    log.flush()
+    print(f"{job.path.name}: ISIN backfilled for {filled} row(s), "
+          f"{unmatched} row(s) without lookup hit, {no_code} row(s) without ticker")
+
+
+def step070_exchange(job: Job, cfg) -> None:
     """Every file: fill the Exchange of rows that have none from the lookup
-    by ISIN (narrowing by ticker if several entries share it). Rows that
+    by Ticker + ISIN. Rows that
     already have an Exchange are left as they are."""
     name = job.path.name
     lookup = get_lookup(str(cfg.lookup_path))
@@ -139,8 +131,8 @@ def step080_exchange(job: Job, cfg) -> None:
     for row in job.table.rows:
         if row.exchange:
             continue
-        hit = _lookup_by_isin(log, row, lookup, narrow_by="ticker",
-                              skipped="Exchange not filled")
+        hit = _lookup_row(log, row, lookup, "Exchange not filled",
+                          ticker=row.code, isin=row.isin)
         if hit is None:
             not_found += 1
         elif not hit.exchange:
@@ -151,6 +143,12 @@ def step080_exchange(job: Job, cfg) -> None:
             filled += 1
     log.flush()
 
+    print(f"{name}: Exchange filled on {filled} row(s), {not_found} not found "
+          f"(missing search fields / no match / ambiguous), {no_exchange} lookup entry without exchange")
+
+
+def step080_exchange_short_form(job: Job, cfg) -> None:
+    """Convert existing and filled Exchange values to configured short names."""
     short_names = get_exchange_names(str(cfg.exchanges_path))
     converted = 0
     for row in job.table.rows:
@@ -161,12 +159,10 @@ def step080_exchange(job: Job, cfg) -> None:
             row.exchange = short
             converted += 1
 
-    print(f"{name}: Exchange filled on {filled} row(s), {not_found} not found "
-          f"(no ISIN / not in lookup), {no_exchange} lookup entry without exchange, "
-          f"{converted} converted to short name")
+    print(f"{job.path.name}: {converted} Exchange value(s) converted to short name")
 
 
-def step082_drop_incomplete(job: Job, cfg) -> None:
+def step090_drop_incomplete(job: Job, cfg) -> None:
     """Remove rows that aren't real holdings:
     both Code and Name empty,
     or a Name containing any SKIP_NAME_TEXTS entry when the Code is empty or one of CODE_TO_CHECK_NAME_TO_SKIP (case sensitive substring)."""
@@ -190,7 +186,24 @@ def step082_drop_incomplete(job: Job, cfg) -> None:
               f"({empty} empty, {skipped} by name)")
 
 
-def step090_write(job: Job, cfg) -> None:
+def step100_weights(job: Job, cfg) -> None:
+    filled = fill_missing_weights(job.table)
+    if filled:
+        total = len(job.table.rows)
+        print(f"{job.path.name}: computed weights for {filled}/{total} row(s)")
+
+
+def step110_sort_by_weight(job: Job, cfg) -> None:
+    """Sort descending by numeric weight; missing/invalid weights go last.
+    Equal weights retain their source order."""
+    def sort_key(row: Row) -> float:
+        weight = parse_float(row.weight)
+        return weight if weight is not None else float("-inf")
+
+    job.table.rows.sort(key=sort_key, reverse=True)
+
+
+def step120_write(job: Job, cfg) -> None:
     """Write the five-column CSV. Tickers starting with 0 are written with a
     leading single quote (see _ticker_cell)."""
     out_path = cfg.output_dir / f"{job.path.stem}.csv"
@@ -205,7 +218,7 @@ def step090_write(job: Job, cfg) -> None:
                              _weight_cell(row.weight), row.exchange or ""])
 
 
-def step100_check(job: Job, cfg) -> None:
+def step130_check(job: Job, cfg) -> None:
     """Log-only sanity checks on the finished table. Findings are stored on
     the job and printed in the final summary; nothing is changed."""
     rows = job.table.rows
@@ -214,6 +227,12 @@ def step100_check(job: Job, cfg) -> None:
 
 
 # ---------------------------------------------------------------- helpers --
+def _is_excluded(row: Row) -> bool:
+    """True when any configured exclusion matches the row."""
+    return any((getattr(row, field) or "").strip().upper() == value.strip().upper()
+               for field, value in EXCLUDE_RULES.items())
+
+
 def _who(row: Row) -> str:
     return row.isin or row.code or row.name or "?"
 
@@ -233,7 +252,7 @@ def _weight_cell(raw) -> str:
 class _RowLog:
     """Per-row messages for one step on one file: the first PER_ROW_LIMIT are
     printed, the rest only counted (the step's summary line has the totals).
-    Ambiguity messages in _lookup_by_isin bypass this and always print."""
+    Ambiguity messages in _lookup_row bypass this and always print."""
     PER_ROW_LIMIT = 10
 
     def __init__(self, name: str):
@@ -253,33 +272,17 @@ class _RowLog:
             print(f"{self.name}: ... and {self.hidden} more per-row message(s) not shown")
 
 
-def _lookup_by_isin(log: _RowLog, row: Row, lookup, narrow_by: str, skipped: str):
-    """Row's ISIN -> ONE lookup entry, or None (why is logged). If several
-    entries share the ISIN, narrow them by the row's exchange or ticker
-    (narrow_by); if still several, use the first. Ambiguity is always printed;
-    'no ISIN' / 'not in lookup' go through the capped log."""
-    if not row.isin:
-        log.say(f"row {_who(row)}: no ISIN -> {skipped}")
+def _lookup_row(log: _RowLog, row: Row, lookup, skipped: str, **criteria):
+    """Shared row logging for missing, unmatched, or ambiguous searches."""
+    missing = [field for field, value in criteria.items() if not (value or "").strip()]
+    if missing:
+        log.say(f"row {_who(row)}: missing {', '.join(missing)} -> {skipped}")
         return None
-    hits = lookup.by_isin(row.isin)
-    if not hits:
-        log.say(f"row {_who(row)}: ISIN not found in lookup -> {skipped}")
+    try:
+        hit = lookup.find(**criteria)
+    except AmbiguousLookupError as exc:
+        print(f"{log.name}: row {_who(row)}: {exc} -> {skipped}")
         return None
-    if len(hits) > 1:
-        key = row.exchange if narrow_by == "exchange" else row.code
-        print(f"{log.name}: row {_who(row)}: {len(hits)} lookup entries share this ISIN "
-              f"-> narrowing by {narrow_by} ({key or 'none on row'})")
-        narrow = (lookup.narrow_by_exchange if narrow_by == "exchange"
-                  else lookup.narrow_by_ticker)
-        narrowed = narrow(hits, key)
-        if len(narrowed) != 1:
-            print(f"{log.name}: row {_who(row)}: still {len(narrowed) or len(hits)} "
-                  f"candidate(s) after {narrow_by} -> using the first")
-        hits = narrowed or hits
-    return hits[0]
-
-
-def _is_excluded(row: Row) -> bool:
-    """True if the row matches any EXCLUDE_RULES entry (case-insensitive)."""
-    return any((getattr(row, field) or "").strip().upper() == value.strip().upper()
-               for field, value in EXCLUDE_RULES.items())
+    if hit is None:
+        log.say(f"row {_who(row)}: no lookup match for {criteria} -> {skipped}")
+    return hit

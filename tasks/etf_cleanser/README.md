@@ -15,12 +15,12 @@ empty input folder the run stops early and the output folder is left alone
 ```
 etf_cleanser/
 ├── main.py         entry point: plumbing (folder checks, discovery, run_step, summary) + the flow in main()
-├── steps.py        the 10 step functions - thin glue over the modules below
+├── steps.py        the 12 step functions - thin glue over the modules below
 ├── config.py       paths, file-name rules, keyword tuples, column candidates, check thresholds
 ├── models.py       Grid / ColumnMap / Row / Table / Job dataclasses + number parsing and weight arithmetic
 ├── parsing.py      CSV / XLSX reading, last-marker lookup, header-row detection, column resolution
 ├── lookup.py       GLOBAL_lookup.csv access
-├── checks.py       log-only sanity checks on the finished table (step 100)
+├── checks.py       log-only sanity checks on the finished table (step 130)
 ├── requirements.txt
 └── README.md
 ```
@@ -45,16 +45,18 @@ Exit code is 1 if any file failed, 0 otherwise.
 020 last_marker     keep only rows from the last 'Fund Holdings as of' down
 030 header          find header row, drop metadata above it
 040 columns         resolve candidate columns -> Table
-060 isin_backfill   fill missing ISIN from GLOBAL_lookup (ticker+exchange); not for <Ticker>.csv files
-070 refresh_from_isin <Ticker>.csv files only: fix Ticker via ISIN -> GLOBAL_lookup
-080 exchange        fill Exchange from GLOBAL_lookup by ISIN where the row has none
-082 drop_incomplete remove rows with empty Code and Name, or a Name containing a SKIP_NAME_TEXTS entry
-085 weights         compute weight when missing
-090 write           Ticker/Name/ISIN/Weight(%)/Exchange csv into the output folder (tickers starting with 0 get a leading ')
-100 check           log-only sanity checks on tickers / ISINs / exchanges / weights (nothing changed)
+050 refresh_from_isin correct Ticker via existing ISIN + Exchange -> GLOBAL_lookup (<Ticker>.csv only)
+060 isin_backfill   fill missing ISIN from GLOBAL_lookup (ticker+exchange; all files)
+070 exchange        fill missing Exchange from GLOBAL_lookup using Ticker + ISIN
+080 exchange_short_form convert Exchange values to configured short names
+090 drop_incomplete remove rows with empty Code and Name, or a Name containing a SKIP_NAME_TEXTS entry
+100 weights         compute weight when missing
+110 sort_by_weight  sort holdings by descending weight (missing/invalid last)
+120 write           Ticker/Name/ISIN/Weight(%)/Exchange csv into the output folder (tickers starting with 0 get a leading ')
+130 check           log-only sanity checks on tickers / ISINs / exchanges / weights (nothing changed)
 ```
 
-Dependency chain: `010 -> 020 -> ... -> 100`, each step feeding the next
+Dependency chain: `010 -> 020 -> ... -> 130`, each step feeding the next
 (050 onward work on `job.table`, which step 040 creates). Steps are numbered
 010/020/... so more can be slotted in later. `main.py` is literally the flow:
 
@@ -71,6 +73,17 @@ but the other files carry on.
 
 ## Knobs (config.py)
 
+- `ENABLE_REFRESH_FROM_ISIN`, `ENABLE_ISIN_BACKFILL`, `ENABLE_EXCHANGE`,
+  `ENABLE_EXCHANGE_SHORT_FORM`, `ENABLE_WEIGHTS`, `ENABLE_SORT_BY_WEIGHT`, `ENABLE_CHECK`: set any to `False`
+  to skip steps 050, 060, 070, 080, 100, 110, or 130 respectively. Step 070 defaults
+  to `False`; the others default to `True`. Sorting puts the highest numeric weight first, keeps equal weights
+  in their source order, and puts missing/invalid weights last. Disabling it
+  preserves the row order. Sorting also works with weight calculation disabled.
+  Disabled steps
+  are reported as skipped; the remaining steps keep their order. When checks
+  are disabled, the summary reports files processed rather than checks passed.
+  The lookup file is only required if at least one of the three lookup steps
+  (050, 060, 070) is enabled.
 - `HOLDINGS_SHEET`: list of candidate Excel sheet names, tried left to right
   (default `["保有明細"]`). The first one found is read and the rest are
   ignored; if none is found the file fails. Add another provider's sheet by
@@ -85,10 +98,8 @@ but the other files carry on.
   claim header columns; a column can belong to only one field, so earlier
   fields win. Fields not listed are never resolved. (The unused `region`
   field was removed.)
-- `TICKER_FILENAME_PATTERN`: which file names count as `<Ticker>.csv` for
-  step 070 (regex against the file stem, default `[0-9A-Z]{3,5}`).
 - `CHECK_DOMINANT_SHARE`, `HOLDINGS_MIN_COUNT`, `WEIGHT_SUM_MAX`, `WEIGHT_SUM_MIN`, `EXCHANGE_SHORT_MAX_LEN`,
-  `CHECK_MAX_LISTED`: thresholds for the step 100 checks.
+  `CHECK_MAX_LISTED`: thresholds for the step 130 checks.
 
 ## Behaviour worth knowing
 
@@ -106,37 +117,46 @@ but the other files carry on.
   whatever is below the header flows straight to the output. Worth checking a
   few output files for stray Total/footnote rows. One guard limit the damage:
   numbers that are placeholders (`nan`, `inf`, `-`) parse as "no value".
-- **Fail-fast inputs.** The lookup file must exist (checked before anything
-  runs) and have `ticker` and `isin` columns (header spaces/case ignored).
+- **Fail-fast inputs.** When any lookup step is enabled, the lookup file must
+  exist (checked before anything runs) and have `ticker` and `isin` columns
+  (header spaces/case ignored).
   A header that resolves neither a ticker nor an ISIN column fails the file,
   as does an empty file. Two inputs with the same stem (`SPY.csv` and
   `SPY.xlsx`) would write the same output: the second one fails instead of
   overwriting the first.
 - **CSV delimiter** is the one (`,` `;` tab) with the most occurrences over
   the first 10 non-empty lines, so a title line above the header can't fool it.
-- **ISIN backfill (060)** fills a missing ISIN from the ticker (plus the
-  row's exchange when the ticker is ambiguous). It is skipped for
-  `<Ticker>.csv` files, whose tickers are the untrusted part. Ticker matching ignores
-  separators ("BRK B" ~ "BRK.B"); an ambiguous ticker with no matching
-  exchange is left untouched rather than guessed.
-- **Step 070 only touches files named like a ticker** (`159A.csv`,
-  `1306.xlsx`, ...); every other file keeps its Ticker. Each row is
-  looked up by ISIN. If several lookup entries share it, the row's Exchange
-  narrows them; if that still leaves several (or the row has no exchange),
-  the first is used and it's printed. ISINs not found, or rows without an
-  ISIN, are logged and left untouched. On a hit, the Ticker is
-  overwritten; the Name is never changed by this step. The summary line
-  splits refreshed / already correct / not found.
+- `TICKER_FILENAME_PATTERN`: the filename stem pattern for step 050
+  (default `[0-9A-Z]{3,5}`). Only CSV files matching it are corrected.
+- **Ticker correction (050)** runs only on `<Ticker>.csv` files, before ISIN backfill.
+  Other holdings files retain their source tickers.
+  Each row requires a match on both existing ISIN and Exchange; without a unique match, the row is
+  logged and its ticker is retained. Rows matching any `EXCLUDE_RULES`
+  entry retain their ticker (default: Exchange TSE or Currency JPY,
+  case-insensitive). On a unique hit the Ticker is corrected; Name, ISIN,
+  and Exchange are retained. Rows without either search field or a lookup hit cannot be
+  corrected and are logged. The summary splits refreshed / already correct /
+  unresolved / lookup entry without ticker.
+- **ISIN backfill (060)** runs on every file, after ticker correction, and
+  fills only missing ISINs using both Ticker and Exchange. Both fields must
+  be present and identify exactly one lookup entry; missing
+  fields, exchange mismatches, and multiple matches leave the row untouched.
+  Existing ISINs are retained. Ticker matching ignores separators
+  ("BRK B" ~ "BRK.B"). A row without an original ISIN uses its source ticker for
+  backfill because step 050 could not independently correct that ticker.
 - **Per-row log lines are capped** at 10 per step per file ("no ISIN",
   "not in lookup", ...); the rest are only counted in the summary. Ambiguity
-  messages ("N entries share this ISIN", "using the first") always print.
+  messages ("N lookup entries match") always print.
 - **Every output has an `Exchange` column.** Rows keep the Exchange from
-  their own source column when it has a value. Step 080 (all files) fills
-  it from the lookup, by ISIN, only for rows where it is empty (several
-  entries -> narrowed by the row's ticker; still several -> first; not
-  found -> printed and left blank). Step 090 writes the same five columns
+  their own source column when it has a value. Step 070 (all files) fills
+  it from the lookup using both Ticker and ISIN, only for rows where it is empty.
+  Missing search fields, no match, or multiple matches are logged and leave it blank.
+  Step 070 is disabled by default. Step 080 independently converts existing
+  and filled exchange names to configured short forms using `exchanges.csv`;
+  unknown names and empty values are retained. It is enabled by default and
+  can run while step 070 is disabled. Step 120 writes the same five columns
   for every file.
-- **Step 100 only reports; it never fixes or fails a file.** "Most" means at
+- **Step 130 only reports; it never fixes or fails a file.** "Most" means at
   least 90% of the rows but not all of them, so a uniform file is silent.
   Checks: (1) ticker length - with at least 10 tickers, if one length
   covers most of them (e.g. 4 chars), the tickers of any other length are
@@ -151,8 +171,10 @@ but the other files carry on.
   All non-alphanumeric characters (`.`, `-`, spaces...) are ignored when measuring tickers.
   Rows are reported as output-file line numbers (header = line 1); at most 3
   are listed per finding, then "... and N more".
-- **GlobalLookup** keeps its internal dicts as `_by_isin` / `_by_ticker` /
-  `_by_ticker_loose` so they don't shadow the `by_isin()` / `by_ticker()`
-  methods. It needs the columns ticker and isin (name, exchange optional);
-  identical duplicate rows are collapsed in all three indexes, so a repeated
-  row doesn't make a ticker look ambiguous.
+- **`GlobalLookup.find(**criteria)`** searches by any combination of one or more
+  columns (`ticker`, `isin`, `exchange`, `name`, `asset_type`). All supplied
+  values must be present and match. It returns one entry or `None`, and raises
+  `AmbiguousLookupError` for multiple matches; steps 050/060/070 catch that
+  error, log it, and skip the update. Ticker separators and exchange aliases
+  are normalised. ISIN and ticker indexes restrict the search candidates.
+  The lookup needs ticker and isin columns; identical duplicate records count once.

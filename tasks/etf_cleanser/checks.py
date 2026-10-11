@@ -1,4 +1,4 @@
-"""Sanity checks on a finished table (used by step 100). They never change
+"""Sanity checks on a finished table (used by step 130). They never change
 anything: each check returns a list of human-readable lines describing rows
 that look unlike the rest, for manual review (check_weights also emits one
 file-level line for the weight total). An empty list = nothing odd."""
@@ -113,8 +113,8 @@ def _label(row: Row) -> str:
 # ---------------------------------------------------------------- helpers --
 def _line_no(i: int) -> int:
     """Row index -> line number in the output CSV (header = line 1). Valid
-    because step 100 runs on the final table: no step adds or drops rows
-    between step 082 and step 090's write."""
+    because step 130 runs on the final table in output order after sorting
+    and step 120's write."""
     return i + 2
 
 

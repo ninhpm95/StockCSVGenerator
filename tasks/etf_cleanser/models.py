@@ -1,6 +1,6 @@
 """Data models shared across the pipeline (raw grid, column map, holding rows,
-table, per-file Job) plus number parsing and weight arithmetic (step 050 fills
-missing weights; step 090 parses/formats them)."""
+table, per-file Job) plus number parsing and weight arithmetic (step 100 fills
+missing weights; step 120 parses/formats them)."""
 from __future__ import annotations
 
 import math
@@ -74,8 +74,8 @@ class Job:
     grid: Grid | None = None       # raw cells: set by step 010, trimmed by 020 and 030
     table: Table | None = None     # parsed rows: set by step 040, used by 050 onward
     error: str | None = None
-    findings: list[str] = field(default_factory=list)   # step 100 output, shown in the summary
-    dropped_rows: int = 0                               # step 082: rows removed (empty or skippable)
+    findings: list[str] = field(default_factory=list)   # step 130 output, shown in the summary
+    dropped_rows: int = 0                               # step 090: rows removed (empty or skippable)
 
 
 # ----------------------------------------------------------------- values --

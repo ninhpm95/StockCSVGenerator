@@ -1,4 +1,4 @@
-"""Central configuration: paths, file-name rules, keyword tuples, column
+"""Central configuration: paths, optional step settings, file-name rules, keyword tuples, column
 candidates, check thresholds."""
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +12,16 @@ OUTPUT_DIR = PROJECT_DIR / "data" / "cleansed_ETFs"
 LOOKUP_PATH = PROJECT_DIR / "data" / "stocks" / "GLOBAL_lookup.csv"
 
 EXCHANGES_PATH = PROJECT_DIR / "data" / "exchanges.csv"
+
+# -------------------------------------------------------- optional steps --
+# Set a switch to False to skip that step for every input file.
+ENABLE_REFRESH_FROM_ISIN = True
+ENABLE_ISIN_BACKFILL = False
+ENABLE_EXCHANGE = False
+ENABLE_EXCHANGE_SHORT_FORM = False
+ENABLE_WEIGHTS = True
+ENABLE_SORT_BY_WEIGHT = False
+ENABLE_CHECK = False
 
 # ---------------------------------------------------------- input reading --
 # Excel workbooks: only one sheet holds data; every other sheet is ignored.
@@ -28,12 +38,11 @@ HOLDINGS_MARK = "Fund Holdings as of"        # case sensitive, matched anywhere 
 # What an ETF ticker looks like in a file name, e.g. "159A", "1306", "SPY".
 _TICKER = r"[0-9A-Z]{3,5}"
 
-# Step 070 (Ticker refresh) only touches files named "<Ticker>.csv"
-# (or .xlsx ...). Matched against the whole file stem.
+# Step 050 only corrects <Ticker>.csv files. Matched against the whole file stem.
 TICKER_FILENAME_PATTERN = _TICKER
 
 # ------------------------------------------------------------------ output --
-# Same columns for every file (order = order written by step 090).
+# Same columns for every file (order = order written by step 120).
 OUTPUT_COLUMNS = ["Ticker", "Name", "ISIN", "Weight(%)", "Exchange"]
 
 # ------------------------------------------------------ header detection ---
@@ -64,19 +73,19 @@ CURRENCY_COLUMN_CANDIDATES = ["Currency"]
 # same cell. Fields left out of this list are never resolved.
 COLUMN_RESOLUTION_ORDER = ["code", "name", "isin", "shares", "price", "valuation", "weight", "exchange", "currency"]
 
-# Step 070 (<Ticker>.csv files only): a row matching ANY rule keeps its Ticker.
+# Step 050 (<Ticker>.csv files only): a row matching ANY rule keeps its Ticker.
 # Keys are Row field names, values are compared case-insensitively.
 EXCLUDE_RULES = {"exchange": "TSE", "currency": "JPY"}
 WEIGHT_TOTAL_EXCLUDE_NAMES = ["FWRDUSDJPY01", "FWRDEURJPY01"]
 
-# Step 082 removes a row if its Name contains any of these texts (case
+# Step 090 removes a row if its Name contains any of these texts (case
 # sensitive substring), treating it as if both Code and Name were empty.
 # Use it for Total / footnote lines. Append more as you find them,
 # e.g. ["Total Net Assets", "合計"].
 SKIP_NAME_TEXTS = ["Total", "合計", "計"]
 CODE_TO_CHECK_NAME_TO_SKIP = [""]
 
-# ------------------------------------------------- output checks (step 100) --
+# ------------------------------------------------- output checks (step 130) --
 # Log only - the checks never change anything.
 CHECK_DOMINANT_SHARE = 0.90        # "most" = at least this share of the rows
 HOLDINGS_MIN_COUNT = 10            # ticker and ISIN checks only run with at least this many values
@@ -110,3 +119,10 @@ class Config:
     lookup_path: Path = LOOKUP_PATH
     exchanges_path: Path = EXCHANGES_PATH
     verbose: bool = False          # print a traceback when a step fails
+    enable_refresh_from_isin: bool = ENABLE_REFRESH_FROM_ISIN
+    enable_isin_backfill: bool = ENABLE_ISIN_BACKFILL
+    enable_exchange: bool = ENABLE_EXCHANGE
+    enable_exchange_short_form: bool = ENABLE_EXCHANGE_SHORT_FORM
+    enable_weights: bool = ENABLE_WEIGHTS
+    enable_sort_by_weight: bool = ENABLE_SORT_BY_WEIGHT
+    enable_check: bool = ENABLE_CHECK

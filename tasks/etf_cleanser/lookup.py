@@ -1,6 +1,6 @@
 """Access to GLOBAL_lookup.csv (loaded once per run, cached), used by
-step 060 (ISIN backfill), step 070 (Ticker refresh, ticker-named files only) and
-step 080 (Exchange, rows without one)."""
+step 050 (Ticker refresh), step 060 (ISIN backfill) and
+step 070 (Exchange, rows without one)."""
 from __future__ import annotations
 
 import csv
@@ -27,18 +27,20 @@ class LookupEntry:
     asset_type: str
 
 
+class AmbiguousLookupError(ValueError):
+    """More than one lookup entry matches all supplied search fields."""
+
+
 class GlobalLookup:
     def __init__(self, path: Path):
-        # Stored as _by_isin / _by_ticker / _by_ticker_loose (not
-        # by_isin / by_ticker) so the dicts don't shadow the by_isin() /
-        # by_ticker() lookup methods below - an instance attribute would
-        # otherwise win over a same-named method.
+        # Indexes restrict candidates for the shared multi-column search.
         self._by_isin: dict[str, list[LookupEntry]] = {}
-        self._by_ticker: dict[str, list[LookupEntry]] = {}
         self._by_ticker_loose: dict[str, list[LookupEntry]] = {}
+        self._entries: list[LookupEntry] = []
         self._load(path)
 
     def _load(self, path: Path) -> None:
+        seen = set()
         with open(path, newline="", encoding="utf-8-sig") as fh:
             reader = csv.DictReader(fh)
             names = {fn.strip().lower(): fn for fn in (reader.fieldnames or [])}
@@ -55,12 +57,16 @@ class GlobalLookup:
                 entry = LookupEntry(col(raw, "ticker"), col(raw, "name"),
                                     col(raw, "exchange"), col(raw, "isin"),
                                     col(raw, "asset_type"))
-                # identical duplicate rows don't count, in any of the three indexes
+                identity = tuple(vars(entry).values())
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                self._entries.append(entry)
+                # Identical duplicate rows have already been removed.
                 if entry.isin:
                     self._add(self._by_isin, entry.isin.upper(), entry)
                 if entry.ticker:
                     key = entry.ticker.upper()
-                    self._add(self._by_ticker, key, entry)
                     loose = _NON_ALNUM.sub("", key)
                     if loose:
                         self._add(self._by_ticker_loose, loose, entry)
@@ -71,48 +77,46 @@ class GlobalLookup:
         if entry not in bucket:
             bucket.append(entry)
 
-    def by_isin(self, isin: str | None) -> list[LookupEntry]:
-        """All lookup entries with this ISIN (empty list if none)."""
-        return list(self._by_isin.get((isin or "").strip().upper(), []))
-
-    @staticmethod
-    def narrow_by_ticker(entries: list[LookupEntry], ticker: str | None) -> list[LookupEntry]:
-        """Entries whose ticker matches (separators ignored: 'BRK B' ~ 'BRK.B'); [] if none/no ticker."""
-        want = _NON_ALNUM.sub("", (ticker or "").upper())
-        if not want:
-            return []
-        return [e for e in entries if _NON_ALNUM.sub("", e.ticker.upper()) == want]
-
-    @staticmethod
-    def narrow_by_exchange(entries: list[LookupEntry], exchange: str | None) -> list[LookupEntry]:
-        """Entries whose exchange matches (aliases normalised); [] if no exchange given or none match."""
-        if not exchange:
-            return []
-        want = _norm_exchange(exchange)
-        return [e for e in entries if _norm_exchange(e.exchange) == want]
-
-    def by_ticker(self, ticker: str | None, exchange: str | None = None) -> LookupEntry | None:
-        """Exact ticker match ('BRK B' also finds 'BRK.B'). Ambiguous tickers are
-        only resolved when the exchange matches; otherwise None (refuse to guess)."""
-        key = (ticker or "").strip().upper()
-        if not key:
+    def find(self, **criteria: str | None) -> LookupEntry | None:
+        """Match ALL supplied fields (one or more LookupEntry column names).
+        Missing search values or no match return None. Multiple matches raise
+        AmbiguousLookupError. Identical source records count as one entry.
+        ISIN/ticker indexes restrict candidates before the remaining filters.
+        """
+        if not criteria:
+            raise ValueError("at least one lookup field is required")
+        unknown = criteria.keys() - LookupEntry.__dataclass_fields__.keys()
+        if unknown:
+            raise ValueError(f"unknown lookup field(s): {', '.join(sorted(unknown))}")
+        wanted = {field: _normalise(field, value) for field, value in criteria.items()}
+        if not all(wanted.values()):
             return None
-        hits = self._by_ticker.get(key) or self._by_ticker_loose.get(_NON_ALNUM.sub("", key)) or []
-        if not hits:
-            return None
-        if len(hits) == 1:
-            return hits[0]
-        if exchange:
-            want = _norm_exchange(exchange)
-            for hit in hits:
-                if _norm_exchange(hit.exchange) == want:
-                    return hit
-        return None
+        if "isin" in wanted:
+            candidates = self._by_isin.get(wanted["isin"], [])
+        elif "ticker" in wanted:
+            candidates = self._by_ticker_loose.get(wanted["ticker"], [])
+        else:
+            candidates = self._entries
+        matches = [entry for entry in candidates
+                   if all(_normalise(field, getattr(entry, field)) == value
+                          for field, value in wanted.items())]
+        if len(matches) > 1:
+            raise AmbiguousLookupError(f"{len(matches)} lookup entries match {criteria}")
+        return matches[0] if matches else None
 
 
 def _norm_exchange(exchange: str) -> str:
     e = exchange.strip().upper()
     return _EXCHANGE_ALIASES.get(e, e)
+
+
+def _normalise(field: str, value: str | None) -> str:
+    value = (value or "").strip().upper()
+    if field == "ticker":
+        return _NON_ALNUM.sub("", value)
+    if field == "exchange":
+        return _norm_exchange(value)
+    return value
 
 
 @lru_cache(maxsize=None)
