@@ -1,4 +1,4 @@
-Ticker,Name,Short name,Region,Company
+Ticker,Name,ShortName,Region,Company
 1305,iFreeETF TOPIX (Yearly Dividend Type),topix,JP,ifree
 1306,NEXT FUNDS TOPIX Exchange Traded Fund,topix,JP,nextFunds
 1308,Amova Exchange Traded Index Fund TOPIX,topix,JP,amova
@@ -18,11 +18,13 @@ Ticker,Name,Short name,Region,Company
 1346,MAXIS NIKKEI225 ETF,nikkei,JP,maxis
 1348,MAXIS TOPIX ETF,topix,JP,maxis
 1349,ABF Pan Asia Bond Index,asiaGovBond,ASIA,spdr
+1357,NEXT FUNDS Nikkei 225 Double Inverse Index Exchange Traded Fund,nikkeiDoubleInverse,JP,nextFunds
 1364,iShares JPX-Nikkei 400 ETF,nikkei400,JP,ishares
 1369,One ETF Nikkei225,nikkei,JP,one
 1397,SMDAM NIKKEI225 ETF,nikkei,JP,smdam
 1398,SMDAM REIT Index ETF,jreit,JP,smdam
 1399,Listed Index Fund MSCI Japan Equity High Dividend Low Volatility,japanHighdiv,JP,amova
+1472,NEXT FUNDS JPX-Nikkei 400 Double Inverse Index Exchange Traded Fund,nikkei400DoubleInverse,JP,nextFunds
 1473,One ETF TOPIX,topix,JP,one
 1474,One ETF JPX-Nikkei 400,nikkei400,JP,one
 1475,iShares Core TOPIX ETF,topix,JP,ishares
@@ -64,6 +66,8 @@ Ticker,Name,Short name,Region,Company
 1560,NEXT FUNDS FTSE Bursa Malaysia KLCI Exchange Traded Fund,klci,MY,nextFunds
 1563,TSE Growth Core ETF,growth,JP,simplex
 1566,Listed Index Fund Emerging Bond,emBond,EM,amova
+1570,NEXT FUNDS Nikkei 225 Leveraged Index Exchange Traded Fund,nikkeiLeveraged,JP,nextFunds
+1571,NEXT FUNDS Nikkei 225 Inverse Index Exchange Traded Fund,nikkeiInverse,JP,nextFunds
 1577,NEXT FUNDS Nomura Japan Equity High Dividend 70 ETF,highdiv,JP,nextFunds
 1578,Listed Index Fund Nikkei 225 (Mini),nikkei,JP,amova
 1585,iFreeETF TOPIX Ex-Financials,topixExFinancials,JP,daiwa
@@ -167,6 +171,7 @@ Ticker,Name,Short name,Region,Company
 2247,iFreeETF S&P500 (NON HEDGED),sp500,US,ifree
 2248,iFreeETF S&P500 (JPY HEDGED),sp500Hedge,US,ifree
 2250,iShares MSCI Japan Climate Action ETF,climate,JP,ishares
+2251,NEXT FUNDS JPX JGB Futures Double Inverse Index Exchange Traded Fund,jgbFuturesDoubleInverse,JP,nextFunds
 2252,Global X Morningstar US Small Mid Moat ETF,usSmallMid,US,globalX
 2253,Global X SuperDividend U.S. ETF,usDividend,US,globalX
 2254,Global X China Electric Vehicle and Battery ETF,chinaEv,CN,globalX
@@ -407,3 +412,4 @@ Ticker,Name,Short name,Region,Company
 610A,Global X Space Tech Top 10 ETF (ex-Japan),space,GLOBAL,globalX
 611A,One ETF Japanese Government Bond 27-30 years,jgb2730,JP,one
 613A,iFreeETF German Government 0-3 Month Bill,germanyBond03m,DE,ifree
+632A,Global X Nikkei225 ETF,nikkei,JP,globalX

@@ -5,7 +5,7 @@ from logging_config import configure_logging
 # run (see logging_config.py) capturing INFO+ records from whichever task
 # actually runs. Off by default -- each task's own terminal summary is
 # normally enough; flip this on only while debugging. The cleanser uses
-# ENABLE_CHECK in tasks/etf_cleanser/config.py instead.
+# ENABLE_LOG_FILE in tasks/etf_cleanser/config.py instead.
 ENABLE_LOG_FILE = False
 
 
@@ -58,8 +58,8 @@ def main():
     enable_log_file = ENABLE_LOG_FILE
     log_dir = None
     if MODE == CLEANSE_ETFS:
-        from tasks.etf_cleanser.config import ENABLE_CHECK, LOGS_DIR
-        enable_log_file = ENABLE_CHECK
+        from tasks.etf_cleanser.config import ENABLE_LOG_FILE as CLEANSER_LOG_FILE, LOGS_DIR
+        enable_log_file = CLEANSER_LOG_FILE
         log_dir = LOGS_DIR
     log_path = configure_logging(enable_log_file, log_dir=log_dir, detailed=MODE == CLEANSE_ETFS)
     try:

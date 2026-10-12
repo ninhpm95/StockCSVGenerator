@@ -6,7 +6,9 @@ input, with `Ticker, Name, ISIN, Weight(%), Exchange` columns.
 Inputs are read-only. The entire run is built in a private sibling staging
 directory. Outputs are published only if every input processes successfully;
 validation findings are advisory and do not prevent publication. Failed or
-empty runs retain the previous output. Publication failures restore the old
+empty runs retain the previous output. A header-only input or a file with no
+holdings left after cleanup fails the run.
+Publication failures restore the old
 directory; if restoring it also fails, the `.cleanser-previous-*` sibling
 backup remains available for recovery.
 
@@ -36,8 +38,10 @@ failure, 0 on a successfully processed run (including advisory findings).
 The console prints only processed/total counts, the output path, and failed
 file names. Root `main.py` uses the project's logging configuration to write
 step details and validation findings to a timestamped file in `tasks/etf_cleanser/logs/` when
-`ENABLE_CHECK = True` in `config.py`. Setting it to False disables both checks
-and cleanser file logging. `--verbose` adds failure tracebacks to that log.
+`ENABLE_LOG_FILE = True` in `config.py` (the default). Advisory checks always
+run; their findings are written to the enabled log alongside lookup and failure
+diagnostics. Disabling logging suppresses the log file. `--verbose` adds
+failure tracebacks to the enabled log.
 
 ## Pipeline
 
@@ -54,7 +58,16 @@ The explicit flow lives in `run.py`; steps delegate to the smaller modules.
    publish the complete run.
 
 The step numbers remain stable for log recognition; cleanup (090) now runs
-before enrichment, and checks (130) run before writing (120).
+before enrichment, and checks (130) run before writing (120). Preflight resolves
+each output name to `Ticker_Region_Company_ShortName.csv` using `data/etf_list.csv`
+(override with `--etf-list`); step 120 writes directly to that name.
+The ticker is the first
+underscore-delimited token of the source filename, matched case-insensitively;
+leading zeroes are preserved. For example, `1306_holdings.csv` becomes
+`1306_JP_nextFunds_topix.csv`. Unmatched files keep their original output name
+and log a warning. Invalid or conflicting reference metadata fails preflight;
+output name collisions are checked case-insensitively before processing and
+fail the run without replacing the previous output.
 
 ## Matching
 
@@ -124,6 +137,9 @@ must not receive TSE through the filename fallback. Specific Global X contract
 roots with month-name expiries (e.g. `NYSE FANG+ Idx Fu Sep26`) are supported,
 as are currency-pair futures on NGC. Provider forward names such as
 `FWRDUSDJPY01` are recognized even when the ticker and ISIN cells are blank.
+A standalone `FORWARD` identifier also marks a contract without a security
+ISIN. Company names containing "FORWARD" (such as "MONEY FORWARD") and the
+stock ticker `FWRD` remain eligible for security lookup.
 Arbitrary names ending in numbers are not treated as futures. A security ISIN
 protects listed names from futures classification. A general `FUTURE`/`FUTURES`
 name match also requires a contract expiry, so "Future Corporation", "Future
@@ -139,7 +155,8 @@ validation still runs. Unrecognized instruments remain eligible for lookup;
 add specific observed patterns rather than broad words like "cash" or "future"
 that can occur in company/fund names. Missing-value
 markers in identifier/numeric columns (`-`, `nan`, `null`, `none`, `n/a`) become
-empty values.
+empty values. Cleanup retains rows with a valid ISIN even when their ticker
+and name are absent, so enrichment can still use the identifier.
 
 ## Weights and validation
 
@@ -192,8 +209,15 @@ The log's closing summary counts files without validation findings, files requir
 review, and processing failures. Identifier coverage is reported separately;
 a file without validation findings may still have incomplete lookup coverage.
 
-Folder containment, duplicate output stems, and reference-file schemas are
+Folder containment, duplicate final output names, and reference-file schemas are
 checked before staging. Input/output folders must be disjoint, and output
 must not contain reference files or be a symbolic link. On successful
 publication, stale outputs from the previous run are removed with the old
 directory backup; no partial run replaces the last completed output.
+
+## Regression checks
+
+Run `python -B -m unittest discover -s tests -v` from the project root.
+The tests cover instrument classification, ISIN enrichment, empty-input
+publication protection, quoted CSV dialects, output naming, ambiguous
+lookups, publication rollback, always-on advisory checks, and logging settings.

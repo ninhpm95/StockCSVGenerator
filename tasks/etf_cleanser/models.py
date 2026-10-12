@@ -81,6 +81,11 @@ class Job:
     dropped_rows: int = 0                               # step 090: rows removed (empty or skippable)
     lookup_issues: list[tuple[str, str, Row, str]] = field(default_factory=list)
     weight_warning: str | None = None
+    output_name: str | None = None
+
+    @property
+    def output_filename(self) -> str:
+        return self.output_name or f"{self.path.stem}.csv"
 
 
 # ----------------------------------------------------------------- values --

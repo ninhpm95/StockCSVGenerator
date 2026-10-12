@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import re
 import csv
+from collections import Counter
+from itertools import islice
 from datetime import date, datetime
 from io import StringIO
 from pathlib import Path
@@ -74,20 +76,24 @@ SNIFF_LINES = 10
 
 
 def sniff_delimiter(text: str) -> str:
-    """Delimiter with the highest total count over the first SNIFF_LINES
-    non-empty lines (a single title line can't mislead it); ',' if none."""
-    counts = {d: 0 for d in (",", ";", "\t")}
-    seen = 0
-    for line in text.splitlines():
-        if not line.strip():
-            continue
-        for d in counts:
-            counts[d] += line.count(d)
-        seen += 1
-        if seen == SNIFF_LINES:
-            break
-    best = max(counts, key=counts.get)
-    return best if counts[best] else ","
+    """Prefer a recognized header, then consistent parsed column counts.
+
+    Parse candidate dialects so quoted punctuation and multiline cells do not
+    count as separators. Metadata may have a different width from holdings.
+    Ties retain the default comma dialect.
+    """
+    def score(delimiter: str) -> tuple:
+        rows = list(islice((row for row in csv.reader(StringIO(text), delimiter=delimiter)
+                            if any(cell.strip() for cell in row)), SNIFF_LINES))
+        widths = Counter(len(row) for row in rows if len(row) > 1)
+        if not widths:
+            return (False, 0, 0, 0)
+        width, count = widths.most_common(1)[0]
+        known_header = any(row_matches(row, combo) for row in rows
+                           for combo in HEADER_KEYWORD_COMBINATIONS)
+        return (known_header, count / len(rows), sum(widths.values()), width)
+
+    return max((",", ";", "\t"), key=score)
 
 
 def drop_empty_rows(rows: list[list[str]]) -> list[list[str]]:

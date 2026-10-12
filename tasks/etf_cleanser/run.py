@@ -18,7 +18,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from . import steps
-from .config import EXCHANGES_PATH, Config, DATA_DIR, LOOKUP_PATH, OUTPUT_DIR
+from .config import EXCHANGES_PATH, ETF_LIST_PATH, Config, DATA_DIR, LOOKUP_PATH, OUTPUT_DIR
+from .filenames import get_etf_filenames
 from .reporting import emit, detail
 from .reporting import log_diagnostics
 from .lookup import get_lookup, get_exchange_names
@@ -39,7 +40,7 @@ def check_folders(cfg: Config) -> None:
     source = cfg.input_dir.resolve()
     if output == source or output in source.parents or source in output.parents:
         sys.exit("ERROR: input and output folders must not contain one another")
-    for protected in (cfg.lookup_path, cfg.exchanges_path):
+    for protected in (cfg.lookup_path, cfg.exchanges_path, cfg.etf_list_path):
         if output == protected.resolve() or output in protected.resolve().parents:
             sys.exit(f"ERROR: output folder contains a reference file: {protected}")
     if cfg.output_dir.is_symlink():
@@ -48,9 +49,12 @@ def check_folders(cfg: Config) -> None:
         sys.exit("ERROR: output path is not a directory")
     get_lookup.cache_clear()
     get_exchange_names.cache_clear()
+    get_etf_filenames.cache_clear()
+    get_etf_filenames(str(cfg.etf_list_path))
     if needs_lookup:
         get_lookup(str(cfg.lookup_path), str(cfg.exchanges_path))
-    elif cfg.enable_unify_exchange_names or cfg.enable_check:
+    else:
+        # Advisory checks always validate exchange names, even without enrichment.
         get_exchange_names(str(cfg.exchanges_path))
 
 
@@ -66,6 +70,25 @@ def find_input_files(input_dir: Path) -> list[Path]:
     if not files:
         emit(f"INPUT EMPTY | no supported files in {input_dir}", level=logging.WARNING)
     return files
+
+
+def plan_output_names(jobs: list[Job], cfg: Config) -> None:
+    """Resolve final filenames and reject collisions before any processing."""
+    filenames = get_etf_filenames(str(cfg.etf_list_path))
+    owners: dict[str, Path] = {}
+    for job in jobs:
+        ticker = job.path.stem.split("_", 1)[0].upper()
+        job.output_name = filenames.get(ticker, f"{job.path.stem}.csv")
+        key = job.output_name.casefold()
+        if key in owners:
+            raise ValueError(f"output filename collision: {owners[key].name} and "
+                             f"{job.path.name} both produce {job.output_name}")
+        owners[key] = job.path
+        if ticker not in filenames:
+            emit(f"FILENAME UNMATCHED | file={job.path.name} | ticker={ticker} | keeping {job.output_name}",
+                 level=logging.WARNING)
+        else:
+            detail(f"OUTPUT NAME | file={job.path.name} | output={job.output_name}")
 
 
 def rename_with_retry(source: Path, destination: Path) -> None:
@@ -132,19 +155,15 @@ def run_step(step_fn, jobs: list[Job], cfg: Config, header: bool = True, quiet: 
          level=logging.ERROR if failures else logging.INFO)
 
 
-def print_summary(jobs: list[Job], check_enabled: bool = True) -> int:
+def print_summary(jobs: list[Job]) -> int:
     """Log one closing section: counts, then failed files, then files whose checks
     found something to review. Returns the exit code (1 if any file failed)."""
     failed = [j for j in jobs if j.error]
     review = [j for j in jobs if not j.error and j.findings]
     passed = len(jobs) - len(failed) - len(review)
 
-    if check_enabled:
-        emit(f"VALIDATION | clean={passed} | review={len(review)} | failed={len(failed)}",
-             level=logging.ERROR if failed else logging.WARNING if review else logging.INFO)
-    else:
-        emit(f"VALIDATION | checks=disabled | processed={len(jobs) - len(failed)} | failed={len(failed)}",
-             level=logging.ERROR if failed else logging.INFO)
+    emit(f"VALIDATION | clean={passed} | review={len(review)} | failed={len(failed)}",
+         level=logging.ERROR if failed else logging.WARNING if review else logging.INFO)
     for job in failed:
         emit(f"FAILED | file={job.path.name} | {job.error}", level=logging.ERROR)
     for job in review:
@@ -160,15 +179,17 @@ def run(argv=None) -> None:
     parser.add_argument("--output", type=Path, default=OUTPUT_DIR)
     parser.add_argument("--lookup", type=Path, default=LOOKUP_PATH)
     parser.add_argument("--exchanges", type=Path, default=EXCHANGES_PATH)
+    parser.add_argument("--etf-list", type=Path, default=ETF_LIST_PATH)
     parser.add_argument("--verbose", action="store_true",
-                        help="include a traceback in the log when a step fails (requires ENABLE_CHECK)")
+                        help="include a traceback in the log when a step fails (requires ENABLE_LOG_FILE)")
     args = parser.parse_args(argv)
 
     cfg = Config(input_dir=args.input, output_dir=args.output, lookup_path=args.lookup,
-                 exchanges_path=args.exchanges, verbose=args.verbose)
+                 exchanges_path=args.exchanges, etf_list_path=args.etf_list, verbose=args.verbose)
     started = time.perf_counter()
     emit(f"RUN START | input={cfg.input_dir.resolve()} | output={cfg.output_dir.resolve()}")
-    emit(f"REFERENCES | lookup={cfg.lookup_path.resolve()} | exchanges={cfg.exchanges_path.resolve()}")
+    emit(f"REFERENCES | lookup={cfg.lookup_path.resolve()} | exchanges={cfg.exchanges_path.resolve()}"
+         f" | etf_list={cfg.etf_list_path.resolve()}")
     try:
         check_folders(cfg)
     except (Exception, SystemExit) as exc:
@@ -181,10 +202,11 @@ def run(argv=None) -> None:
         print(f"Processed 0/0 files; no supported input files in {cfg.input_dir.resolve()}")
         return
     jobs = [Job(path=path) for path in files]
-    stems = [p.stem.casefold() for p in files]
-    if len(set(stems)) != len(stems):
-        emit("PREFLIGHT FAILED | input files have duplicate output stems", level=logging.ERROR)
-        sys.exit("ERROR: input files have duplicate output stems")
+    try:
+        plan_output_names(jobs, cfg)
+    except ValueError as exc:
+        emit(f"PREFLIGHT FAILED | {exc}", level=logging.ERROR)
+        sys.exit(f"ERROR: {exc}")
     cfg.output_dir.parent.mkdir(parents=True, exist_ok=True)
     work_dir = Path(tempfile.mkdtemp(prefix=".cleanser-", dir=cfg.output_dir.parent)).resolve()
     if work_dir.parent != cfg.output_dir.parent.resolve():
@@ -236,6 +258,8 @@ def run(argv=None) -> None:
 
 def process_jobs(jobs: list[Job], cfg: Config) -> int:
     """Build and validate one complete run in its private staging directory."""
+    if any(job.output_name is None for job in jobs):
+        plan_output_names(jobs, cfg)
     run_step(steps.step010_load, jobs, cfg, quiet=True)
     failed = [j for j in jobs if j.error]
     for job in failed:
@@ -253,9 +277,9 @@ def process_jobs(jobs: list[Job], cfg: Config) -> int:
     run_step(steps.step080_isin_backfill, jobs, cfg, enabled=cfg.enable_refresh_isin)
     run_step(steps.step100_weights, jobs, cfg, enabled=cfg.enable_calc_weights)
     run_step(steps.step110_sort_by_weight, jobs, cfg, enabled=cfg.enable_sort_by_weight)
-    run_step(steps.step130_check, jobs, cfg, enabled=cfg.enable_check)
+    run_step(steps.step130_check, jobs, cfg)
     run_step(steps.step120_write, jobs, cfg, header=False)
     written = sum(1 for j in jobs if not j.error)
     emit(f"OUTPUT PREPARED | files={written}/{len(jobs)}")
     log_diagnostics(jobs)
-    return print_summary(jobs, check_enabled=cfg.enable_check)
+    return print_summary(jobs)

@@ -9,7 +9,7 @@ import csv
 import logging
 import re
 
-from .checks import check_exchanges, check_isins, check_tickers, check_weights
+from .checks import check_exchanges, check_isins, check_tickers, check_weights, valid_isin
 from .config import (OUTPUT_COLUMNS, SKIP_NAME_TEXTS, CODE_TO_CHECK_NAME_TO_SKIP,
                      TICKER_FILENAME_PATTERN, EXCLUDE_RULES, FILENAME_COUNTRY_EXCHANGES)
 from .lookup import AmbiguousLookupError, get_lookup, get_exchange_names
@@ -195,24 +195,26 @@ def step080_isin_backfill(job: Job, cfg) -> None:
 
 
 def step090_drop_incomplete(job: Job, cfg) -> None:
-    """Remove rows that aren't real holdings:
-    both Code and Name empty,
-    or a Name containing any SKIP_NAME_TEXTS entry when the Code is empty or one of CODE_TO_CHECK_NAME_TO_SKIP (case sensitive substring)."""
+    """Remove empty/summary rows while preserving valid ISIN-only holdings.
+    Reject files with no holdings, independently of advisory validation."""
     log = _RowLog(job.path.name)
     kept, empty, skipped = [], 0, 0
     for r in job.table.rows:
         code = (r.code or "").strip()
         matched = next((t for t in SKIP_NAME_TEXTS if r.name and t in r.name), None)
-        if code in CODE_TO_CHECK_NAME_TO_SKIP and matched:
+        has_isin = valid_isin(r.isin or "")
+        if code in CODE_TO_CHECK_NAME_TO_SKIP and matched and not has_isin:
             skipped += 1
             log.say(f"dropped by name: '{r.name}' (matched '{matched}')")
-        elif not (r.code or r.name):
+        elif not (r.code or r.name or has_isin):
             empty += 1
         else:
             kept.append(r)
     log.flush()
     job.dropped_rows = empty + skipped
     job.table.rows = kept
+    if not kept:
+        raise ValueError("no holdings remain after cleanup")
     if job.dropped_rows:
         detail(f"{job.path.name}: dropped {job.dropped_rows} row(s) "
               f"({empty} empty, {skipped} by name)")
@@ -243,10 +245,10 @@ def step110_sort_by_weight(job: Job, cfg) -> None:
 def step120_write(job: Job, cfg) -> None:
     """Write the five-column CSV. Tickers starting with 0 are written with a
     leading single quote (see _ticker_cell)."""
-    out_path = cfg.output_dir / f"{job.path.stem}.csv"
-    if out_path.exists():        # folder is wiped at start, so this is another input
+    out_path = cfg.output_dir / job.output_filename
+    if out_path.exists():
         raise FileExistsError(f"{out_path.name} was already written by another input "
-                              f"file with the same name stem")
+                              f"file with the same output name")
     with open(out_path, "w", newline="", encoding="utf-8-sig") as fh:
         writer = csv.writer(fh)
         writer.writerow(OUTPUT_COLUMNS)

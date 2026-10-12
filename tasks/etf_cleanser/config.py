@@ -13,6 +13,7 @@ OUTPUT_DIR = PROJECT_DIR / "data" / "cleansed_ETFs"
 LOOKUP_PATH = PROJECT_DIR / "data" / "stocks" / "GLOBAL_lookup.csv"
 
 EXCHANGES_PATH = PROJECT_DIR / "data" / "exchanges.csv"
+ETF_LIST_PATH = PROJECT_DIR / "data" / "etf_list.csv"
 
 # -------------------------------------------------------- optional steps --
 # Set a switch to False to skip that step for every input file.
@@ -28,8 +29,8 @@ REFRESH_TICKERS_ALL_FILES = False
 ENABLE_REFRESH_ISIN = True
 ENABLE_CALC_WEIGHTS = True
 ENABLE_SORT_BY_WEIGHT = True
-# Also enables detailed logs under tasks/etf_cleanser/logs/ via main.py.
-ENABLE_CHECK = False
+# Retains advisory checks, lookup diagnostics, and failure details.
+ENABLE_LOG_FILE = False
 
 # ---------------------------------------------------------- input reading --
 # Excel workbooks: only one sheet holds data; every other sheet is ignored.
@@ -137,6 +138,7 @@ class Config:
     output_dir: Path = OUTPUT_DIR
     lookup_path: Path = LOOKUP_PATH
     exchanges_path: Path = EXCHANGES_PATH
+    etf_list_path: Path = ETF_LIST_PATH
     verbose: bool = False          # include failure tracebacks in the enabled log
     enable_manual_updates: bool = ENABLE_MANUAL_UPDATES
     manual_update_rules: list[dict] = field(default_factory=lambda: list(MANUAL_UPDATE_RULES))
@@ -147,4 +149,3 @@ class Config:
     enable_refresh_isin: bool = ENABLE_REFRESH_ISIN
     enable_calc_weights: bool = ENABLE_CALC_WEIGHTS
     enable_sort_by_weight: bool = ENABLE_SORT_BY_WEIGHT
-    enable_check: bool = ENABLE_CHECK

@@ -42,7 +42,8 @@ def log_diagnostics(jobs):
             for issue in job.lookup_issues:
                 groups.setdefault(issue[0], []).append(issue)
             for step, issues in groups.items():
-                detail(f"LOOKUP FILE | file={_display(job.path.name)} | step={step} | attempts={len(issues)}")
+                detail(f"LOOKUP FILE | file={_display(job.path.name)} | output={_display(job.output_filename)}"
+                       f" | step={step} | attempts={len(issues)}")
                 for _, reason, row, search in issues:
                     status = "resolved_later" if _issue_resolved(step, row) else "unresolved"
                     detail(f"  output_line={positions.get(id(row), 'missing')} | status={status} | reason={reason}"
@@ -67,7 +68,7 @@ def log_diagnostics(jobs):
             file_totals.update(eligible=len(rows), missing_ticker=len(rows) - tickers,
                                missing_isin=len(rows) - isins,
                                missing_exchange=sum(not r.exchange for r in rows))
-            detail(f"COVERAGE | file={_display(job.path.name)} | exchange={exchange}"
+            detail(f"COVERAGE | file={_display(job.path.name)} | output={_display(job.output_filename)} | exchange={exchange}"
                    f" | eligible={len(rows)} | with_ticker={tickers} | with_isin={isins}")
         totals.update(file_totals)
         missing = sum(file_totals[key] for key in ("missing_ticker", "missing_isin", "missing_exchange"))

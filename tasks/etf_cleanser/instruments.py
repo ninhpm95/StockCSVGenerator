@@ -47,9 +47,10 @@ def instrument_kind(row) -> str:
                 name.startswith("CASH COLLATERAL ")
                 or re.fullmatch(r"[A-Z]{3} CASH(?:\(COMMITTED\))?", name)))):
         return "cash"
-    if (any(value.startswith(("FORWARD", "FWRD")) for value in (code, isin))
-            or re.search(r"\bFORWARD\b", name)
-            or re.fullmatch(r"FWRD[A-Z]{6}\d{2}", name)):
+    # A company name containing FORWARD (e.g. MONEY FORWARD) is not a contract.
+    forward_identifier = r"(?:FORWARD|(?:FORWARD|FWRD)[A-Z]{6}\d{2})"
+    if not security_isin and any(re.fullmatch(forward_identifier, value)
+                                 for value in (code, isin, name)):
         return "forward"
     if (code in {"TNOTE", "TBOND"}
             or re.search(r"\bTREASURY (?:BILL|NOTE|BOND)\b", name)
