@@ -6,15 +6,16 @@ in order via run_step; nothing else calls them."""
 from __future__ import annotations
 
 import csv
+import logging
 import re
 
 from .checks import check_exchanges, check_isins, check_tickers, check_weights
 from .config import (OUTPUT_COLUMNS, SKIP_NAME_TEXTS, CODE_TO_CHECK_NAME_TO_SKIP,
-                     TICKER_FILENAME_PATTERN, EXCLUDE_RULES)
+                     TICKER_FILENAME_PATTERN, EXCLUDE_RULES, FILENAME_COUNTRY_EXCHANGES)
 from .lookup import AmbiguousLookupError, get_lookup, get_exchange_names
 from .manual_updates import apply_manual_updates
 from .instruments import needs_listing_lookup
-from .reporting import emit
+from .reporting import emit, detail
 from .models import (Job, Row, Table, fill_missing_weights, format_weight,
                     parse_float, row_from_cells)
 from .parsing import (find_header_row, find_last_marker_row, load_file,
@@ -33,7 +34,7 @@ def step020_last_marker(job: Job, cfg) -> None:
     if idx is None:
         return
     if idx:
-        emit(f"{job.path.name}: last 'Fund Holdings as of' at row {idx + 1} "
+        detail(f"{job.path.name}: last 'Fund Holdings as of' at row {idx + 1} "
               f"-> dropped {idx} row(s) above")
     grid.rows = grid.rows[idx:]
 
@@ -46,7 +47,7 @@ def step030_header(job: Job, cfg) -> None:
     if header_idx is None:
         raise ValueError("no known header row found")
     if header_idx:
-        emit(f"{job.path.name}: header at row {header_idx + 1} "
+        detail(f"{job.path.name}: header at row {header_idx + 1} "
               f"(dropped {header_idx} metadata row(s))")
     grid.rows = grid.rows[header_idx:]
 
@@ -64,41 +65,50 @@ def step040_columns(job: Job, cfg) -> None:
     common_currency = ("JPY" if colmap.valuation is not None
                        and "Market Value/Jpy" in header[colmap.valuation] else None)
     job.table = Table(rows=rows, valuation_currency=common_currency)
-    emit(f"{job.path.name}: resolved columns [{', '.join(resolved)}], {len(rows)} data row(s)")
+    detail(f"{job.path.name}: resolved columns [{', '.join(resolved)}], {len(rows)} data row(s)")
 
 
 def step041_manual_updates(job: Job, cfg) -> None:
     """Apply explicit manual corrections immediately after columns are resolved."""
     changed = apply_manual_updates(job.table.rows, cfg.manual_update_rules)
-    emit(f"{job.path.name}: manual updates changed {changed} row(s)")
+    if changed:
+        detail(f"{job.path.name}: manual updates changed {changed} row(s)")
 
 
 def step050_exchange(job: Job, cfg) -> None:
     """Every file: fill the Exchange of rows that have none from the lookup
-    by Ticker + ISIN. Rows that
-    already have an Exchange are left as they are."""
+    by Ticker + ISIN, then use an explicitly mapped filename country as
+    a last resort. Existing exchanges and non-listing instruments are retained."""
     name = job.path.name
     lookup = get_lookup(str(cfg.lookup_path), str(cfg.exchanges_path))
     log = _RowLog(name, job, "exchange")
-    filled = not_found = no_exchange = 0
+    country_match = re.match(rf"{TICKER_FILENAME_PATTERN}_([A-Z]{{2}})_", job.path.stem, re.IGNORECASE)
+    fallback_exchange = (FILENAME_COUNTRY_EXCHANGES.get(country_match[1].upper())
+                         if country_match else None)
+    filled = filename_filled = not_found = no_exchange = 0
     for row in job.table.rows:
         if row.exchange or not needs_listing_lookup(row):
             continue
-        hit = _lookup_row(log, row, lookup, "Exchange not filled",
+        hit = _lookup_row(log, row, lookup, "Exchange not found in lookup",
                           ticker=row.code, isin=row.isin)
-        if hit is None:
+        if hit and hit.exchange:
+            row.exchange = hit.exchange
+            filled += 1
+        elif fallback_exchange:
+            row.exchange = fallback_exchange
+            filename_filled += 1
+        elif hit is None:
             not_found += 1
-        elif not hit.exchange:
+        else:
             job.lookup_issues.append(("exchange", "lookup_missing_value", row, "exchange"))
             log.say(f"row {_who(row)}: lookup entry has no exchange -> Exchange not filled")
             no_exchange += 1
-        else:
-            row.exchange = hit.exchange
-            filled += 1
     log.flush()
 
-    emit(f"{name}: Exchange filled on {filled} row(s), {not_found} not found "
-          f"(missing search fields / no match / ambiguous), {no_exchange} lookup entry without exchange")
+    if filled or filename_filled or not_found or no_exchange:
+        detail(f"{name}: exchange lookup_filled={filled}, filename_filled={filename_filled}"
+               + (f" ({country_match[1].upper()} -> {fallback_exchange})" if filename_filled else "")
+               + f", unresolved={not_found}, lookup_missing_exchange={no_exchange}")
 
 
 def step060_unify_exchange_names(job: Job, cfg) -> None:
@@ -113,7 +123,8 @@ def step060_unify_exchange_names(job: Job, cfg) -> None:
             row.exchange = unified
             converted += 1
 
-    emit(f"{job.path.name}: {converted} Exchange value(s) unified to lookup name")
+    if converted:
+        detail(f"{job.path.name}: {converted} Exchange value(s) unified to lookup name")
 
 
 def step070_refresh_from_isin(job: Job, cfg) -> None:
@@ -125,7 +136,6 @@ def step070_refresh_from_isin(job: Job, cfg) -> None:
     if (not cfg.refresh_tickers_all_files
             and (job.path.suffix.lower() != ".csv"
                  or not re.fullmatch(TICKER_FILENAME_PATTERN, job.path.stem))):
-        emit(f"{name}: not a <Ticker>.csv file -> Ticker left as-is")
         return
     lookup = get_lookup(str(cfg.lookup_path), str(cfg.exchanges_path))
     log = _RowLog(name, job, "ticker")
@@ -135,9 +145,11 @@ def step070_refresh_from_isin(job: Job, cfg) -> None:
             excluded += 1
             continue
         # Prefer an existing ticker within ambiguous ISIN/exchange candidates.
-        # Unknown counters remain ambiguous rather than choosing arbitrarily.
+        # If the source code is not a counter ticker (e.g. SEDOL), the holding's
+        # currency can resolve a standard HKEX HKD/RMB equity pair. See lookup.py.
         hit = _lookup_row(log, row, lookup, "not refreshed",
-                          preferred_ticker=row.code, isin=row.isin, exchange=row.exchange)
+                          preferred_ticker=row.code, preferred_currency=row.currency,
+                          isin=row.isin, exchange=row.exchange)
         if hit is None:
             not_found += 1
         elif not hit.ticker:
@@ -150,9 +162,9 @@ def step070_refresh_from_isin(job: Job, cfg) -> None:
         else:
             unchanged += 1
     log.flush()
-    emit(f"{name}: tickers refreshed on {refreshed} row(s), {unchanged} already correct, "
-          f"{not_found} unresolved (missing search fields / no match / ambiguous), "
-          f"{no_ticker} lookup entry without ticker, {excluded} excluded")
+    if refreshed or not_found or no_ticker:
+        detail(f"{name}: ticker refreshed={refreshed}, unchanged={unchanged}, "
+               f"unresolved={not_found}, lookup_missing_ticker={no_ticker}, excluded={excluded}")
 
 
 def step080_isin_backfill(job: Job, cfg) -> None:
@@ -178,8 +190,8 @@ def step080_isin_backfill(job: Job, cfg) -> None:
                 job.lookup_issues.append(("isin", "lookup_missing_value", row, "isin"))
             unmatched += 1
     log.flush()
-    emit(f"{job.path.name}: ISIN backfilled for {filled} row(s), "
-          f"{unmatched} row(s) without lookup hit, {no_code} row(s) without ticker")
+    if filled or unmatched or no_code:
+        detail(f"{job.path.name}: ISIN filled={filled}, unresolved={unmatched}, missing_ticker={no_code}")
 
 
 def step090_drop_incomplete(job: Job, cfg) -> None:
@@ -202,7 +214,7 @@ def step090_drop_incomplete(job: Job, cfg) -> None:
     job.dropped_rows = empty + skipped
     job.table.rows = kept
     if job.dropped_rows:
-        emit(f"{job.path.name}: dropped {job.dropped_rows} row(s) "
+        detail(f"{job.path.name}: dropped {job.dropped_rows} row(s) "
               f"({empty} empty, {skipped} by name)")
 
 
@@ -211,11 +223,11 @@ def step100_weights(job: Job, cfg) -> None:
         filled = fill_missing_weights(job.table)
     except ValueError as exc:
         job.weight_warning = str(exc)
-        emit(f"{job.path.name}: weights not calculated: {exc}")
+        emit(f"WEIGHTS | file={job.path.name} | calculation skipped: {exc}", level=logging.WARNING)
         return
     if filled:
         total = len(job.table.rows)
-        emit(f"{job.path.name}: computed weights for {filled}/{total} row(s)")
+        detail(f"{job.path.name}: computed weights for {filled}/{total} row(s)")
 
 
 def step110_sort_by_weight(job: Job, cfg) -> None:
@@ -277,9 +289,7 @@ def _weight_cell(raw) -> str:
 
 
 class _RowLog:
-    """Per-row messages for one step on one file: the first PER_ROW_LIMIT are
-    printed, the rest only counted (the step's summary line has the totals).
-    Complete lookup issues are retained separately for the diagnostic CSV."""
+    """Cleanup samples are capped; lookup events are logged once at run end."""
     PER_ROW_LIMIT = 10
 
     def __init__(self, name: str, job: Job | None = None, step: str = ""):
@@ -290,18 +300,22 @@ class _RowLog:
         self.hidden = 0
 
     def say(self, message: str) -> None:
+        if self.job is not None:
+            # Lookup issues already contain this information, without truncation.
+            return
         if self.shown < self.PER_ROW_LIMIT:
             self.shown += 1
-            emit(f"{self.name}: {message}")
+            detail(f"{self.name}: {message}")
         else:
             self.hidden += 1
 
     def flush(self) -> None:
         if self.hidden:
-            emit(f"{self.name}: ... and {self.hidden} more per-row message(s) not shown")
+            detail(f"{self.name}: ... and {self.hidden} more cleanup message(s) not shown")
 
 
-def _lookup_row(log: _RowLog, row: Row, lookup, skipped: str, preferred_ticker=None, **criteria):
+def _lookup_row(log: _RowLog, row: Row, lookup, skipped: str, preferred_ticker=None,
+                preferred_currency=None, **criteria):
     """Shared row logging for missing, unmatched, or ambiguous searches."""
     missing = [field for field, value in criteria.items() if not (value or "").strip()]
     if missing:
@@ -310,7 +324,8 @@ def _lookup_row(log: _RowLog, row: Row, lookup, skipped: str, preferred_ticker=N
         log.say(f"row {_who(row)}: missing {', '.join(missing)} -> {skipped}")
         return None
     try:
-        hit = lookup.find(preferred_ticker=preferred_ticker, **criteria)
+        hit = lookup.find(preferred_ticker=preferred_ticker,
+                          preferred_currency=preferred_currency, **criteria)
     except AmbiguousLookupError as exc:
         if log.job:
             log.job.lookup_issues.append((log.step, "ambiguous", row, str(exc)))

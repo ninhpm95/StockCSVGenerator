@@ -1,10 +1,11 @@
 from constants import MODE, UPDATE_FINANCIALS, AGGREGATE_ETFS, SCREEN_ETFS, CLEANSE_ETFS, ENRICH_STOCKS, EXTRACT_TICKERS, FILE_NAME, SPEED
 from logging_config import configure_logging
 
-# Master switch for ALL tasks. True writes one timestamped log file per
+# Switch for tasks other than the ETF cleanser. True writes one timestamped log file per
 # run (see logging_config.py) capturing INFO+ records from whichever task
 # actually runs. Off by default -- each task's own terminal summary is
-# normally enough; flip this on only while debugging.
+# normally enough; flip this on only while debugging. The cleanser uses
+# ENABLE_CHECK in tasks/etf_cleanser/config.py instead.
 ENABLE_LOG_FILE = False
 
 
@@ -54,7 +55,13 @@ TASK_RUNNERS = {
 
 
 def main():
-    log_path = configure_logging(ENABLE_LOG_FILE)
+    enable_log_file = ENABLE_LOG_FILE
+    log_dir = None
+    if MODE == CLEANSE_ETFS:
+        from tasks.etf_cleanser.config import ENABLE_CHECK, LOGS_DIR
+        enable_log_file = ENABLE_CHECK
+        log_dir = LOGS_DIR
+    log_path = configure_logging(enable_log_file, log_dir=log_dir, detailed=MODE == CLEANSE_ETFS)
     try:
         try:
             runner = TASK_RUNNERS[MODE]
@@ -62,7 +69,7 @@ def main():
             raise ValueError(f"Unrecognized MODE: {MODE!r}. Check constants.py / fields.py.") from None
         runner()
     finally:
-        # log_path is returned unconditionally when ENABLE_LOG_FILE is on,
+        # log_path is returned unconditionally when file logging is on,
         # but the FileHandler uses delay=True so the file itself is only
         # created the moment something is actually logged. Checking
         # .exists() here (after the task has run) avoids announcing a log

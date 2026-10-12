@@ -9,12 +9,13 @@ BASE_DIR = Path(__file__).resolve().parent
 LOGS_DIR = BASE_DIR / "logs"
 
 
-def configure_logging(enable_log_file: bool) -> Optional[Path]:
+def configure_logging(enable_log_file: bool, log_dir: Optional[Path] = None,
+                      detailed: bool = False) -> Optional[Path]:
     """Configure the root logger once, before any task runs. Returns the
     log file path, or None if file logging is disabled.
 
     `enable_log_file` is the master on/off switch for writing a
-    timestamped log file under LOGS_DIR -- owned and passed in by
+    timestamped log file under log_dir (defaults to LOGS_DIR) -- owned and passed in by
     main.py, so it's the one place in the project you flip while
     debugging. This function itself has no opinion on whether logging
     should be on, just how to wire it up when it is.
@@ -23,6 +24,10 @@ def configure_logging(enable_log_file: bool) -> Optional[Path]:
     just do `logger = logging.getLogger(__name__)` and log normally --
     they don't need to know about this flag, LOGS_DIR, or handler wiring
     at all.
+
+    detailed=True enables cleanser DEBUG records in the same file and uses
+    compact time-only timestamps with aligned level labels. Other loggers
+    retain their normal INFO threshold; this does not enable dependency DEBUG.
 
     Uses delay=True on the FileHandler, so the file is only actually
     created on disk the moment something is first logged. This is what
@@ -37,6 +42,8 @@ def configure_logging(enable_log_file: bool) -> Optional[Path]:
     """
     root = logging.getLogger()
     root.setLevel(logging.INFO)
+    # Enable full cleanser detail without enabling noisy dependency DEBUG logs.
+    logging.getLogger("tasks.etf_cleanser").setLevel(logging.DEBUG if detailed else logging.INFO)
 
     for old_handler in root.handlers[:]:
         if getattr(old_handler, "_project_logging_handler", False):
@@ -54,11 +61,17 @@ def configure_logging(enable_log_file: bool) -> Optional[Path]:
         root.addHandler(null_handler)
         return None
 
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = LOGS_DIR / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
+    directory = log_dir if log_dir is not None else LOGS_DIR
+    directory.mkdir(parents=True, exist_ok=True)
+    log_path = directory / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log"
 
     handler = logging.FileHandler(log_path, encoding="utf-8", delay=True)
-    handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+    if detailed:
+        # The filename supplies the date; retain milliseconds for stage timing.
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s.%(msecs)03d | %(levelname)-7s | %(message)s", datefmt="%H:%M:%S"))
+    else:
+        handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
     handler._project_logging_handler = True
     root.addHandler(handler)
 

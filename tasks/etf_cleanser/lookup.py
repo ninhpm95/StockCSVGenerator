@@ -4,6 +4,7 @@ step 080 (ISIN backfill)."""
 from __future__ import annotations
 
 import csv
+import logging
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -80,11 +81,15 @@ class GlobalLookup:
         if entry not in bucket:
             bucket.append(entry)
 
-    def find(self, *, preferred_ticker: str | None = None, **criteria: str | None) -> LookupEntry | None:
+    def find(self, *, preferred_ticker: str | None = None,
+             preferred_currency: str | None = None, **criteria: str | None) -> LookupEntry | None:
         """Match ALL supplied fields (one or more LookupEntry column names).
         Missing search values or no match return None. Multiple matches raise
         AmbiguousLookupError. Identical source records count as one entry.
         ISIN/ticker indexes restrict candidates before the remaining filters.
+        An existing ticker takes precedence. Otherwise, a holding's trading
+        currency can distinguish a standard HKEX equity dual-counter pair;
+        preferred_currency is a tie-breaker, not a required lookup CSV field.
         """
         if not criteria:
             raise ValueError("at least one lookup field is required")
@@ -110,9 +115,44 @@ class GlobalLookup:
             preferred = [entry for entry in matches if _tickers_match(preferred_ticker, entry)]
             if len(preferred) == 1:
                 return preferred[0]
+        if len(matches) > 1 and "isin" in wanted and wanted.get("exchange") == "HKEX":
+            counter = _hkex_dual_counter(matches, preferred_currency)
+            if counter is not None:
+                logging.getLogger("tasks.etf_cleanser").info(
+                    "HKEX dual-counter resolved: ISIN=%s, holding currency=%s -> ticker=%s",
+                    wanted["isin"], preferred_currency, counter.ticker)
+                return counter
         if len(matches) > 1:
             raise AmbiguousLookupError(f"{len(matches)} lookup entries match {criteria}")
         return matches[0] if matches else None
+
+
+def _hkex_dual_counter(matches: list[LookupEntry], currency: str | None) -> LookupEntry | None:
+    """Resolve only the standard 0xxxx/8xxxx HKEX equity pair, never all 8xxxx.
+
+    HKEX Dual Counter Model FAQ, Trading Q11, documents HKD 0xxxx / RMB 8xxxx
+    counters sharing an ISIN. The final four digits normally match, but there
+    are exceptions: those remain ambiguous here. ETFs and other instruments
+    have different counter conventions and are deliberately excluded.
+    Source: https://www.hkex.com.hk/-/media/HKEX-Market/Services/Trading/Securities/Overview/Trading-Mechanism/HKDRMB-Dual-Counter/Dual-Counter-Model-FAQ_E.pdf
+    """
+    prefix = {"HKD": "0", "CNY": "8", "CNH": "8", "RMB": "8"}.get(
+        (currency or "").strip().upper())
+    if prefix is None or len(matches) != 2:
+        return None
+    if any(entry.exchange.strip().upper() != "HKEX"
+           or entry.asset_type.strip().upper() != "STOCK" for entry in matches):
+        return None
+    isins = {entry.isin.strip().upper() for entry in matches}
+    if len(isins) != 1 or not next(iter(isins)):
+        return None
+    codes = [entry.ticker.strip().lstrip("'") for entry in matches]
+    if any(not re.fullmatch(r"[0-9]{1,5}", code) for code in codes):
+        return None
+    codes = [code.zfill(5) for code in codes]
+    if {code[0] for code in codes} != {"0", "8"} or codes[0][1:] != codes[1][1:]:
+        return None
+    return next(entry for entry, code in zip(matches, codes) if code.startswith(prefix))
 
 
 def _tickers_match(value: str | None, entry: LookupEntry) -> bool:

@@ -6,6 +6,7 @@ from pathlib import Path
 # ------------------------------------------------------------------ paths --
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent.parent
+LOGS_DIR = BASE_DIR / "logs"
 
 DATA_DIR = PROJECT_DIR / "data" / "ETFs"
 OUTPUT_DIR = PROJECT_DIR / "data" / "cleansed_ETFs"
@@ -27,7 +28,8 @@ REFRESH_TICKERS_ALL_FILES = False
 ENABLE_REFRESH_ISIN = True
 ENABLE_CALC_WEIGHTS = True
 ENABLE_SORT_BY_WEIGHT = True
-ENABLE_CHECK = True
+# Also enables detailed logs under tasks/etf_cleanser/logs/ via main.py.
+ENABLE_CHECK = False
 
 # ---------------------------------------------------------- input reading --
 # Excel workbooks: only one sheet holds data; every other sheet is ignored.
@@ -47,6 +49,11 @@ _TICKER = r"[0-9A-Z]{3,5}"
 # Default step 070 scope: <Ticker>.csv files, unless REFRESH_TICKERS_ALL_FILES is True.
 # Matched against the whole file stem.
 TICKER_FILENAME_PATTERN = _TICKER
+
+# Last resort for missing exchanges in <Ticker>_<Country>_... filenames.
+# Explicit holdings-market conventions only; never infer from ISIN country.
+# Countries with multiple possible equity exchanges (e.g. US/UK) stay unmapped.
+FILENAME_COUNTRY_EXCHANGES = {"JP": "TSE"}
 
 # ------------------------------------------------------------------ output --
 # Same columns for every file (order = order written by step 120).
@@ -130,7 +137,7 @@ class Config:
     output_dir: Path = OUTPUT_DIR
     lookup_path: Path = LOOKUP_PATH
     exchanges_path: Path = EXCHANGES_PATH
-    verbose: bool = False          # print a traceback when a step fails
+    verbose: bool = False          # include failure tracebacks in the enabled log
     enable_manual_updates: bool = ENABLE_MANUAL_UPDATES
     manual_update_rules: list[dict] = field(default_factory=lambda: list(MANUAL_UPDATE_RULES))
     enable_refresh_exchanges: bool = ENABLE_REFRESH_EXCHANGES

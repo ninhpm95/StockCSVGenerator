@@ -12,7 +12,7 @@ from .config import (CHECK_MAX_LISTED, EXCHANGES_PATH, EXCHANGE_UNKNOWN_MAX_LEN,
                     WEIGHT_SUM_MAX, WEIGHT_SUM_MIN, WEIGHT_TOTAL_EXCLUDE_NAMES)
 from .models import Row, format_weight, parse_float
 from .lookup import get_exchange_names
-from .instruments import instrument_kind, needs_listing_lookup
+from .instruments import instrument_kind
 
 def check_tickers(rows: list[Row]) -> list[str]:
     """Validate known market formats without comparing unrelated exchanges."""
@@ -31,7 +31,7 @@ def check_tickers(rows: list[Row]) -> list[str]:
 def check_isins(rows: list[Row]) -> list[str]:
     """Validate identifiers themselves; country diversity is legitimate."""
     odd = [f"line {_line_no(i)}: {r.isin}" for i, r in enumerate(rows)
-           if needs_listing_lookup(r) and r.isin and not valid_isin(r.isin)]
+           if instrument_kind(r) in {"security", "bond"} and r.isin and not valid_isin(r.isin)]
     return _report("invalid ISIN format or checksum", odd)
 
 
