@@ -69,13 +69,13 @@ def normalize_exchange(value) -> str:
 
 @lru_cache(maxsize=1)
 def load_exchange_countries() -> Dict[str, str]:
-    """Map exact long/short exchange aliases to ISO country codes.
+    """Map exact exchange/short-name aliases to ISO country codes.
 
     Shared aliases spanning multiple countries (such as Euronext) remain
     UNKNOWN instead of choosing whichever row happens to come last.
     """
     df = pd.read_csv(EXCHANGES_PATH, dtype=str, keep_default_na=False, encoding="utf-8-sig")
-    required = {"long_name", "short_name", "country"}
+    required = {"exchange", "short_name", "country"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"{EXCHANGES_PATH}: missing columns: {', '.join(sorted(missing))}")
@@ -84,7 +84,7 @@ def load_exchange_countries() -> Dict[str, str]:
         country = normalize_text(row["country"]).upper()
         if country and not re.fullmatch(r"[A-Z]{2}", country):
             raise ValueError(f"{EXCHANGES_PATH}: invalid country code {country!r}")
-        for field in ("long_name", "short_name"):
+        for field in ("exchange", "short_name"):
             alias = normalize_exchange(row[field])
             if alias:
                 countries_by_alias.setdefault(alias, set()).add(country or UNKNOWN_REGION)

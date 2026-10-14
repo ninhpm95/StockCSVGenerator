@@ -34,7 +34,8 @@ class GlobalLookup:
         self._by_ticker_loose: dict[str, list[LookupEntry]] = {}
         self._entries: list[LookupEntry] = []
         self._seen: set[tuple[str, str, str]] = set()
-        self._exchanges = get_exchange_names(str(exchanges_path)) if exchanges_path else {}
+        self._exchanges = (get_exchange_names(str(exchanges_path), "lookup_name")
+                           if exchanges_path else {})
         self._load(path)
 
     def _load(self, path: Path) -> None:
@@ -96,6 +97,9 @@ class GlobalLookup:
         unknown = criteria.keys() - LookupEntry.__dataclass_fields__.keys()
         if unknown:
             raise ValueError(f"unknown lookup field(s): {', '.join(sorted(unknown))}")
+        if criteria.get("exchange"):
+            exchange = criteria["exchange"].strip()
+            criteria["exchange"] = self._exchanges.get(exchange.casefold(), exchange)
         wanted = {field: _normalise(field, value) for field, value in criteria.items()}
         if not all(wanted.values()):
             return None
@@ -184,20 +188,23 @@ def get_lookup(path: str, exchanges_path: str | None = None) -> GlobalLookup:
 
 
 @lru_cache(maxsize=None)
-def get_exchange_names(path: str) -> dict[str, str]:
-    """exchanges.csv -> {alias (stripped, case-folded): canonical lookup name}."""
+def get_exchange_names(path: str, target_column: str = "short_name") -> dict[str, str]:
+    """Map exchange aliases to output short names or stock lookup names."""
     with open(path, newline="", encoding="utf-8-sig") as fh:
         reader = csv.DictReader(fh)
         names = {fn.strip().lower(): fn for fn in (reader.fieldnames or [])}
-        for required in ("long_name", "short_name"):
+        for required in dict.fromkeys(("exchange", "short_name", target_column)):
             if required not in names:
                 raise ValueError(f"exchanges file {path} has no '{required}' column "
                                  f"(found: {', '.join(names) or 'none'})")
         mapping = {}
         for raw in reader:
-            long_name = (raw.get(names["long_name"]) or "").strip()
+            exchange = (raw.get(names["exchange"]) or "").strip()
             short_name = (raw.get(names["short_name"]) or "").strip()
-            if long_name and short_name:
-                mapping[long_name.casefold()] = short_name
-                mapping.setdefault(short_name.casefold(), short_name)
+            target = (raw.get(names[target_column]) or "").strip()
+            if exchange and target:
+                mapping[exchange.casefold()] = target
+                if short_name:
+                    mapping.setdefault(short_name.casefold(), target)
+                mapping.setdefault(target.casefold(), target)
     return mapping

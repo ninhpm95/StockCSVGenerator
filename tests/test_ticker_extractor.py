@@ -29,7 +29,7 @@ class TickerExtractorTests(unittest.TestCase):
         self.addCleanup(extractor.load_exchange_countries.cache_clear)
         self.exchanges = self.root / "exchanges.csv"
         self.exchanges.write_text(
-            "long_name,short_name,country\n"
+            "exchange,short_name,country\n"
             "Tokyo Stock Exchange,TSE,JP\n"
             "Hong Kong Exchanges And Clearing Ltd,HKEX,HK\n"
             "Toronto Stock Exchange,TSX,CA\n"
@@ -294,7 +294,7 @@ class TickerExtractorTests(unittest.TestCase):
         self.assertEqual(result.skipped_incomplete, 1)
 
     def test_missing_country_column_fails_clearly(self):
-        self.exchanges.write_text("long_name,short_name\nTokyo Stock Exchange,TSE\n", encoding="utf-8")
+        self.exchanges.write_text("exchange,short_name\nTokyo Stock Exchange,TSE\n", encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "missing columns: country"):
             extractor.load_exchange_countries()
 

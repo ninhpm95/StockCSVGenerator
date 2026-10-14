@@ -13,7 +13,8 @@ from tasks.etf_cleanser.lookup import AmbiguousLookupError, GlobalLookup
 from tasks.etf_cleanser.models import Job, Row, Table
 from tasks.etf_cleanser.parsing import read_csv, sniff_delimiter
 from tasks.etf_cleanser.run import plan_output_names, process_jobs, publish_output, run
-from tasks.etf_cleanser.steps import step080_isin_backfill, step090_drop_incomplete
+from tasks.etf_cleanser.steps import (step060_unify_exchange_names, step070_refresh_from_isin,
+                                    step080_isin_backfill, step090_drop_incomplete)
 
 
 HEADER = "Code,Name,ISIN,Exchange,Shares Amount,Stock Price\n"
@@ -35,7 +36,7 @@ class CleanserTests(unittest.TestCase):
         self.lookup = self.root / "lookup.csv"
         self.lookup.write_text(f"ticker,name,exchange,isin,asset_type\n3994,MONEY FORWARD,TSE,{ISIN},Stock\n", encoding="utf-8")
         self.exchanges = self.root / "exchanges.csv"
-        self.exchanges.write_text("long_name,short_name\nTokyo Stock Exchange,TSE\n", encoding="utf-8")
+        self.exchanges.write_text("exchange,short_name,lookup_name\nTokyo Stock Exchange,TSE,TSE\n", encoding="utf-8")
         self.cfg = replace(Config(), input_dir=self.input, output_dir=self.output,
                            etf_list_path=self.metadata, lookup_path=self.lookup,
                            exchanges_path=self.exchanges,
@@ -64,6 +65,42 @@ class CleanserTests(unittest.TestCase):
         job = Job(path=Path("1475_holdings.csv"), table=Table(rows=[row]))
         step080_isin_backfill(job, self.cfg)
         self.assertEqual(row.isin, ISIN)
+
+    def test_lookup_name_matches_without_replacing_holding_short_name(self):
+        self.exchanges.write_text(
+            "exchange,short_name,lookup_name\n"
+            "Nyse Euronext - Euronext Paris,Euronext Paris,Euronext\n"
+            "XPAR,Euronext Paris,Euronext\n"
+            "Nyse Euronext - Euronext Brussels,Euronext Brussels,Euronext\n",
+            encoding="utf-8")
+        self.lookup.write_text(
+            "ticker,name,exchange,isin,asset_type\n"
+            "ABC,Example,Euronext,FR0000000001,Stock\n", encoding="utf-8")
+        for exchange in ("Nyse Euronext - Euronext Paris", "XPAR", "Euronext Paris",
+                         "Nyse Euronext - Euronext Brussels"):
+            with self.subTest(exchange=exchange):
+                short_name = ("Euronext Brussels" if "Brussels" in exchange else "Euronext Paris")
+                rows = [Row(code="OLD", isin="FR0000000001", exchange=exchange),
+                        Row(code="ABC", exchange=exchange)]
+                job = Job(path=Path("1306.csv"), table=Table(rows=rows))
+                step060_unify_exchange_names(job, self.cfg)
+                step070_refresh_from_isin(job, self.cfg)
+                step080_isin_backfill(job, self.cfg)
+                self.assertEqual([(r.code, r.isin, r.exchange) for r in rows],
+                                 [("ABC", "FR0000000001", short_name)] * 2)
+
+    def test_lookup_accepts_raw_short_and_lookup_exchange_names(self):
+        self.exchanges.write_text(
+            "exchange,short_name,lookup_name\nXPAR,Euronext Paris,Euronext\n",
+            encoding="utf-8")
+        self.lookup.write_text(
+            "ticker,exchange,isin\nABC,Euronext,FR0000000001\n", encoding="utf-8")
+        lookup = GlobalLookup(self.lookup, self.exchanges)
+        for exchange in ("XPAR", " Euronext Paris ", "euronext"):
+            with self.subTest(exchange=exchange):
+                self.assertEqual(lookup.find(ticker="ABC", exchange=exchange).isin,
+                                 "FR0000000001")
+        self.assertIsNone(lookup.find(ticker="ABC", exchange="Unknown"))
 
     def test_isin_only_holding_survives_cleanup(self):
         row = Row(isin=ISIN, exchange="TSE", weight="5")

@@ -112,7 +112,7 @@ def step050_exchange(job: Job, cfg) -> None:
 
 
 def step060_unify_exchange_names(job: Job, cfg) -> None:
-    """Unify existing and filled Exchange values to lookup names via exchanges.csv."""
+    """Unify existing and filled Exchange values to short names via exchanges.csv."""
     exchange_names = get_exchange_names(str(cfg.exchanges_path))
     converted = 0
     for row in job.table.rows:
@@ -124,7 +124,7 @@ def step060_unify_exchange_names(job: Job, cfg) -> None:
             converted += 1
 
     if converted:
-        detail(f"{job.path.name}: {converted} Exchange value(s) unified to lookup name")
+        detail(f"{job.path.name}: {converted} Exchange value(s) unified to short name")
 
 
 def step070_refresh_from_isin(job: Job, cfg) -> None:
