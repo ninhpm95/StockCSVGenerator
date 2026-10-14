@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 from .fields import Fields as F
 
@@ -9,47 +8,17 @@ from .fields import Fields as F
 # --------------------------------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parent           # parent/tasks/ticker_extractor
 REPO_ROOT = PROJECT_ROOT.parent.parent                    # parent
-HOLDINGS_DIR = REPO_ROOT / "data" / "ETFs"
-LOOKUP_DIR = REPO_ROOT / "data" / "stocks"
+HOLDINGS_DIR = REPO_ROOT / "data" / "cleansed_ETFs"
+EXCHANGES_PATH = REPO_ROOT / "data" / "exchanges.csv"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
-TOP_N_HOLDINGS = 100
+# False: all holdings. True: largest holdings covering TOP_WEIGHT_PERCENT of each ETF.
+FILTER_BY_CUMULATIVE_WEIGHT = False
+TOP_WEIGHT_PERCENT = 80.0
 
-# --------------------------------------------------------------------------
-# What we're looking for in each file, and how to recognize each column.
-# A cell is considered a match for a field if its normalized text contains
-# one of that field's candidate strings.
-# --------------------------------------------------------------------------
-OUTPUT_FIELDS = [F.TICKER, F.NAME, F.ISIN, F.EXCHANGE, F.CURRENCY]
-
-FIELD_CANDIDATES: Dict[str, List[str]] = {
-    F.TICKER: ["Ticker", "銘柄コード", "コード", "Code"],
-    F.NAME: ["Name", "銘柄", "銘柄名"],
-    F.ISIN: ["ISIN"],
-    F.EXCHANGE: ["Exchange", "取引所"],
-    F.CURRENCY: ["Currency", "Ccy", "通貨"],
-    # Region-detection signal only, not written out as its own column.
-    F.LOCATION: ["Location", "Country", "国", "国名", "所在国", "所在地"],
-    # Used to pick the top-N holdings, not written out as its own column.
-    F.WEIGHT: ["純資産比率 % of NAV", "純資産比率", "% of NAV", "Weight (%)", "Weight", "% of net asset"],
-    F.PRICE: ["Stock Price", "Price", "Market Value", "株価"],
-    F.SHARES: ["株数（※）No. of Shares（※）", "Shares Amount", "No. of Shares", "株数", "Shares", "Shares Held"],
-}
-
-# A row is treated as the holdings-table header if it matches one of these
-# keyword sequences. Combinations are tried in order, top to bottom, row by
-# row; the first row where ANY combination matches wins. Within a
-# combination, keywords are matched left to right and case-insensitively:
-# once a cell containing keyword N is found, the search for keyword N+1
-# resumes from the next cell onward -- so the matched cells must appear in
-# order, but don't need to be adjacent.
-HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
-    ("銘柄コード", "ISINコード", "Name"),
-    ("Code", "Name", "ISIN"),
-    ("Code", "Name", "Weight"),
-    ("Ticker", "Name", "Weight"),
-    ("code", "Name", "Shares Held"),  # Maxis
-]
+# Cleansed holdings have a fixed header and percentage-point weights.
+HOLDINGS_COLUMNS = [F.TICKER, F.NAME, F.ISIN, F.WEIGHT, F.EXCHANGE]
+OUTPUT_FIELDS = HOLDINGS_COLUMNS
 
 
 # --------------------------------------------------------------------------
@@ -67,96 +36,11 @@ HEADER_KEYWORD_COMBINATIONS: List[Tuple[str, ...]] = [
 PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "null", "none"}
 
 
-# --------------------------------------------------------------------------
-# File reading: CSV/XLSX -> a raw grid of cells (no header assumed yet)
-# --------------------------------------------------------------------------
-
-# Encodings to try, in order, when reading a holdings CSV. Source files come
-# from more than one provider (e.g. iShares exports are plain UTF-8, Next
-# Funds exports are Shift-JIS/CP932) and don't declare their own encoding,
-# so we try each until one decodes cleanly. utf-8-sig also handles plain
-# utf-8 (with or without a BOM), so it's tried first.
-CSV_ENCODINGS: List[str] = ["utf-8-sig", "cp932", "cp1252"]
-
-# Sheet names known to hold the actual holdings table in multi-sheet
-# workbooks (tried first, in order, as an exact stripped match).
-HOLDINGS_SHEET_NAMES = ["保有明細"]
-
-
-# --------------------------------------------------------------------------
-# Region detection: ISIN country prefix > Location column > Exchange name >
-# filename convention > UNKNOWN
-# --------------------------------------------------------------------------
-
-LOCATION_TO_REGION: Dict[str, str] = {
-    "JAPAN": "JP", "UNITED STATES": "US", "USA": "US", "U.S.": "US",
-    "CHINA": "CN", "HONG KONG": "HK", "TAIWAN": "TW",
-    "SOUTH KOREA": "KR", "KOREA": "KR", "INDIA": "IN",
-    "UNITED KINGDOM": "GB", "BRITAIN": "GB",
-    "GERMANY": "DE", "FRANCE": "FR", "NETHERLANDS": "NL", "ITALY": "IT",
-    "SPAIN": "ES", "SWITZERLAND": "CH", "SWEDEN": "SE", "NORWAY": "NO",
-    "DENMARK": "DK", "FINLAND": "FI", "BELGIUM": "BE", "AUSTRIA": "AT",
-    "POLAND": "PL", "CANADA": "CA", "AUSTRALIA": "AU", "SINGAPORE": "SG",
-    "BRAZIL": "BR", "MEXICO": "MX", "ISRAEL": "IL", "SOUTH AFRICA": "ZA",
-    "THAILAND": "TH", "INDONESIA": "ID", "MALAYSIA": "MY",
-    "PHILIPPINES": "PH", "VIETNAM": "VN",
-}
-
-EXCHANGE_TO_REGION: Dict[str, str] = {
-    "TOKYO": "JP", "OSAKA": "JP", "NAGOYA": "JP",
-    "NEW YORK": "US", "NASDAQ": "US", "NYSE": "US", "AMEX": "US", "CBOE": "US",
-    "LONDON": "GB", "LSE": "GB",
-    "SHENZHEN": "CN", "SHANGHAI": "CN",
-    "HONG KONG": "HK", "HKEX": "HK",
-    "TAIWAN": "TW", "TAIPEI": "TW",
-    "KOREA": "KR", "KOSPI": "KR", "KOSDAQ": "KR",
-    "NATIONAL STOCK EXCHANGE OF INDIA": "IN", "BOMBAY": "IN", "BSE": "IN", "NSE": "IN",
-    "SINGAPORE": "SG", "SGX": "SG",
-    "AUSTRALIA": "AU", "ASX": "AU",
-    "TORONTO": "CA", "TSX": "CA",
-    "FRANKFURT": "DE", "XETRA": "DE", "DEUTSCHE": "DE",
-    "EURONEXT PARIS": "FR", "PARIS": "FR",
-    "EURONEXT AMSTERDAM": "NL", "AMSTERDAM": "NL",
-    "BORSA ITALIANA": "IT", "MILAN": "IT",
-    "MADRID": "ES", "BME": "ES",
-    "SIX": "CH", "SWISS": "CH", "ZURICH": "CH",
-    "STOCKHOLM": "SE", "OSLO": "NO", "COPENHAGEN": "DK", "HELSINKI": "FI",
-    "BRUSSELS": "BE", "VIENNA": "AT", "WARSAW": "PL",
-    "JOHANNESBURG": "ZA", "SAO PAULO": "BR", "B3": "BR", "MEXICO": "MX",
-    "TEL AVIV": "IL", "BANGKOK": "TH", "JAKARTA": "ID",
-    "KUALA LUMPUR": "MY", "MANILA": "PH", "HO CHI MINH": "VN",
-}
-
+# Country grouping comes exclusively from exchanges.csv.
 UNKNOWN_REGION = "UNKNOWN"
 
-# Sentinel region for the cross-provider fallback lookup file
-# (data/stocks/GLOBAL_lookup.csv), used when a holding's own region's
-# lookup file doesn't have it. Lives next to UNKNOWN_REGION since both are
-# region sentinels, not real region codes.
-GLOBAL_REGION = "GLOBAL"
-
-# Every region code we actually know how to handle -- the union of every
-# value LOCATION_TO_REGION/EXCHANGE_TO_REGION can produce. Used to keep the
-# filename-region fallback (_region_from_filename in run.py) from treating
-# an unrelated two-letter token -- e.g. a currency code, as in
-# "IVV_USD_nav.csv" -- as a region just because it happens to be two
-# letters.
-KNOWN_REGIONS = set(LOCATION_TO_REGION.values()) | set(EXCHANGE_TO_REGION.values())
-
-
-# --------------------------------------------------------------------------
-# Output-file safety
-# --------------------------------------------------------------------------
-
-# Matches the filenames run() itself writes to OUTPUT_DIR (a known region
-# code, GLOBAL_REGION, or UNKNOWN_REGION, each with a .csv suffix). Built
-# from the region tables above, but this isn't about detecting regions --
-# it's what lets stale-output cleanup in run() safely remove only files
-# this script produced, never an unrelated file a user happens to have
-# dropped in OUTPUT_DIR.
-OUTPUT_FILENAME_PATTERN = re.compile(
-    r"^(" + "|".join(sorted(KNOWN_REGIONS | {UNKNOWN_REGION, GLOBAL_REGION})) + r")\.csv$"
-)
+# Include previous ISIN-country outputs when removing stale generated files.
+OUTPUT_FILENAME_PATTERN = re.compile(r"^(?:[A-Z]{2}|UNKNOWN|GLOBAL)\.csv$")
 
 
 # --------------------------------------------------------------------------
