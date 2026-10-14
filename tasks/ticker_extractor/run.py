@@ -1,15 +1,16 @@
-"""Extract the top holdings from standardized data/cleansed_ETFs CSVs.
+"""Extract unique listings from data/cleansed_ETFs CSVs.
 
-The ETF cleanser owns source parsing, column normalization and weight
-calculation. This task keeps rows with a ticker and exchange, optionally
-filters by cumulative weight, and writes country CSVs deduplicated by ticker.
+Missing extraction columns are treated as blank; extra columns are ignored.
+This task keeps rows with a ticker and exchange, optionally
+filters by cumulative weight, and writes country CSVs deduplicated by exchange
+and ticker.
 Run through the project runner with MODE = EXTRACT_TICKERS.
 """
 from __future__ import annotations
 
-import logging
 import math
 import re
+import shutil
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -19,20 +20,19 @@ import pandas as pd
 
 from .constants import (
     EXCHANGES_PATH,
-    HOLDINGS_COLUMNS,
     HOLDINGS_DIR,
-    LABEL_SUFFIXES,
     OUTPUT_DIR,
     OUTPUT_FIELDS,
-    OUTPUT_FILENAME_PATTERN,
+    REPO_ROOT,
     PLACEHOLDER_TOKENS,
     TOP_WEIGHT_PERCENT,
     FILTER_BY_CUMULATIVE_WEIGHT,
+    MIN_HOLDINGS_FOR_WEIGHT_FILTER,
     UNKNOWN_REGION,
 )
 from .fields import Fields
 
-logger = logging.getLogger(__name__)
+CountryListings = Dict[str, Dict[Tuple[str, str], dict]]
 
 
 def normalize_text(value) -> str:
@@ -138,22 +138,21 @@ class FileResult:
     selected_rows: int = 0                       # eligible rows retained by weight selection
     skipped_incomplete: int = 0                  # missing ticker or exchange
     weight_undetermined: bool = False
-    duplicate_tickers: int = 0                   # repeated country/ticker across source files
+    duplicate_listings: int = 0                  # repeated country/exchange/ticker
     problem: Optional[str] = None
 
 
 def extract_holdings(path: Path) -> FileResult:
-    """Read the cleanser's fixed schema and keep the top holdings by weight."""
+    """Extract available fields, filling missing columns with blank values."""
     try:
         df = pd.read_csv(path, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     except Exception as exc:
         return FileResult([], problem=f"could not be read ({exc})")
 
-    missing = [field for field in HOLDINGS_COLUMNS if field not in df.columns]
-    if missing:
-        return FileResult([], problem=f"missing cleansed columns: {', '.join(missing)}")
+    # Weight is optional input for the cumulative filter, never an output field.
+    df = df.reindex(columns=OUTPUT_FIELDS + [Fields.WEIGHT], fill_value="")
 
-    df = df.loc[df[HOLDINGS_COLUMNS].ne("").any(axis=1)]
+    df = df.loc[df[OUTPUT_FIELDS].ne("").any(axis=1)]
     total_rows = len(df)
     eligible = df[Fields.TICKER].map(normalize_text).ne("") & df[Fields.EXCHANGE].map(normalize_text).ne("")
     skipped_incomplete = int((~eligible).sum())
@@ -164,7 +163,7 @@ def extract_holdings(path: Path) -> FileResult:
 
     top_indices = list(range(len(df)))
     weight_determined = True
-    if FILTER_BY_CUMULATIVE_WEIGHT:
+    if FILTER_BY_CUMULATIVE_WEIGHT and total_rows >= MIN_HOLDINGS_FOR_WEIGHT_FILTER:
         weights = pd.to_numeric(df[Fields.WEIGHT], errors="coerce")
         top_indices, weight_determined = select_top_indices(
             [None if pd.isna(weight) else float(weight) for weight in weights],
@@ -184,22 +183,35 @@ def extract_holdings(path: Path) -> FileResult:
     )
 
 
+def choose_listing(existing: dict, candidate: dict) -> dict:
+    """Keep the row with more filled output fields; ties keep the first."""
+    existing_filled = sum(bool(normalize_text(existing[field])) for field in OUTPUT_FIELDS)
+    candidate_filled = sum(bool(normalize_text(candidate[field])) for field in OUTPUT_FIELDS)
+    return candidate if candidate_filled > existing_filled else existing
+
+
+def merge_listings(records: List[dict], by_region: CountryListings) -> int:
+    """Merge source rows by country, exchange and ticker; count duplicates."""
+    duplicates = 0
+    for record in records:
+        region_rows = by_region.setdefault(record[Fields.REGION], {})
+        key = (normalize_exchange(record[Fields.EXCHANGE]), normalize_ticker(record[Fields.TICKER]))
+        if key in region_rows:
+            duplicates += 1
+            region_rows[key] = choose_listing(region_rows[key], record)
+        else:
+            region_rows[key] = record
+    return duplicates
+
+
 # --------------------------------------------------------------------------
 # Run summary
 # --------------------------------------------------------------------------
 
 
-def short_label(path: Path) -> str:
-    stem = path.stem
-    for suffix in LABEL_SUFFIXES:
-        if stem.lower().endswith(suffix):
-            return stem[: -len(suffix)]
-    return stem
-
-
 class RunSummary:
     """Buckets each input file into one category for the end-of-run report,
-    keyed by short_label(path)."""
+    labeled with its full filename."""
 
     def __init__(self):
         self.clean: List[str] = []
@@ -208,7 +220,7 @@ class RunSummary:
         self.region_counts: Dict[str, int] = {}
 
     def add(self, path: Path, result: FileResult) -> None:
-        label = short_label(path)
+        label = path.name
         if result.problem is not None:
             self.problems.setdefault(result.problem, []).append(label)
             return
@@ -221,8 +233,8 @@ class RunSummary:
             notes.append(f"top {TOP_WEIGHT_PERCENT:g}% weight: {result.selected_rows} of {eligible_rows} holdings")
         if result.skipped_incomplete:
             notes.append(f"{result.skipped_incomplete} missing ticker or exchange")
-        if result.duplicate_tickers:
-            notes.append(f"{result.duplicate_tickers} duplicate ticker(s) collapsed")
+        if result.duplicate_listings:
+            notes.append(f"{result.duplicate_listings} duplicate exchange/ticker pair(s) collapsed")
 
         if notes:
             self.partial.append(f"{label} ({', '.join(notes)})")
@@ -231,17 +243,49 @@ class RunSummary:
 
     def print(self) -> None:
         if self.clean:
-            print(f"Successful ETFs ({len(self.clean)}): {', '.join(self.clean)}")
+            print(f"Successful ETFs ({len(self.clean)}):")
+            for label in self.clean:
+                print(f"  * {label}")
+            print()
         if self.partial:
-            print(f"ETFs with some holdings filtered out ({len(self.partial)}): {', '.join(self.partial)}")
+            print(f"ETFs with some holdings filtered out ({len(self.partial)}):")
+            for label in self.partial:
+                print(f"  * {label}")
+            print()
         if self.problems:
-            print("Others:")
             for reason, labels in self.problems.items():
-                print(f"  {reason} ({len(labels)}): {', '.join(labels)}")
+                print(f"{reason[0].upper() + reason[1:]} ({len(labels)}):")
+                for label in labels:
+                    print(f"  * {label}")
+                print()
         if self.region_counts:
             ordered = sorted(self.region_counts.items(), key=lambda kv: (-kv[1], kv[0]))
             breakdown = ", ".join(f"{region} ({count})" for region, count in ordered)
             print(f"By region: {breakdown}")
+            print()
+
+
+# --------------------------------------------------------------------------
+# Output writing
+# --------------------------------------------------------------------------
+
+
+def write_outputs(by_region: CountryListings) -> None:
+    """Recreate the output folder and write the current country listings."""
+    # Check the absolute deletion target before clearing the output directory.
+    output_dir = OUTPUT_DIR.resolve()
+    repo_root = REPO_ROOT.resolve()
+    if output_dir == repo_root or not output_dir.is_relative_to(repo_root):
+        raise ValueError(f"output directory must be inside the project: {output_dir}")
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for region, rows_by_listing in by_region.items():
+        rows = list(rows_by_listing.values())
+        rows.sort(key=lambda r: (r[Fields.TICKER], r[Fields.EXCHANGE], r[Fields.ISIN], r[Fields.NAME]))
+        out_path = output_dir / f"{region}.csv"
+        pd.DataFrame(rows, columns=OUTPUT_FIELDS).to_csv(out_path, index=False)
 
 
 # --------------------------------------------------------------------------
@@ -250,10 +294,6 @@ class RunSummary:
 
 
 def run() -> None:
-    # Deliberately no logging.basicConfig() here -- this is a subtask
-    # module that may be imported and run by a parent orchestrator, which
-    # should own root-logger configuration. This module only logs through
-    # its own `logger`; the caller decides where that ends up.
     load_exchange_countries.cache_clear()
     load_exchange_countries()  # Validate the country mapping before processing outputs.
     files = sorted(
@@ -263,44 +303,17 @@ def run() -> None:
         raise FileNotFoundError(f"no cleansed holdings CSV files found in {HOLDINGS_DIR.resolve()}")
 
     summary = RunSummary()
-    by_region: Dict[str, Dict[str, dict]] = {}  # country -> ticker -> source row
+    by_region: CountryListings = {}
 
     for path in files:
         result = extract_holdings(path)
-        for record in result.records:
-            region_rows = by_region.setdefault(record[Fields.REGION], {})
-            ticker = normalize_ticker(record[Fields.TICKER])
-            if ticker in region_rows:
-                result.duplicate_tickers += 1
-            # Last occurrence wins, including its source weight and ISIN.
-            region_rows[ticker] = record
+        result.duplicate_listings = merge_listings(result.records, by_region)
         summary.add(path, result)
 
     summary.region_counts = {region: len(rows) for region, rows in by_region.items()}
-
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    existing_outputs = {
-        p for p in OUTPUT_DIR.glob("*.csv") if OUTPUT_FILENAME_PATTERN.match(p.name)
-    }
-
-    csv_columns = OUTPUT_FIELDS
-    total_stocks = 0
-    written_outputs: set = set()
-    for region, rows_by_ticker in by_region.items():
-        rows = list(rows_by_ticker.values())
-        rows.sort(key=lambda r: (r[Fields.TICKER], r[Fields.ISIN], r[Fields.NAME]))
-        out_path = OUTPUT_DIR / f"{region}.csv"
-        pd.DataFrame(rows, columns=csv_columns).to_csv(out_path, index=False)
-        written_outputs.add(out_path)
-        total_stocks += len(rows)
-
-    # Remove region files left over from a previous run whose region no
-    # longer has any holdings this run, so stale data doesn't linger
-    # silently alongside the current output.
-    for stale_path in existing_outputs - written_outputs:
-        stale_path.unlink()
-        logger.info("removed stale output file with no holdings this run: %s", stale_path.name)
+    write_outputs(by_region)
 
     summary.print()
-    print(f"Found {total_stocks} unique stocks across the holdings files in {HOLDINGS_DIR.resolve()}.")
+    total_listings = sum(summary.region_counts.values())
+    print(f"Found {total_listings} unique exchange/ticker listings across the holdings files in {HOLDINGS_DIR.resolve()}.")
     print(f"Written to {len(by_region)} region file(s) in {OUTPUT_DIR.resolve()}")

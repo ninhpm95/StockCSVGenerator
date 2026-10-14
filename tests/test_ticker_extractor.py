@@ -11,6 +11,7 @@ import pandas as pd
 
 extractor = importlib.import_module("tasks.ticker_extractor.run")
 HEADER = "Ticker,Name,ISIN,Weight(%),Exchange\n"
+OUTPUT_COLUMNS = ["Ticker", "Name", "ISIN", "Exchange"]
 
 
 class TickerExtractorTests(unittest.TestCase):
@@ -21,6 +22,9 @@ class TickerExtractorTests(unittest.TestCase):
         self.selection_patch = patch.object(extractor, "FILTER_BY_CUMULATIVE_WEIGHT", False)
         self.selection_patch.start()
         self.addCleanup(self.selection_patch.stop)
+        self.threshold_patch = patch.object(extractor, "MIN_HOLDINGS_FOR_WEIGHT_FILTER", 0)
+        self.threshold_patch.start()
+        self.addCleanup(self.threshold_patch.stop)
         extractor.load_exchange_countries.cache_clear()
         self.addCleanup(extractor.load_exchange_countries.cache_clear)
         self.exchanges = self.root / "exchanges.csv"
@@ -65,9 +69,25 @@ class TickerExtractorTests(unittest.TestCase):
         self.assertEqual(result.records[0]["Region"], "JP")
         self.assertEqual(len(result.records), 2)
 
-    def test_raw_provider_header_is_rejected(self):
+    def test_missing_ticker_and_exchange_columns_skip_ineligible_rows(self):
         result = extractor.extract_holdings(self.holdings("Code,Name,ISIN\n3994,Money Forward,JP3869960009\n"))
-        self.assertIn("missing cleansed columns", result.problem)
+        self.assertEqual(result.problem, "no holdings with both ticker and exchange")
+        self.assertEqual(result.skipped_incomplete, 1)
+
+    def test_missing_optional_columns_are_blank_and_extra_columns_are_ignored(self):
+        result = extractor.extract_holdings(self.holdings(
+            "Extra,Ticker,Exchange,Another\nignored,3994,TSE,ignored\n"))
+        self.assertIsNone(result.problem)
+        self.assertEqual(result.records, [{
+            "Ticker": "3994", "Name": "", "ISIN": "", "Exchange": "TSE", "Region": "JP",
+        }])
+
+    def test_missing_weight_with_filter_enabled_keeps_all_eligible_rows(self):
+        with patch.object(extractor, "FILTER_BY_CUMULATIVE_WEIGHT", True):
+            result = extractor.extract_holdings(self.holdings(
+                "Ticker,Exchange\n3994,TSE\n7203,TSE\n"))
+        self.assertEqual(len(result.records), 2)
+        self.assertTrue(result.weight_undetermined)
 
     def test_flag_off_keeps_more_than_100_holdings_without_weights(self):
         path = self.holdings(HEADER + "".join(
@@ -86,8 +106,32 @@ class TickerExtractorTests(unittest.TestCase):
         with patch.object(extractor, "FILTER_BY_CUMULATIVE_WEIGHT", True):
             result = extractor.extract_holdings(path)
         self.assertEqual([row["Ticker"] for row in result.records], ["B", "C", "D"])
-        self.assertEqual(sum(float(row["Weight(%)"]) for row in result.records), 90)
+        self.assertTrue(all("Weight(%)" not in row for row in result.records))
         self.assertEqual(result.selected_rows, 3)
+
+    def test_small_files_skip_weight_selection_and_threshold_is_inclusive(self):
+        for count, expected in ((299, 299), (300, 1)):
+            with self.subTest(count=count):
+                path = self.holdings(HEADER + "".join(
+                    f"T{i},Holding {i},,{80 if i == 0 else 0.01},XNAS\n"
+                    for i in range(count)
+                ) + ",,,,\n")
+                with patch.object(extractor, "FILTER_BY_CUMULATIVE_WEIGHT", True), \
+                     patch.object(extractor, "MIN_HOLDINGS_FOR_WEIGHT_FILTER", 300), \
+                     patch.object(extractor, "select_top_indices", wraps=extractor.select_top_indices) as select:
+                    result = extractor.extract_holdings(path)
+                self.assertEqual(result.total_rows, count)
+                self.assertEqual(result.selected_rows, expected)
+                self.assertEqual(select.call_count, int(count >= 300))
+                self.assertFalse(result.weight_undetermined)
+
+    def test_weight_filter_threshold_is_configurable(self):
+        path = self.holdings(HEADER + "A,First,,80,XNAS\nB,Second,,20,XNAS\n")
+        with patch.object(extractor, "FILTER_BY_CUMULATIVE_WEIGHT", True):
+            with patch.object(extractor, "MIN_HOLDINGS_FOR_WEIGHT_FILTER", 3):
+                self.assertEqual(extractor.extract_holdings(path).selected_rows, 2)
+            with patch.object(extractor, "MIN_HOLDINGS_FOR_WEIGHT_FILTER", 2):
+                self.assertEqual(extractor.extract_holdings(path).selected_rows, 1)
 
     def test_exact_threshold_ties_and_floating_point_boundary(self):
         self.assertEqual(extractor.select_top_indices([50, 30, 20]), ([0, 1], True))
@@ -118,7 +162,9 @@ class TickerExtractorTests(unittest.TestCase):
         output.mkdir()
         (output / "US.csv").write_text("stale", encoding="utf-8")
         (output / "KY.csv").write_text("old ISIN-country output", encoding="utf-8")
-        (output / "notes.csv").write_text("keep", encoding="utf-8")
+        (output / "notes.csv").write_text("old notes", encoding="utf-8")
+        (output / "old").mkdir()
+        (output / "old" / "notes.txt").write_text("old notes", encoding="utf-8")
         with patch.object(extractor, "HOLDINGS_DIR", inputs), \
              patch.object(extractor, "OUTPUT_DIR", output), \
              contextlib.redirect_stdout(io.StringIO()):
@@ -127,13 +173,12 @@ class TickerExtractorTests(unittest.TestCase):
         ca = pd.read_csv(output / "CA.csv", dtype=str, keep_default_na=False)
         self.assertEqual(len(hk), 1)
         self.assertEqual(hk.iloc[0]["Ticker"], "'00175")
-        self.assertEqual(list(hk.columns), HEADER.strip().split(","))
-        self.assertEqual(hk.iloc[0]["Weight(%)"], "9")
+        self.assertEqual(list(hk.columns), OUTPUT_COLUMNS)
         self.assertEqual(ca.iloc[0]["Ticker"], "NA")
         self.assertEqual(ca.iloc[0]["ISIN"], "")
         self.assertFalse((output / "US.csv").exists())
         self.assertFalse((output / "KY.csv").exists())
-        self.assertEqual((output / "notes.csv").read_text(encoding="utf-8"), "keep")
+        self.assertEqual({p.name for p in output.iterdir()}, {"HK.csv", "CA.csv"})
 
     def test_european_isin_on_us_exchange_and_unknown_exchange(self):
         result = extractor.extract_holdings(self.holdings(
@@ -162,19 +207,67 @@ class TickerExtractorTests(unittest.TestCase):
             extractor.run()
         us = pd.read_csv(output / "US.csv", dtype=str, keep_default_na=False)
         jp = pd.read_csv(output / "JP.csv", dtype=str, keep_default_na=False)
-        self.assertEqual(list(us.columns), HEADER.strip().split(","))
+        self.assertEqual(list(us.columns), OUTPUT_COLUMNS)
         self.assertEqual(len(us), 3)
         self.assertEqual(set(us["Ticker"]), {"ABC", "NEW", "OLD"})
         abc = us.loc[us["Ticker"] == "ABC"].iloc[0]
-        self.assertEqual((abc["Name"], abc["ISIN"], abc["Weight(%)"]),
-                         ("Last", "US0000000004", "2"))
+        self.assertEqual((abc["Name"], abc["ISIN"]),
+                         ("First", "US0000000001"))
         self.assertEqual(jp.iloc[0]["Ticker"], "ABC")
-        self.assertEqual(jp.iloc[0]["Weight(%)"], "4")
 
     def test_ambiguous_short_exchange_name_stays_unknown(self):
         self.assertEqual(extractor.get_region("Euronext Paris"), "FR")
         self.assertEqual(extractor.get_region("Euronext Brussels"), "BE")
         self.assertEqual(extractor.get_region("Euronext"), "UNKNOWN")
+
+    def test_same_country_keeps_different_exchanges_and_deduplicates_matching_pairs(self):
+        inputs = self.root / "holdings"
+        inputs.mkdir()
+        (inputs / "a.csv").write_text(
+            "Ticker,Name,Exchange\nABC,First,XNAS\nABC,Other exchange,NASDAQ\n",
+            encoding="utf-8")
+        (inputs / "b.csv").write_text(
+            "Ticker,Name,Exchange\n abc ,Last, xnas \n",
+            encoding="utf-8")
+        output = self.root / "output"
+        with patch.object(extractor, "HOLDINGS_DIR", inputs), \
+             patch.object(extractor, "OUTPUT_DIR", output), \
+             contextlib.redirect_stdout(io.StringIO()):
+            extractor.run()
+        us = pd.read_csv(output / "US.csv", dtype=str, keep_default_na=False)
+        self.assertEqual(len(us), 2)
+        self.assertEqual(set(us["Name"]), {"First", "Other exchange"})
+        first = us.loc[us["Name"] == "First"].iloc[0]
+        self.assertEqual((first["Ticker"], first["Exchange"]), ("ABC", "XNAS"))
+
+    def test_dedup_prefers_more_filled_output_fields_and_keeps_first_on_ties(self):
+        inputs = self.root / "holdings"
+        inputs.mkdir()
+        (inputs / "a.csv").write_text(
+            "Ticker,Name,ISIN,Exchange,Extra\n"
+            "A,Incomplete,,XNAS,ignored\n"
+            "B,Complete,US0000000002,XNAS,ignored\n"
+            "C,First,,XNAS,ignored\n"
+            "C,Same file tie,,XNAS,ignored\n"
+            "D, -,N/A,XNAS,ignored\n", encoding="utf-8")
+        (inputs / "b.csv").write_text(
+            "Ticker,Name,ISIN,Exchange\n"
+            "A,More complete,US0000000001,XNAS\n"
+            "B,Less complete,,XNAS\n"
+            "C,Later tie,,XNAS\n"
+            "D,Valid name,,XNAS\n", encoding="utf-8")
+        output = self.root / "output"
+        with patch.object(extractor, "HOLDINGS_DIR", inputs), \
+             patch.object(extractor, "OUTPUT_DIR", output), \
+             contextlib.redirect_stdout(io.StringIO()):
+            extractor.run()
+        rows = pd.read_csv(output / "US.csv", dtype=str, keep_default_na=False).set_index("Ticker")
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(rows.loc["A", "Name"], "More complete")
+        self.assertEqual(rows.loc["A", "ISIN"], "US0000000001")
+        self.assertEqual(rows.loc["B", "Name"], "Complete")
+        self.assertEqual(rows.loc["C", "Name"], "First")
+        self.assertEqual(rows.loc["D", "Name"], "Valid name")
 
     def test_only_ticker_and_exchange_are_required_and_values_are_preserved(self):
         result = extractor.extract_holdings(self.holdings(
@@ -186,7 +279,7 @@ class TickerExtractorTests(unittest.TestCase):
             "   ,Whitespace,,5,XNAS\n"))
         self.assertEqual([row["Ticker"] for row in result.records], ["BG", "EBS", "CUSTOM"])
         self.assertEqual(result.records[0]["ISIN"], "AT0000BAWAG2")
-        self.assertEqual(result.records[0]["Weight(%)"], "0.02")
+        self.assertNotIn("Weight(%)", result.records[0])
         self.assertEqual(result.records[2]["ISIN"], "")
         self.assertEqual(result.records[2]["Name"], "")
         self.assertEqual(result.records[2]["Exchange"], "Unmapped exchange")

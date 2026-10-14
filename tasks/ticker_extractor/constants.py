@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 from .fields import Fields as F
@@ -15,10 +14,11 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 # False: all holdings. True: largest holdings covering TOP_WEIGHT_PERCENT of each ETF.
 FILTER_BY_CUMULATIVE_WEIGHT = False
 TOP_WEIGHT_PERCENT = 80.0
+# Files with fewer holdings skip cumulative-weight selection. Set to 0 to disable.
+MIN_HOLDINGS_FOR_WEIGHT_FILTER = 300
 
-# Cleansed holdings have a fixed header and percentage-point weights.
-HOLDINGS_COLUMNS = [F.TICKER, F.NAME, F.ISIN, F.WEIGHT, F.EXCHANGE]
-OUTPUT_FIELDS = HOLDINGS_COLUMNS
+# Extract only these fields; missing source columns are filled with blanks.
+OUTPUT_FIELDS = [F.TICKER, F.NAME, F.ISIN, F.EXCHANGE]
 
 
 # --------------------------------------------------------------------------
@@ -38,15 +38,3 @@ PLACEHOLDER_TOKENS = {"-", "--", "―", "‐", "‑", "n/a", "null", "none"}
 
 # Country grouping comes exclusively from exchanges.csv.
 UNKNOWN_REGION = "UNKNOWN"
-
-# Include previous ISIN-country outputs when removing stale generated files.
-OUTPUT_FILENAME_PATTERN = re.compile(r"^(?:[A-Z]{2}|UNKNOWN|GLOBAL)\.csv$")
-
-
-# --------------------------------------------------------------------------
-# Run-summary labeling
-# --------------------------------------------------------------------------
-
-# Suffixes stripped from a source filename's stem to build the short label
-# used in the end-of-run summary (e.g. "SPY_holdings.csv" -> "SPY").
-LABEL_SUFFIXES = ["_brd_data", "_holdings"]
