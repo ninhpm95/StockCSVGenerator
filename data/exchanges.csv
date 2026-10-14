@@ -1,102 +1,102 @@
 long_name,short_name,country
-New York Stock Exchange Inc.,NYSE,US
-Taiwan Stock Exchange,TWSE,TW
-Chicago Mercantile Exchange,CME,US
-Borsa Italiana,Borsa Italiana,IT
-Tokyo Stock Exchange,TSE,JP
-Korea Exchange (Stock Market),KRX,KR
-Osaka Securities Exchange,OSE,JP
-NO MARKET (E.G. UNLISTED),UNLISTED,
-Index And Options Market,IOM,US
-SIX Swiss Exchange,SIX,CH
-Toronto Stock Exchange,TSX,CA
-Nasdaq Omx Nordic,STO,SE
-Chicago Board Of Trade,CBOT,US
-Hong Kong Exchanges And Clearing Ltd,HKEX,HK
-Euronext Amsterdam,AMS,NL
-London Stock Exchange,LSE,GB
-Nyse Euronext - Euronext Paris,Euronext,FR
-Nasdaq Omx Helsinki Ltd.,HEL,FI
-Tel Aviv Stock Exchange,TASE,IL
-National Stock Exchange Of India,NSE_IN,IN
-Asx - All Markets,ASX,AU
-Asx - Trade24,ASX,AU
-Bolsa De Madrid,BME,ES
-Korea Exchange (Kosdaq),KOSDAQ,KR
-Oslo Bors Asa,OSL,NO
-Johannesburg Stock Exchange,JSE,ZA
-Saudi Stock Exchange,TADAWUL,SA
-Omx Nordic Exchange Copenhagen A/S,CPH,DK
-Singapore Exchange,SGX,SG
-Singapore Exchange Derivatives Clearing Limited,SGX,SG
-Shanghai Stock Exchange,SSE,CN
-Bursa Malaysia,Bursa,MY
-Eurex Deutschland,EUREX,DE
-Bolsa Mexicana de Valores,BMV,MX
-Budapest Stock Exchange,BSE_HU,HU
-Kuwait Stock Exchange,BK,KW
-Nyse Euronext - Euronext Brussels,Euronext,BE
-Wiener Boerse Ag,VSE,AT
-Irish Stock Exchange - All Market,ISE,IE
-Warsaw Stock Exchange/Equities/Main Market,WSE,PL
-Stock Exchange Of Thailand,SET,TH
 Abu Dhabi Securities Exchange,ADX,AE
-Qatar Exchange,QSE,QA
-Dubai Financial Market,DFM,AE
-Indonesia Stock Exchange,IDX,ID
-Athens Exchange S.A. Cash Market,ATHEX,GR
-Gretai Securities Market,TPEX,TW
-Shenzhen Stock Exchange,SZSE,CN
-Philippine Stock Exchange Inc.,PSE,PH
-Bolsa De Valores De Colombia,BVC,CO
-Santiago Stock Exchange,SSE_CL,CL
-Istanbul Stock Exchange,BIST,TR
-Prague Stock Exchange,PSE_CZ,CZ
-New Zealand Exchange Ltd,NZX,NZ
-Deutsche Boerse Xetra,XETRA,DE
-The Montreal Exchange / Bourse De Montreal,MX,CA
-Egyptian Exchange,EGX,EG
-Standard-Classica-Forts,SCF,RU
-Ice Futures U.S.,ICE,US
-Euronext Lisbon,Euronext,PT
-Nyse Euronext - Euronext Lisbon,Euronext,PT
-New York Stock Exchange,NYSE,US
-XNYS,NYSE,US
-NASDAQ,NASDAQ,US
-XNAS,NASDAQ,US
-NASDAQ Stock Market,NASDAQ,US
-NYSE ARCA,NYSE ARCA,US
 ARCA,NYSE ARCA,US
 ARCX,NYSE ARCA,US
+Asx - All Markets,ASX,AU
+Asx - Trade24,ASX,AU
+Athens Exchange S.A. Cash Market,ATHEX,GR
+Bolsa De Madrid,BME,ES
+Bolsa De Valores De Colombia,BVC,CO
+Bolsa Mexicana de Valores,BMV,MX
+Borsa Italiana,Borsa Italiana,IT
+Bse Ltd,BSE_IN,IN
+Bucharest Stock Exchange,BVB,RO
+Budapest Stock Exchange,BSE_HU,HU
+Bursa Malaysia,Bursa,MY
+Cboe BZX,BATS,US
+Chicago Board Of Trade,CBOT,US
+Chicago Mercantile Exchange,CME,US
+Deutsche Boerse Xetra,XETRA,DE
+Dubai Financial Market,DFM,AE
+Duesseldorf Stock Exchange,XDUS,DE
+Egyptian Exchange,EGX,EG
+Eurex Deutschland,EUREX,DE
+Euronext Amsterdam,AMS,NL
+Euronext Lisbon,Euronext,PT
+Frankfurt Stock Exchange,FSX,DE
+Gretai Securities Market,TPEX,TW
+Hong Kong Exchanges And Clearing Ltd,HKEX,HK
+Ice Futures U.S.,ICE,US
+Index And Options Market,IOM,US
+Indonesia Stock Exchange,IDX,ID
+Irish Stock Exchange - All Market,ISE,IE
+Istanbul Stock Exchange,BIST,TR
+Johannesburg Stock Exchange,JSE,ZA
+Korea Exchange (Kosdaq),KOSDAQ,KR
+Korea Exchange (Stock Market),KRX,KR
+Kuwait Stock Exchange,BK,KW
+London Stock Exchange,LSE,GB
+NASDAQ,NASDAQ,US
+Nasdaq Omx Helsinki Ltd.,HEL,FI
+Nasdaq Omx Nordic,STO,SE
+NASDAQ Stock Market,NASDAQ,US
+National Stock Exchange Of India,NSE_IN,IN
+New York Stock Exchange,NYSE,US
+New York Stock Exchange Inc.,NYSE,US
+New Zealand Exchange Ltd,NZX,NZ
+NO MARKET (E.G. UNLISTED),UNLISTED,
+NSE IFSC Limited,INSE,IN
 NYSE,NYSE,US
-XHKG,HKEX,HK
-XNSE,NSE_IN,IN
+NYSE American,NYSE AMERICAN,US
+NYSE ARCA,NYSE ARCA,US
+Nyse Euronext - Euronext Brussels,Euronext,BE
+Nyse Euronext - Euronext Lisbon,Euronext,PT
+Nyse Euronext - Euronext Paris,Euronext,FR
+NYSE MKT,NYSE AMERICAN,US
+Omx Nordic Exchange Copenhagen A/S,CPH,DK
+Osaka Securities Exchange,OSE,JP
+Oslo Bors Asa,OSL,NO
+Philippine Stock Exchange Inc.,PSE,PH
+Prague Stock Exchange,PSE_CZ,CZ
+Qatar Exchange,QSE,QA
+Santiago Stock Exchange,SSE_CL,CL
+Saudi Stock Exchange,TADAWUL,SA
+Shanghai Stock Exchange,SSE,CN
+Shenzhen Stock Exchange,SZSE,CN
+Singapore Exchange,SGX,SG
+Singapore Exchange Derivatives Clearing Limited,SGX,SG
+SIX Swiss Exchange,SIX,CH
+Standard-Classica-Forts,SCF,RU
+Stock Exchange Of Thailand,SET,TH
+Stuttgart Stock Exchange,XSTU,DE
+Taiwan Stock Exchange,TWSE,TW
+Tel Aviv Stock Exchange,TASE,IL
+The Montreal Exchange / Bourse De Montreal,MX,CA
+Tokyo Stock Exchange,TSE,JP
+Toronto Stock Exchange,TSX,CA
+Warsaw Stock Exchange/Equities/Main Market,WSE,PL
+Wiener Boerse Ag,VSE,AT
+XAMS,AMS,NL
 XASX,ASX,AU
-XTSE,TSX,CA
-XLON,LSE,GB
-XJPX,TSE,JP
-XSWX,SIX,CH
-XSES,SGX,SG
-XPAR,Euronext,FR
 XBRU,Euronext,BE
+XBSP,B3,BR
+XCSE,CPH,DK
 XETR,XETRA,DE
 Xetra,XETRA,DE
+XHKG,HKEX,HK
+XJPX,TSE,JP
 XKRX,KRX,KR
+XLON,LSE,GB
+XMAD,BME,ES
+XMIL,Borsa Italiana,IT
+XNAS,NASDAQ,US
+XNSE,NSE_IN,IN
+XNYS,NYSE,US
+XOSL,OSL,NO
+XPAR,Euronext,FR
+XSES,SGX,SG
 XSHE,SZSE,CN
 XSHG,SSE,CN
-XMIL,Borsa Italiana,IT
-XCSE,CPH,DK
-XAMS,AMS,NL
-XMAD,BME,ES
-XOSL,OSL,NO
 XSTO,STO,SE
-XBSP,B3,BR
-Bse Ltd,BSE_IN,IN
-Cboe BZX,BATS,US
-Stuttgart Stock Exchange,XSTU,DE
-Frankfurt Stock Exchange,FSX,DE
-Bucharest Stock Exchange,BVB,RO
-Duesseldorf Stock Exchange,XDUS,DE
-NYSE MKT,NYSE AMERICAN,US
-NYSE American,NYSE AMERICAN,US
-NSE IFSC Limited,INSE,IN
+XSWX,SIX,CH
+XTSE,TSX,CA
