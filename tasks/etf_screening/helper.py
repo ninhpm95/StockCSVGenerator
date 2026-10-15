@@ -1,4 +1,5 @@
 import re
+import math
 import unicodedata
 import pandas as pd
 from .constants import Fields as F
@@ -74,11 +75,11 @@ def parse_number(raw):
         value = float(s)
     except ValueError:
         return None
-    return value / 100
+    return value / 100 if math.isfinite(value) and value >= 0 else None
 
 
 def load_lookup_fees(lookup_path, encoding="utf-8") -> dict:
-    lookup = pd.read_csv(lookup_path, dtype=str, encoding=encoding)
+    lookup = pd.read_csv(lookup_path, dtype=str, encoding=encoding, keep_default_na=False)
     _require_columns(lookup, [F.TICKER, F.FEE], f"Lookup CSV at {lookup_path}")
 
     lookup[F.TICKER] = lookup[F.TICKER].map(normalize_ticker)
@@ -103,12 +104,8 @@ def dedup_groups(df, normalized_groups, fee_lookup, cascade, log=print):
 
     `normalized_groups` is {group_name: [normalized_ticker, ...]} (already
     run through normalize_ticker -- see TICKER_GROUPS in constants.py).
-    Note: if the same ticker appears in more than one group, later groups
-    (in dict iteration order) take precedence for membership purposes --
-    this matches the original inline implementation. The final
-    drop_duplicates(subset=F.TICKER) in run() is what actually guards
-    against a ticker being emitted twice if it independently wins more
-    than one group.
+    A ticker can participate in multiple groups. The caller removes any
+    duplicate winners after selection.
 
     For each group, cascades through descending volume thresholds
     (`cascade`, must be sorted descending) looking for the first threshold
@@ -121,12 +118,7 @@ def dedup_groups(df, normalized_groups, fee_lookup, cascade, log=print):
     Pulled out of run() so the cascade/dedup logic can be unit-tested
     without touching disk.
     """
-    ticker_to_group = {
-        t: group_name
-        for group_name, tickers in normalized_groups.items()
-        for t in tickers
-    }
-    grouped_tickers = set(ticker_to_group.keys())
+    grouped_tickers = {t for tickers in normalized_groups.values() for t in tickers}
     df_grouped = df[df[F.TICKER].isin(grouped_tickers)].copy()
     df_ungrouped = df[~df[F.TICKER].isin(grouped_tickers)].copy()
 

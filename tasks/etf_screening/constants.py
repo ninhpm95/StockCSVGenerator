@@ -8,27 +8,18 @@ OUTPUT_DIR = BASE_DIR.parent.parent / "output"
 CURRENT_CSV = OUTPUT_DIR / "JP_ETFs.csv"
 DATA_CSV = OUTPUT_DIR / "JP_ETFs_full.csv"
 
-# NOTE: this currently points at the SAME file as DATA_CSV. That makes the
-# "found in lookup CSV" check in run.py's group-dedup step (Step 5) weaker
-# than it looks -- it's just checking "does this ticker have a parseable Fee
-# in the data it already came from," not membership in a separately curated,
-# manually-maintained fee list (which is what the surrounding comments in
-# run.py describe). Point this at a real separate file once you have one.
-LOOKUP_CSV = OUTPUT_DIR / "JP_ETFs_full.csv"  # TODO: point at a real curated fee source
-OUTPUT_CSV = OUTPUT_DIR / "screened_etfs.csv"
+# Used only for fee comparisons; output Fee text always comes from DATA_CSV.
+LOOKUP_CSV = DATA_CSV
+# Read existing annotations first, then replace the current list with results.
+OUTPUT_CSV = CURRENT_CSV
 
 # CSV read/write encoding. JP-sourced spreadsheet exports (Excel, etc.) are
 # sometimes Shift-JIS/cp932 rather than utf-8 -- if you hit UnicodeDecodeError
 # on a real export, change this rather than hardcoding encoding= in run.py.
 CSV_ENCODING = "utf-8"
 
-# Step 4 currently keeps the TSE-provided fee as-is instead of overwriting it
-# with the (slower to maintain, but more accurate) LOOKUP_CSV fee. Flip this
-# to True to have run.py overwrite df[Fields.FEE] from fee_lookup before
-# output. Keeping this as a constant (rather than a comment telling a future
-# reader to add a code block) means the alternate path actually exists and
-# can't silently rot.
-OVERWRITE_FEE_FROM_LOOKUP = False
+# Literal website footnote text to remove from the output Fee column.
+FEE_TEXT_TO_REMOVE = ["(*3)"]
 
 MIN_AVG_VOLUME = 30_000_000
 
