@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Optional
 
 import pandas as pd
 
-from .constants import AGGREGATE_COLUMNS, ETF_DIR, OUTPUT_DIR, STOCK_FILE_SUFFIX
-from .normalize import normalize_isin, normalize_ticker
+from .constants import AGGREGATE_COLUMNS, ETF_DIR, EXCHANGES_FILE, OUTPUT_DIR, STOCK_FILE_SUFFIX
+from .normalize import normalize_exchange, normalize_isin, normalize_region, normalize_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -82,3 +83,23 @@ def find_holdings_file(ticker: str) -> Optional[Path]:
     if len(matches) > 1:
         logger.warning("%s: multiple holdings files found; using %s", ticker, matches[0].name)
     return matches[0]
+
+
+@lru_cache(maxsize=None)
+def load_exchange_regions(path: Path = EXCHANGES_FILE) -> Dict[str, str]:
+    """Map holdings Exchange values via short_name to country once per file."""
+    exchanges = pd.read_csv(path, dtype=str, keep_default_na=False)
+    required = {"short_name", "country"}
+    missing = required.difference(exchanges.columns)
+    if missing:
+        raise ValueError(f"{path}: missing exchange columns: {', '.join(sorted(missing))}")
+
+    regions: Dict[str, str] = {}
+    for _, row in exchanges.iterrows():
+        region = normalize_region(row["country"])
+        if not region or region == "N/A":
+            continue
+        short_name = normalize_exchange(row["short_name"])
+        if short_name and short_name != "N/A":
+            regions.setdefault(short_name, region)
+    return regions

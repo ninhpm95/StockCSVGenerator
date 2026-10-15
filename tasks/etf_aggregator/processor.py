@@ -114,7 +114,7 @@ def process_etf(
         total_weight = sum(item["weight"] for item in matched_rows)
         stats.matched_weight = total_weight
 
-        # --- COVERAGE GUARD: Skip aggregation if matched weight is below 80% ---
+        # --- COVERAGE GUARD: Skip aggregation below the configured matched-weight threshold ---
         # Note: this checks the raw sum of matched holding weights, not a
         # weight normalized against the holdings file's own total. If a fund's
         # weight column doesn't sum to exactly 100% (rounding, an included
@@ -122,7 +122,7 @@ def process_etf(
         # clear this threshold on that basis alone. The per-holding
         # normalization a few lines down (normalized_weight) corrects for this
         # in the actual aggregated averages either way, so this only affects
-        # whether the 80% gate itself is a little generous in that scenario.
+        # whether the configured coverage gate itself is a little generous in that scenario.
         if total_weight < MIN_WEIGHT_THRESHOLD:
             logger.warning(
                 "ETF %s: matched weight (%.1f%%) is below the required %.0f%% threshold; leaving row unchanged.",

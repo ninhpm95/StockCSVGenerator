@@ -7,7 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent.parent
 
 OUTPUT_DIR = PROJECT_DIR / "output"
-ETF_DIR = PROJECT_DIR / "data" / "ETFs"
+ETF_DIR = PROJECT_DIR / "data" / "cleansed_ETFs"
+EXCHANGES_FILE = PROJECT_DIR / "data" / "exchanges.csv"
 
 TARGET_ETF_FILE = OUTPUT_DIR / "JP_ETFs.csv"
 
@@ -80,40 +81,12 @@ RATING_THRESHOLDS = [
 
 # Priority for locating a holding's region (see matcher.find_region):
 #   1. Region column on the holding row, if present
-#   2. Exchange -> region mapping (this dict)
+#   2. Exchange -> country mapping from data/exchanges.csv
 #   3. ISIN first two characters
-#   4. Holdings filename's region token, e.g. "1655_us_sp500.xlsx" -> "US"
-#      (weakest signal -- fund-level, not holding-level; see
-#      matcher.region_from_filename)
+#   4. Holdings filename's region token (weakest signal)
 #
-# If none of these resolve a region (or the ticker isn't found within it),
-# find_stock falls back separately to searching every loaded stock file by
-# ISIN, ignoring region -- see matcher.find_stock_by_isin.
-#
-# Add/change exchange mappings here if your files contain other exchange names.
-EXCHANGE_TO_REGION = {
-    "TSE": "JP",
-    "TYO": "JP",
-    "JPX": "JP",
-    "OSE": "JP",
-    "TOKYO STOCK EXCHANGE": "JP",
-    "NSE": "IN",
-    "BSE": "IN",
-    "NASDAQ": "US",
-    "NYSE": "US",
-    "AMEX": "US",
-    "ARCA": "US",
-    "HKEX": "HK",
-    "HKG": "HK",
-    "LSE": "GB",
-    "LON": "GB",
-    "ASX": "AU",
-    "SSE": "CN",
-    "SZSE": "CN",
-    "KSE": "KR",
-    "KRX": "KR",
-    "TWSE": "TW",
-}
+# If the region or ticker cannot be resolved, matching falls back to a
+# region-independent ISIN search across loaded stock files.
 
 # --------------------------------------------------------------------------
 # Holdings file parsing

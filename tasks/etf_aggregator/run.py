@@ -8,7 +8,7 @@ import pandas as pd
 import logging
 
 from .constants import AGGREGATE_COLUMNS, TARGET_ETF_FILE
-from .loaders import load_stock_files
+from .loaders import load_exchange_regions, load_stock_files
 from .normalize import normalize_ticker
 from .processor import (
     SKIP_EMPTY_HOLDINGS,
@@ -106,6 +106,7 @@ def run() -> None:
 
     logger.info("Loading stock databases...")
     stock_data = load_stock_files()
+    load_exchange_regions()
 
     logger.info("Loading ETF file: %s", target_path)
     etfs = pd.read_csv(target_path, dtype=str)

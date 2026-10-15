@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .constants import EXCHANGE_TO_REGION
+from .loaders import load_exchange_regions
 from .normalize import normalize_exchange, normalize_isin, normalize_region, normalize_ticker
 
 
@@ -50,7 +50,7 @@ def find_region(
         return region, "region"
 
     exchange = normalize_exchange(holding.get("Exchange", ""))
-    mapped_region = EXCHANGE_TO_REGION.get(exchange)
+    mapped_region = load_exchange_regions().get(exchange)
     if mapped_region in stock_data:
         return mapped_region, f"exchange:{exchange}"
 
