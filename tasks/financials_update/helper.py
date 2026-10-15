@@ -1,23 +1,70 @@
 import os
+import csv
+import re
+from functools import lru_cache
+from pathlib import Path
 from typing import Optional
 from .constants import TV_SLEEP_LOOKUP
 from .fields import FAST
 
-def get_region(filename: str) -> str:
-    # Extract just the filename in case a full path is passed
+EXCHANGES_PATH = Path(__file__).resolve().parents[2] / 'data' / 'exchanges.csv'
+
+
+@lru_cache(maxsize=1)
+def load_exchanges() -> tuple[dict, ...]:
+    with EXCHANGES_PATH.open(newline='', encoding='utf-8-sig') as source:
+        reader = csv.DictReader(source)
+        required = {'exchange', 'short_name', 'lookup_name', 'country',
+                    'yahoo_suffix', 'yahoo_exchange_codes', 'yahoo_dot_replacement',
+                    'tv_screener', 'tv_exchange'}
+        missing = required - set(reader.fieldnames or [])
+        if missing:
+            raise ValueError(f'{EXCHANGES_PATH}: missing columns: {", ".join(sorted(missing))}')
+        return tuple({key: (value or '').strip() for key, value in row.items()}
+                     for row in reader)
+
+
+def _exchange_rows(exchange: str | None) -> list[dict]:
+    key = (exchange or '').strip().casefold()
+    if not key:
+        return []
+    rows = load_exchanges()
+    matches = [row for row in rows if key in {
+        row['exchange'].casefold(), row['short_name'].casefold(),
+        *(code.strip().casefold() for code in row['yahoo_exchange_codes'].split('|') if code.strip()),
+    }]
+    return matches or [row for row in rows if key == row['lookup_name'].casefold()]
+
+
+def _unique_value(rows: list[dict], field: str) -> str | None:
+    values = {row[field] for row in rows}
+    return next(iter(values)) if len(values) == 1 else None
+
+
+def _market_value(region: str, exchange: str | None, field: str) -> str:
+    rows = _exchange_rows(exchange)
+    if not rows:
+        rows = [row for row in load_exchanges() if row['country'] == region.upper()
+                and row['yahoo_suffix'] != 'N/A']
+    value = _unique_value(rows, field)
+    if value is None or value == 'N/A':
+        raise ValueError(f'No unambiguous {field} configured for exchange={exchange!r}, country={region!r}')
+    return value
+
+
+def get_region(filename: str, exchange: str | None = None) -> str:
+    country = _unique_value(_exchange_rows(exchange), 'country')
+    if country:
+        return country
     base_name = os.path.basename(filename).upper()
-
-    if 'JP' in base_name:
-        return 'JP'
-    if 'US' in base_name:
-        return 'US'
-    if 'HK' in base_name:
-        return 'HK'
-
-    # Raise rather than return a silent 'Unknown' sentinel - get_tv_screener
-    # has no 'Unknown' branch and would otherwise default to "america" for
-    # any unrecognized filename, silently screening it as a US file.
-    raise ValueError(f"Could not determine region from file name: {filename!r}")
+    countries = list(dict.fromkeys(row['country'] for row in load_exchanges() if row['country']))
+    tokens = re.split(r'[^A-Z]+', os.path.splitext(base_name)[0])
+    matches = [country for country in countries if country in tokens]
+    if not matches:
+        matches = [country for country in countries if country in base_name]
+    if len(matches) == 1:
+        return matches[0]
+    raise ValueError(f'Could not determine region from exchange {exchange!r} or file name {filename!r}')
 
 def get_tv_sleep_range(ticker_num: int, speed: str) -> Optional[tuple[int, int]]:
     if speed == FAST:
@@ -31,46 +78,18 @@ def prepare_ticker(ticker: str) -> str:
     ticker = str(ticker).strip().lstrip("'")
     return ticker
 
-def format_ticker_for_yfinance(ticker: str, region: str) -> str:
-    ticker = str(ticker).strip().lstrip("'")
-    if region == 'JP' and not ticker.endswith('.T'):
-        return f"{ticker}.T"
-    if region == 'HK' and not ticker.endswith('.HK'):
-        return f"{ticker}.HK"
-    if region == 'US':
-        return ticker.replace('.', '-')
-    return ticker
+def format_ticker_for_yfinance(ticker: str, region: str, exchange: str | None = None) -> str:
+    ticker = prepare_ticker(ticker)
+    suffix = _market_value(region, exchange, 'yahoo_suffix')
+    if suffix and ticker.upper().endswith(suffix.upper()):
+        ticker = ticker[:-len(suffix)]
+    replacement = _market_value(region, exchange, 'yahoo_dot_replacement')
+    if replacement:
+        ticker = ticker.replace('.', replacement)
+    return ticker + suffix
 
-def get_tv_screener(region: str) -> str:
-    """Returns the TradingView screener name based on region."""
-    if region == 'JP':
-        return "japan"
-    if region == 'HK':
-        return "hongkong"
-    return "america"
+def get_tv_screener(region: str, exchange: str | None = None) -> str:
+    return _market_value(region, exchange, 'tv_screener')
 
-def map_exchange(yf_exchange: str) -> Optional[str]:
-    """Maps yfinance exchange codes to TradingView exchange codes.
-
-    Returns None when the exchange is missing or unrecognized, so callers
-    can skip the TradingView lookup instead of silently building a wrong
-    symbol (e.g. defaulting to TSE for a US/HK ticker).
-    """
-    if not yf_exchange:
-        return None
-
-    # Common yfinance exchange mappings
-    mapping = {
-        "NMS": "NASDAQ",
-        "NGM": "NASDAQ",
-        "NCM": "NASDAQ",
-        "BTS": "NASDAQ",
-        "NYQ": "NYSE",
-        "ASE": "AMEX",
-        "PCX": "AMEX",
-        "TSE": "TSE",
-        "TYO": "TSE",
-        "JPX": "TSE",
-        "HKG": "HKEX",
-    }
-    return mapping.get(yf_exchange)
+def map_exchange(exchange: str | None) -> Optional[str]:
+    return _unique_value(_exchange_rows(exchange), 'tv_exchange') or None

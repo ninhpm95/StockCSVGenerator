@@ -106,11 +106,12 @@ def format_financials(ticker_data: Dict) -> Dict:
     # source of truth, but they're not redundant with each other.
     return {k: v for k, v in result.items() if k in FINAL_COLUMNS}
 
-def get_tv_scores_batch(tv_symbols: List[str], region: str) -> Dict[str, Dict]:
+def get_tv_scores_batch(tv_symbols: List[str], region: str = '',
+                        screener: str | None = None) -> Dict[str, Dict]:
     if not tv_symbols:
         return {}
 
-    screener = get_tv_screener(region)
+    screener = screener or get_tv_screener(region)
     intervals = {'1d': Interval.INTERVAL_1_DAY, '1w': Interval.INTERVAL_1_WEEK}
     if ENABLE_1M_RATING:
         # Off by default - see ENABLE_1M_RATING in constants.py for why.
@@ -140,14 +141,19 @@ def get_tv_scores_batch(tv_symbols: List[str], region: str) -> Dict[str, Dict]:
 
     return score_map
 
-def fetch_financials_batch(ticker_list: List[str], region: str, speed: str) -> List[Dict]:
+def fetch_financials_batch(ticker_list: List[str], region: str | List[str], speed: str,
+                           exchanges: List[str] | None = None) -> List[Dict]:
     intermediate_data = []
-    tv_symbols_to_fetch = []
+    tv_groups = {}
+    regions = [region] * len(ticker_list) if isinstance(region, str) else region
+    exchanges = exchanges if exchanges is not None else [''] * len(ticker_list)
+    if len(regions) != len(ticker_list) or len(exchanges) != len(ticker_list):
+        raise ValueError('Tickers, regions and exchanges must have matching lengths')
 
     # Step 1: Fetch yfinance data & map TradingView symbols
-    for symbol in ticker_list:
+    for symbol, ticker_region, exchange in zip(ticker_list, regions, exchanges):
         try:
-            yf_sym = format_ticker_for_yfinance(symbol, region)
+            yf_sym = format_ticker_for_yfinance(symbol, ticker_region, exchange)
 
             ticker = yf.Ticker(yf_sym)
 
@@ -161,7 +167,9 @@ def fetch_financials_batch(ticker_list: List[str], region: str, speed: str) -> L
 
             # Identify Exchange and format for TradingView
             yf_exchange = info.get('exchange')
-            mapped_exch = map_exchange(yf_exchange)
+            # Prefer the input listing; Yahoo's exchange code is the fallback.
+            tv_exchange = exchange if map_exchange(exchange) else yf_exchange
+            mapped_exch = map_exchange(tv_exchange)
 
             if mapped_exch is None:
                 # Unknown/unmapped exchange - don't guess a TradingView symbol
@@ -174,10 +182,19 @@ def fetch_financials_batch(ticker_list: List[str], region: str, speed: str) -> L
                 time.sleep(0.05)
                 continue
 
+            try:
+                screener = get_tv_screener(ticker_region, tv_exchange)
+            except ValueError as e:
+                print(f" [!] {symbol}: {e}; skipping TV score lookup")
+                screener = ''
+            if not screener:
+                info['tv_key'] = None
+                intermediate_data.append(info)
+                continue
             tv_sym = f"{mapped_exch}:{symbol}"
 
             info['tv_key'] = tv_sym
-            tv_symbols_to_fetch.append(tv_sym)
+            tv_groups.setdefault(screener, []).append(tv_sym)
             intermediate_data.append(info)
 
             time.sleep(0.05)
@@ -186,7 +203,10 @@ def fetch_financials_batch(ticker_list: List[str], region: str, speed: str) -> L
             intermediate_data.append({'shortName': symbol, 'error': True})
 
     # Step 2: Fetch TV scores
-    tv_scores = {} if speed == F.FAST else get_tv_scores_batch(tv_symbols_to_fetch, region)
+    tv_scores = {}
+    if speed != F.FAST:
+        for screener, symbols in tv_groups.items():
+            tv_scores.update(get_tv_scores_batch(list(dict.fromkeys(symbols)), screener=screener))
 
     # Step 3: Combine and Format
     final_results = []

@@ -6,6 +6,7 @@ one place instead of being retyped (and possibly mistyped) at each call site.
 
 # Identifiers
 TICKER = 'Ticker'
+EXCHANGE = 'Exchange'
 NAME = 'Name'
 ISIN = 'ISIN'
 SECTOR = 'Sector'

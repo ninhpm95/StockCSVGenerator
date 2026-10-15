@@ -7,13 +7,13 @@ from typing import List, Dict
 from .financials import fetch_financials_batch
 from .helper import prepare_ticker, get_tv_sleep_range
 from .constants import BATCH_SIZE, COLUMNS_TO_PRESERVE
-from .fields import TICKER
+from .fields import TICKER, EXCHANGE
 
 def load_and_clean_data(file_path: str) -> pd.DataFrame:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    df = pd.read_csv(file_path, encoding='utf-8-sig')
+    df = pd.read_csv(file_path, encoding='utf-8-sig', dtype=str, keep_default_na=False)
     if df.empty:
         raise ValueError("CSV file is empty.")
 
@@ -21,12 +21,14 @@ def load_and_clean_data(file_path: str) -> pd.DataFrame:
     df = df[existing_cols].copy()
     
     ticker_col = TICKER if TICKER in df.columns else df.columns[0]
-    df = df.drop_duplicates(subset=[ticker_col], keep='first')
+    keys = [ticker_col, EXCHANGE] if EXCHANGE in df.columns else [ticker_col]
+    df = df.drop_duplicates(subset=keys, keep='first')
     
     df['api_ticker'] = df[ticker_col].apply(lambda t: prepare_ticker(t))
     return df
 
-def process_batches(tickers: List[str], region: str, speed: str) -> List[Dict]:
+def process_batches(tickers: List[str], region: str | List[str], speed: str,
+                    exchanges: List[str] | None = None) -> List[Dict]:
     results = []
     total_batches = math.ceil(len(tickers) / BATCH_SIZE)
     sleep_range = get_tv_sleep_range(len(tickers), speed)
@@ -37,7 +39,9 @@ def process_batches(tickers: List[str], region: str, speed: str) -> List[Dict]:
         print(f"[*] Processing batch {batch_num}/{total_batches}...")
 
         try:
-            batch_data = fetch_financials_batch(batch, region, speed)
+            batch_regions = region if isinstance(region, str) else region[i:i + BATCH_SIZE]
+            batch_exchanges = exchanges[i:i + BATCH_SIZE] if exchanges is not None else None
+            batch_data = fetch_financials_batch(batch, batch_regions, speed, batch_exchanges)
             results.extend(batch_data)
         except Exception as e:
             print(f" [!] Batch {batch_num} failed: {e}")
